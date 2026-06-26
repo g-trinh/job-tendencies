@@ -1,0 +1,25 @@
+# sqlc.yaml — code generation config for Job Tendencies.
+#
+# Schema:  migrations/        (SQL migration files managed by goose)
+# Queries: internal/infra/queries/ (per-context .sql query files; populated in Phase 3+)
+# Output:  internal/infra/sqlcdb/  (generated Go package imported by infra adapters)
+#
+# Run via: make sqlc
+#
+# Docs: https://docs.sqlc.dev/en/latest/reference/config.html
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "migrations/"
+    queries: "internal/infra/queries/"
+    gen:
+      go:
+        package: "sqlcdb"
+        out: "internal/infra/sqlcdb"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: true
+        emit_exact_table_names: false
+        emit_empty_slices: true
+        emit_methods_with_db_argument: true

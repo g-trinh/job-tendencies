@@ -1,0 +1,74 @@
+# golangci-lint v2 configuration for Job Tendencies backend.
+# Run: golangci-lint run ./...
+# Docs: https://golangci-lint.run/usage/configuration/
+version: "2"
+
+run:
+  tests: true
+  timeout: 3m
+
+formatters:
+  enable:
+    - goimports   # Enforces goimports import ordering
+
+  settings:
+    goimports:
+      # Blank line between std, external, and internal imports.
+      local-prefixes:
+        - github.com/g-trinh/job-tendencies
+
+linters:
+  default: standard
+
+  enable:
+    # Error handling
+    - errcheck        # Unchecked errors
+    - wrapcheck       # Errors must be wrapped at package boundaries
+
+    # Code quality
+    - gocritic        # Opinionated suggestions
+    - misspell        # Typos in comments and strings
+    - revive          # General Go linter (replaces golint)
+    - unconvert       # Unnecessary type conversions
+    - unparam         # Unused function parameters
+
+    # Style
+    - godot           # Comments must end with a period
+
+  disable:
+    - depguard        # No import restrictions needed yet
+    - exhaustruct     # Too noisy for Phase 0 skeletons
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+
+    wrapcheck:
+      ignoreSigs:
+        - "errors.New("
+        - "fmt.Errorf("
+        - ".Errorf("
+      ignorePackageGlobs:
+        - "github.com/g-trinh/job-tendencies/*"
+
+    godot:
+      scope: declarations
+
+issues:
+  exclude-rules:
+    # Test files: relax wrapcheck and godot
+    - path: "_test\\.go"
+      linters:
+        - wrapcheck
+        - godot
+
+    # cmd/ packages: thin composition roots, relax godot on package-level comments
+    - path: "cmd/"
+      linters:
+        - godot
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
