@@ -4,8 +4,9 @@
 // LLM for structured extraction, deduplicates against existing jobs, upserts
 // contacts, and triggers scoring.
 //
-// Phase 0: boots a minimal HTTP server exposing /healthz only. Pub/Sub push
-// handler, extraction, and scoring logic will be added in later phases.
+// Required env vars for push handling:
+//   - WORKER_SERVICE_URL — this service's Cloud Run URL (used as OIDC audience).
+//   - PUBSUB_PUSH_SA     — push-auth SA email (pubsub-push-dev@…).
 package main
 
 import (
@@ -17,10 +18,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-
+	"github.com/g-trinh/job-tendencies/internal/app/extraction"
 	"github.com/g-trinh/job-tendencies/internal/config"
+	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
 )
 
 func main() {
@@ -33,14 +33,22 @@ func main() {
 	logger := newLogger(cfg.LogLevel)
 	slog.SetDefault(logger)
 
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Recoverer)
+	// Build the router with base middleware.
+	r := handler.NewRouter(logger)
 
-	// /healthz is reserved by Cloud Run's ingress (requests never reach the
-	// container), so also expose /livez for reachable health checks.
+	// Health probes — /healthz is reserved by Cloud Run ingress; /livez is reachable.
 	r.Get("/healthz", handleHealthz)
 	r.Get("/livez", handleHealthz)
+
+	// Pub/Sub push route — protected by OIDC verification.
+	// Phase 1 stub: extraction.Service logs the event and returns nil.
+	extractionSvc := extraction.New(logger)
+	oidcMiddleware := handler.OIDCMiddleware(
+		handler.GoogleTokenVerifier{},
+		cfg.WorkerServiceURL,
+		cfg.PubSubPushSA,
+	)
+	r.With(oidcMiddleware).Post("/push/listing-extract", handler.PushListingExtract(extractionSvc, logger))
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
