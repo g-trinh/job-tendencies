@@ -60,10 +60,10 @@ This skill covers **how to implement** decisions that have already been made —
 > - Read the current story's tech-breakdown (`docs/feature/<slug>/tech-breakdown-<story-id>.md`).
 > - Identify the **first unimplemented task** in it.
 > - Implement that task only — domain types, application service, infra adapter, wiring, and tests.
-> - Run only the smallest directly affected tests. Do not run full tests, quality gates, or commit while story tasks remain.
-> - Stop and report: *"Task [ID] — [title] implemented. Affected tests pass. Full gates deferred until story completion. Ready for task [ID+1]: [title]?"*
+> - Run only the smallest directly affected tests, then commit the task. The user's request to implement an explicit task or workflow authorizes per-task commits unless they say not to commit. Do not run full tests or quality gates while story tasks remain.
+> - Stop and report: *"Task [ID] — [title] implemented, affected tests pass, and task commit is [hash]. Full gates deferred until story completion. Ready for task [ID+1]: [title]?"*
 > - Wait for explicit confirmation before implementing the next task.
-> - After the final task, or when explicitly asked to finalize, run the full suite and quality gates once, then commit the story only when authorized.
+> - After the final task, or when explicitly asked to finalize, run the full suite and quality gates once. Do not create a bundle commit; task commits already exist.
 >
 > **Never implement multiple tasks in a single response.** If the tech-breakdown has 8 tasks, this skill runs 8 times — one task per run.
 
@@ -203,17 +203,20 @@ For any non-trivial task, follow this sequence. Do not skip steps.
 9. Update component specs               → for each domain component created or changed,
       create/update `docs/components/<component>.md` (see `base-guidelines` §7).
 10. Run the smallest directly affected Go test package(s) for this task.
-11. If story tasks remain, STOP and report the task complete. Do not run full tests,
-      quality gates, or commit. Wait for confirmation before the next task.
-12. After the final story task, or when explicitly asked to finalize, run once:
+11. Load `git`, stage only files changed for this task, commit the task, and verify
+      with `git status`. The user's request to implement an explicit task or workflow
+      authorizes per-task commits unless they say not to commit.
+      One explicit user task outside a workflow, or one tech-breakdown task inside a
+      workflow, equals one commit.
+12. If story tasks remain, STOP and report the task complete. Do not run full tests
+      or quality gates. Wait for confirmation before the next task.
+13. After the final story task, or when explicitly asked to finalize, run once:
       a. `rtk goimports -w backend/`
       b. `rtk go test ./...`
       c. `rtk go vet ./...`
       d. `rtk golangci-lint run ./...`
       e. `rtk govulncheck ./...`
     Fix findings yourself and rerun only failed checks.
-13. Commit the complete story only when explicitly authorized. Load `git`, stage only
-      story files, commit once, and verify with `git status`.
 14. STOP and report finalization status, files changed, and commit status.
 ```
 

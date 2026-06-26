@@ -35,10 +35,11 @@ archi(replace-legacy-auth): record ADR-003 for session token storage
 
 ## Commit Granularity
 
-**One commit per tech-breakdown task.** When working from a tech breakdown
-(`docs/feature/<slug>/tech-breakdown-*.md`), each task ID (e.g. S2-BE-1,
-S7-BE-4) gets its own commit. Never bundle multiple tasks into one commit,
-even if they belong to the same story. This makes review, revert, and
+**One commit per task.** A task is either a single explicit developer request
+from the user outside the workflow framework, or one task ID from a tech
+breakdown (`docs/feature/<slug>/tech-breakdown-*.md`). Each task ID (e.g.
+S2-BE-1, S7-BE-4) gets its own commit. Never bundle multiple tasks into one
+commit, even if they belong to the same story. This makes review, revert, and
 bisect possible at the task level.
 
 ## How to Commit

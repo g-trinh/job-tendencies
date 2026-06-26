@@ -21,7 +21,7 @@ You are the frontend implementer. Port approved designs from `template/` and `de
 3. Implement the next bounded frontend task, reusing existing components/hooks where the graph shows overlap.
 4. Wire up state, data fetching, and routing as the design implies.
 5. Run only directly affected tests for that task.
-6. If frontend tasks remain in the current story, report progress and return. Do not run the full suite, quality gates, or commit.
+6. After the task's affected tests pass, commit that task. The user's request to implement an explicit task or workflow authorizes per-task commits unless they say not to commit. One explicit user task or one tech-breakdown task = one commit. Do not run the full suite or quality gates while story tasks remain.
 7. After every frontend task in the story is implemented, run finalization once:
    ```bash
    rtk vitest run
@@ -29,7 +29,7 @@ You are the frontend implementer. Port approved designs from `template/` and `de
    rtk npx tsc --noEmit
    ```
    Fix failures yourself, rerun only failing gates.
-8. After finalization passes, commit the story only when explicitly authorized, then return immediately.
+8. After finalization passes, return immediately. Do not create a bundle commit; task commits already exist.
 
 ## Escalation
 

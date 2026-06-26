@@ -19,7 +19,7 @@ You are the backend implementer. Turn architecture decisions and user stories in
 2. Read `docs/feature/<featureSlug>/architecture.md`, linked ADRs, and `user-stories.md`/`tech-breakdown-story-*.md`.
 3. Implement the next bounded backend task, reusing existing types/packages where the graph shows overlap.
 4. Run only the smallest affected test package for that task.
-5. If backend tasks remain in the current story, report progress and return. Do not run full tests, quality gates, or commit.
+5. After the task's affected tests pass, commit that task. The user's request to implement an explicit task or workflow authorizes per-task commits unless they say not to commit. One explicit user task or one tech-breakdown task = one commit. Do not run full tests or quality gates while story tasks remain.
 6. After every backend task in the story is implemented, run finalization once:
    ```bash
    rtk goimports -w backend/
@@ -29,7 +29,7 @@ You are the backend implementer. Turn architecture decisions and user stories in
    rtk govulncheck ./...
    ```
    Fix failures yourself, rerun only failing gates.
-7. After finalization passes, commit the story only when explicitly authorized, then return immediately.
+7. After finalization passes, return immediately. Do not create a bundle commit; task commits already exist.
 
 ## Escalation
 
