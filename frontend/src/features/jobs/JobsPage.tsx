@@ -16,31 +16,27 @@ function formatSalary(min: number | null, max: number | null): string {
 
 /**
  * Presentational card for a single job. The heading links to the original
- * posting (first source). `title`/`company`/`location` are optional today, so
- * the link falls back to a generic label and the company line is conditional.
+ * posting via the always-populated `url`; `company`/`location` may be empty for
+ * HTML-fallback boards, so the company line is conditional. Enum fields are
+ * skipped when empty (undetermined) rather than rendering a raw key.
  */
 function JobCard({ job }: { job: JobSummary }) {
-  const postingUrl = job.sources[0]?.sourceUrl;
   const companyLine = [job.company, job.location].filter(Boolean).join(' — ');
 
   return (
     <li>
       <article>
         <h2>
-          {postingUrl !== undefined ? (
-            <a href={postingUrl} target="_blank" rel="noreferrer">
-              {job.title ?? "Voir l'offre"}
-            </a>
-          ) : (
-            (job.title ?? 'Offre')
-          )}
+          <a href={job.url} target="_blank" rel="noreferrer">
+            {job.title || "Voir l'offre"}
+          </a>
         </h2>
         {companyLine !== '' && <p>{companyLine}</p>}
         <ul aria-label="Caractéristiques">
-          {job.contractType !== null && <li>{t(`job.contract.${job.contractType}`)}</li>}
-          {job.remotePolicy !== null && <li>{t(`job.remote.${job.remotePolicy}`)}</li>}
-          {job.seniority !== null && <li>{t(`job.seniority.${job.seniority}`)}</li>}
-          {job.workingDays !== null && <li>{t(`job.working_days.${job.workingDays}`)}</li>}
+          {job.contractType && <li>{t(`job.contract.${job.contractType}`)}</li>}
+          {job.remotePolicy && <li>{t(`job.remote.${job.remotePolicy}`)}</li>}
+          {job.seniority && <li>{t(`job.seniority.${job.seniority}`)}</li>}
+          {job.workingDays && <li>{t(`job.working_days.${job.workingDays}`)}</li>}
         </ul>
         <p>{formatSalary(job.salaryMin, job.salaryMax)}</p>
         {job.skills.length > 0 && (

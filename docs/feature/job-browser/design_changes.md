@@ -54,3 +54,19 @@ Enum string values mirror the backend `kernel` package exactly
   shows dates; `be-phase2` will omit them from the response for now.
 - `GET /api/active-profile` confirmed as `{ id, name, search_keywords[], location }`;
   the FE reads `.id` only.
+
+### Final contract — architect ruling implemented (2026-06-27)
+
+`be-phase2` landed the final `GET /api/jobs` contract; the FE was finalized to match:
+
+- **Identity fields `title`/`company`/`location`/`url` are guaranteed on every row**,
+  captured verbatim from the search card during scraping (NOT LLM-extracted), so a
+  low-understanding extraction still yields a browsable, linkable card. The posting link
+  now uses the top-level `url`; the heading still falls back to "Voir l'offre" defensively.
+  `company`/`location` may be empty for HTML-fallback boards and render conditionally.
+- **Enum fields can be the empty string `""`** (not `null`) when the LLM could not
+  determine them. The card now skips empty enums via a truthiness guard instead of
+  rendering the raw i18n key — covered by a regression test.
+- **`sources`** (array of `{ board_id, raw_listing_id, source_url }`) is no longer needed
+  by the FE for the posting link (top-level `url` supersedes it); board-name display is
+  deferred to Phase 3, so `sources` is dropped from the FE types for now.

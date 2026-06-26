@@ -50,8 +50,12 @@ describe('JobsPage', () => {
       'href',
       'https://www.welcometothejungle.com/fr/companies/alan/jobs/senior-backend-engineer',
     );
-    // The second job has no title yet, so its posting link uses the fallback label.
-    expect(screen.getByRole('link', { name: "Voir l'offre" })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Développeur Full-Stack' }),
+    ).toHaveAttribute(
+      'href',
+      'https://www.welcometothejungle.com/fr/companies/doctolib/jobs/developpeur-full-stack',
+    );
   });
 
   // AC: structured enums shown in French
@@ -65,9 +69,19 @@ describe('JobsPage', () => {
     expect(screen.getByText('Hybride')).toBeInTheDocument();
     expect(screen.getByText('Senior')).toBeInTheDocument();
     expect(screen.getByText('Temps plein')).toBeInTheDocument();
-    expect(screen.getByText('Freelance')).toBeInTheDocument();
     expect(screen.getByText('Télétravail complet')).toBeInTheDocument();
     expect(screen.getByText('Semaine de 4 jours')).toBeInTheDocument();
+  });
+
+  // The second job's contract type is undetermined ("") — it must be omitted,
+  // never rendered as the raw i18n key.
+  it('omits an enum field that the extraction could not determine', async () => {
+    mock.onGet('/jobs').reply(200, jobsFixture);
+
+    renderJobsPage();
+
+    await screen.findByRole('link', { name: 'Développeur Full-Stack' });
+    expect(screen.queryByText(/job\.contract\./)).not.toBeInTheDocument();
   });
 
   // AC: the list is scoped to the active profile via X-Active-Profile
