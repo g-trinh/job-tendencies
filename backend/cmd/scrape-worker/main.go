@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -40,14 +41,12 @@ func main() {
 	slog.SetDefault(logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	pool, closePool, err := db.NewPool(ctx, cfg.CloudSQLInstance, cfg.DBIAMUser, cfg.DBName)
 	if err != nil {
 		slog.Error("connecting to database", "err", err)
 		os.Exit(1)
 	}
-	defer closePool()
 
 	rawStore, err := blobstore.NewGCSBlobStore(ctx, cfg.GCSRawBucket)
 	if err != nil {
@@ -60,6 +59,11 @@ func main() {
 		slog.Error("creating extract publisher", "err", err)
 		os.Exit(1)
 	}
+
+	// Register cleanup only after all fatal startup steps succeed so the os.Exit
+	// branches above run with no pending defers.
+	defer stop()
+	defer closePool()
 	defer extractPublisher.Stop()
 
 	boardSvc := appboards.New(infraboards.NewRepository(pool))
@@ -120,7 +124,7 @@ type adapterSource struct {
 func (a adapterSource) ApprovedBoardAdapters(ctx context.Context) ([]appscraping.BoardAdapter, error) {
 	adapters, err := a.boards.ApprovedAdapters(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading approved adapters: %w", err)
 	}
 	out := make([]appscraping.BoardAdapter, 0, len(adapters))
 	for _, ad := range adapters {
@@ -137,7 +141,7 @@ type targetSource struct {
 func (t targetSource) ActiveTarget(ctx context.Context) (appscraping.ScrapeTarget, error) {
 	p, err := t.profiles.ActiveProfile(ctx)
 	if err != nil {
-		return appscraping.ScrapeTarget{}, err
+		return appscraping.ScrapeTarget{}, fmt.Errorf("resolving active target: %w", err)
 	}
 	return appscraping.ScrapeTarget{
 		ProfileID: p.ID,

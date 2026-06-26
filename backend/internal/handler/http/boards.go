@@ -25,10 +25,10 @@ type boardResponse struct {
 
 // adapterResponse is the JSON shape of a board's approved adapter.
 type adapterResponse struct {
-	ID        string         `json:"id"`
-	Status    string         `json:"status"`
-	FetchMode string         `json:"fetch_mode"`
-	Version   int            `json:"version"`
+	ID        string          `json:"id"`
+	Status    string          `json:"status"`
+	FetchMode string          `json:"fetch_mode"`
+	Version   int             `json:"version"`
 	Spec      llm.AdapterSpec `json:"spec"`
 }
 

@@ -34,20 +34,23 @@ func main() {
 	slog.SetDefault(logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	pool, closePool, err := db.NewPool(ctx, cfg.CloudSQLInstance, cfg.DBIAMUser, cfg.DBName)
 	if err != nil {
 		slog.Error("connecting to database", "err", err)
 		os.Exit(1)
 	}
-	defer closePool()
 
 	rawStore, err := blobstore.NewGCSBlobStore(ctx, cfg.GCSRawBucket)
 	if err != nil {
 		slog.Error("creating gcs blobstore", "err", err)
 		os.Exit(1)
 	}
+
+	// Register cleanup only after all fatal startup steps succeed so the os.Exit
+	// branches above run with no pending defers.
+	defer stop()
+	defer closePool()
 
 	extractor := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
 

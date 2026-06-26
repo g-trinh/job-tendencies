@@ -161,7 +161,10 @@ func (r *Repository) sourcesByJob(ctx context.Context, id kernel.JobID) ([]jobs.
 			SourceURL:    sourceURL,
 		})
 	}
-	return sources, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating job source rows: %w", err)
+	}
+	return sources, nil
 }
 
 // rowScanner is satisfied by both pgx.Row and pgx.Rows.
@@ -185,7 +188,7 @@ func scanJob(row rowScanner) (jobs.Job, error) {
 		&job.Skills, &remotePolicy, &job.OfficeDays, &contractType,
 		&workingDays, &job.SalaryMin, &job.SalaryMax, &seniority,
 		&confidence, &understanding, &job.FirstSeen, &job.LastSeen); err != nil {
-		return jobs.Job{}, err
+		return jobs.Job{}, fmt.Errorf("scanning job row: %w", err)
 	}
 
 	job.ID = kernel.JobID(id)
@@ -206,6 +209,6 @@ func scanJob(row rowScanner) (jobs.Job, error) {
 
 // Ensure the repository satisfies the app-layer ports at compile time.
 var (
-	_ appjobs.Repository       = (*Repository)(nil)
+	_ appjobs.Repository      = (*Repository)(nil)
 	_ appextraction.JobWriter = (*Repository)(nil)
 )

@@ -162,7 +162,7 @@ func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target S
 
 	for pagesScanned := 0; pagesScanned < adapter.Spec.Incremental.SafetyMaxPages; pagesScanned++ {
 		if err := ctx.Err(); err != nil {
-			return err
+			return fmt.Errorf("scrape cancelled: %w", err)
 		}
 
 		cards, err := s.fetcher.FetchPage(ctx, adapter.Spec, target, page)

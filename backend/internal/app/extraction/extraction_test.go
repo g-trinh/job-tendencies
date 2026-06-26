@@ -15,9 +15,9 @@ func TestBuildJob(t *testing.T) {
 	salary := int64(55000)
 
 	extracted := &llm.ExtractedListing{
-		Skills:       llm.ExtractedField[[]string]{Value: []string{"go", "sql"}, Confidence: 90},
-		RemotePolicy: llm.ExtractedField[kernel.RemotePolicy]{Value: kernel.RemotePolicyHybrid, Confidence: 80},
-		SalaryMin:    llm.ExtractedField[*int64]{Value: &salary, Confidence: 70},
+		Skills:        llm.ExtractedField[[]string]{Value: []string{"go", "sql"}, Confidence: 90},
+		RemotePolicy:  llm.ExtractedField[kernel.RemotePolicy]{Value: kernel.RemotePolicyHybrid, Confidence: 80},
+		SalaryMin:     llm.ExtractedField[*int64]{Value: &salary, Confidence: 70},
 		Seniority:     llm.ExtractedField[kernel.Seniority]{Value: kernel.SenioritySenior, Confidence: 60},
 		Understanding: 88,
 	}

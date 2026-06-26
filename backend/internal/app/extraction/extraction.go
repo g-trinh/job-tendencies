@@ -11,12 +11,12 @@ import (
 	"log/slog"
 	"time"
 
+	appscraping "github.com/g-trinh/job-tendencies/internal/app/scraping"
 	"github.com/g-trinh/job-tendencies/internal/domain/blobstore"
 	"github.com/g-trinh/job-tendencies/internal/domain/jobs"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 	"github.com/g-trinh/job-tendencies/internal/domain/llm"
 	"github.com/g-trinh/job-tendencies/internal/domain/messaging"
-	appscraping "github.com/g-trinh/job-tendencies/internal/app/scraping"
 )
 
 // RawListingRef is the extraction context's view of a captured raw listing: enough to
