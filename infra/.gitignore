@@ -1,0 +1,9 @@
+# OpenTofu / Terraform local state, provider binaries, saved plans
+.terraform/
+.terraform.tfstate.lock.info
+*.tfstate
+*.tfstate.*
+tfplan*
+crash.log
+crash.*.log
+# Lock file IS committed (.terraform.lock.hcl) — pins provider versions.
