@@ -1,12 +1,7 @@
-// Command extract-worker is the Job Tendencies extraction + scoring worker. It
-// runs on Cloud Run and receives listing.extract Pub/Sub push messages
-// (OIDC-authenticated). It loads raw listings from GCS, sends them to the Claude
-// LLM for structured extraction, deduplicates against existing jobs, upserts
-// contacts, and triggers scoring.
-//
-// Required env vars for push handling:
-//   - WORKER_SERVICE_URL — this service's Cloud Run URL (used as OIDC audience).
-//   - PUBSUB_PUSH_SA     — push-auth SA email (pubsub-push-dev@…).
+// Command extract-worker is the Job Tendencies extraction worker. It runs on Cloud Run
+// and receives listing.extract Pub/Sub push messages (OIDC-authenticated). It loads raw
+// listings from GCS, sends them to Claude for structured extraction, and creates one job
+// per listing. Phase 2 skips dedup/merge, contacts and scoring.
 package main
 
 import (
@@ -18,9 +13,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/g-trinh/job-tendencies/internal/app/extraction"
+	appextraction "github.com/g-trinh/job-tendencies/internal/app/extraction"
 	"github.com/g-trinh/job-tendencies/internal/config"
 	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
+	"github.com/g-trinh/job-tendencies/internal/infra/blobstore"
+	"github.com/g-trinh/job-tendencies/internal/infra/db"
+	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
+	infrallm "github.com/g-trinh/job-tendencies/internal/infra/llm"
+	infrascraping "github.com/g-trinh/job-tendencies/internal/infra/scraping"
 )
 
 func main() {
@@ -33,16 +33,36 @@ func main() {
 	logger := newLogger(cfg.LogLevel)
 	slog.SetDefault(logger)
 
-	// Build the router with base middleware.
-	r := handler.NewRouter(logger)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
 
-	// Health probes — /healthz is reserved by Cloud Run ingress; /livez is reachable.
+	pool, closePool, err := db.NewPool(ctx, cfg.CloudSQLInstance, cfg.DBIAMUser, cfg.DBName)
+	if err != nil {
+		slog.Error("connecting to database", "err", err)
+		os.Exit(1)
+	}
+	defer closePool()
+
+	rawStore, err := blobstore.NewGCSBlobStore(ctx, cfg.GCSRawBucket)
+	if err != nil {
+		slog.Error("creating gcs blobstore", "err", err)
+		os.Exit(1)
+	}
+
+	extractor := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
+
+	extractionSvc := appextraction.New(
+		infrascraping.NewRawListingRepository(pool),
+		rawStore,
+		extractor,
+		infrajobs.NewRepository(pool),
+		logger,
+	)
+
+	r := handler.NewRouter(logger)
 	r.Get("/healthz", handleHealthz)
 	r.Get("/livez", handleHealthz)
 
-	// Pub/Sub push route — protected by OIDC verification.
-	// Phase 1 stub: extraction.Service logs the event and returns nil.
-	extractionSvc := extraction.New(logger)
 	oidcMiddleware := handler.OIDCMiddleware(
 		handler.GoogleTokenVerifier{},
 		cfg.WorkerServiceURL,
@@ -55,9 +75,6 @@ func main() {
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	go func() {
 		slog.Info("extract-worker starting", "addr", srv.Addr)
