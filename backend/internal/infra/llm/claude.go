@@ -50,102 +50,101 @@ Given a board URL and an example API response or HTML page, generate a declarati
 The spec must be pure data (JSONPath expressions, CSS selectors, URL templates) — never code.
 Output must be valid JSON matching the AdapterSpec schema exactly.`
 
-// extractionSchema is the JSON schema passed to Claude as a tool, defining the shape
-// of the ExtractedListing. Sent with a cache-control breakpoint alongside the system prompt.
-var extractionSchema = map[string]interface{}{
-	"type": "object",
-	"properties": map[string]interface{}{
-		"skills": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+// extractionProperties is the JSON Schema "properties" map for the extraction tool.
+// The surrounding object wrapper (type, required) is provided via ToolInputSchemaParam fields.
+var extractionProperties = map[string]interface{}{
+	"skills": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"remote_policy": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"type": "string", "enum": []string{"on_site", "hybrid", "full_remote"}},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+		"required": []string{"value", "confidence"},
+	},
+	"remote_policy": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"type": "string", "enum": []string{"on_site", "hybrid", "full_remote"}},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"office_days": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 7},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+		"required": []string{"value", "confidence"},
+	},
+	"office_days": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 7},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"contract_type": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"type": "string", "enum": []string{"cdi", "cdd", "freelance", "interim"}},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+		"required": []string{"value", "confidence"},
+	},
+	"contract_type": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"type": "string", "enum": []string{"cdi", "cdd", "freelance", "interim"}},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"working_days": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"type": "string", "enum": []string{"full_time", "part_time", "four_day"}},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+		"required": []string{"value", "confidence"},
+	},
+	"working_days": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"type": "string", "enum": []string{"full_time", "part_time", "four_day"}},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"salary_min": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"oneOf": []interface{}{map[string]interface{}{"type": "integer"}, map[string]interface{}{"type": "null"}}},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+		"required": []string{"value", "confidence"},
+	},
+	"salary_min": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"oneOf": []interface{}{map[string]interface{}{"type": "integer"}, map[string]interface{}{"type": "null"}}},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"salary_max": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"oneOf": []interface{}{map[string]interface{}{"type": "integer"}, map[string]interface{}{"type": "null"}}},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+		"required": []string{"value", "confidence"},
+	},
+	"salary_max": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"oneOf": []interface{}{map[string]interface{}{"type": "integer"}, map[string]interface{}{"type": "null"}}},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"seniority": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value":      map[string]interface{}{"type": "string", "enum": []string{"entry", "mid", "senior", "lead", "exec"}},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
-			},
-			"required": []string{"value", "confidence"},
+		"required": []string{"value", "confidence"},
+	},
+	"seniority": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value":      map[string]interface{}{"type": "string", "enum": []string{"entry", "mid", "senior", "lead", "exec"}},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"recruiter": map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"value": map[string]interface{}{
-					"oneOf": []interface{}{
-						map[string]interface{}{
-							"type": "object",
-							"properties": map[string]interface{}{
-								"name":         map[string]interface{}{"type": "string"},
-								"email":        map[string]interface{}{"type": "string"},
-								"linkedin_url": map[string]interface{}{"type": "string"},
-								"phone":        map[string]interface{}{"type": "string"},
-							},
+		"required": []string{"value", "confidence"},
+	},
+	"recruiter": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"value": map[string]interface{}{
+				"oneOf": []interface{}{
+					map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"name":         map[string]interface{}{"type": "string"},
+							"email":        map[string]interface{}{"type": "string"},
+							"linkedin_url": map[string]interface{}{"type": "string"},
+							"phone":        map[string]interface{}{"type": "string"},
 						},
-						map[string]interface{}{"type": "null"},
 					},
+					map[string]interface{}{"type": "null"},
 				},
-				"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 			},
-			"required": []string{"value", "confidence"},
+			"confidence": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
 		},
-		"understanding": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
+		"required": []string{"value", "confidence"},
 	},
-	"required": []string{
-		"skills", "remote_policy", "office_days", "contract_type", "working_days",
-		"salary_min", "salary_max", "seniority", "recruiter", "understanding",
-	},
+	"understanding": map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 100},
+}
+
+// extractionRequired is the list of required fields for the extraction schema.
+var extractionRequired = []string{
+	"skills", "remote_policy", "office_days", "contract_type", "working_days",
+	"salary_min", "salary_max", "seniority", "recruiter", "understanding",
 }
 
 // Client implements both domain/llm.AdapterGenerator and domain/llm.ListingExtractor
@@ -174,11 +173,7 @@ func New(apiKey string, modelID string, logger *slog.Logger) *Client {
 // and an example page response. The result is data only — it must be human-reviewed
 // and approved before the scraper evaluates it.
 func (c *Client) GenerateAdapter(ctx context.Context, boardURL string, exampleResponse string) (*domainllm.AdapterSpec, error) {
-	schemaBytes, err := json.Marshal(adapterSpecSchema())
-	if err != nil {
-		return nil, fmt.Errorf("marshalling adapter schema: %w", err)
-	}
-
+	spec := adapterSpecSchema()
 	userMsg := fmt.Sprintf("Board URL: %s\n\nExample response:\n%s", boardURL, exampleResponse)
 
 	msg, err := c.api.Messages.New(ctx, anthropic.MessageNewParams{
@@ -192,7 +187,10 @@ func (c *Client) GenerateAdapter(ctx context.Context, boardURL string, exampleRe
 		},
 		Tools: []anthropic.ToolUnionParam{
 			anthropic.ToolUnionParamOfTool(
-				anthropic.ToolInputSchemaParam{Properties: json.RawMessage(schemaBytes)},
+				anthropic.ToolInputSchemaParam{
+					Properties: spec.properties,
+					Required:   spec.required,
+				},
 				"generate_adapter",
 			),
 		},
@@ -210,13 +208,13 @@ func (c *Client) GenerateAdapter(ctx context.Context, boardURL string, exampleRe
 		return nil, fmt.Errorf("extracting adapter tool input: %w", err)
 	}
 
-	var spec domainllm.AdapterSpec
-	if err := json.Unmarshal(raw, &spec); err != nil {
+	var adapterSpec domainllm.AdapterSpec
+	if err := json.Unmarshal(raw, &adapterSpec); err != nil {
 		return nil, fmt.Errorf("unmarshalling adapter spec: %w", err)
 	}
 
 	c.logger.InfoContext(ctx, "adapter generated", "board_url", boardURL)
-	return &spec, nil
+	return &adapterSpec, nil
 }
 
 // Extract calls Claude to extract structured fields from a raw job listing payload.
@@ -226,11 +224,6 @@ func (c *Client) GenerateAdapter(ctx context.Context, boardURL string, exampleRe
 // The stable system prompt and extraction schema are sent with cache-control breakpoints
 // so they are cached across repeated calls, reducing cost on bulk extraction runs.
 func (c *Client) Extract(ctx context.Context, raw string) (*domainllm.ExtractedListing, error) {
-	schemaBytes, err := json.Marshal(extractionSchema)
-	if err != nil {
-		return nil, fmt.Errorf("marshalling extraction schema: %w", err)
-	}
-
 	msg, err := c.api.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     c.modelID,
 		MaxTokens: 2048,
@@ -243,9 +236,12 @@ func (c *Client) Extract(ctx context.Context, raw string) (*domainllm.ExtractedL
 		Tools: []anthropic.ToolUnionParam{
 			{
 				OfTool: &anthropic.ToolParam{
-					Name:         "extract_listing",
-					Description:  anthropic.String("Extract structured fields from a job listing"),
-					InputSchema:  anthropic.ToolInputSchemaParam{Properties: json.RawMessage(schemaBytes)},
+					Name:        "extract_listing",
+					Description: anthropic.String("Extract structured fields from a job listing"),
+					InputSchema: anthropic.ToolInputSchemaParam{
+						Properties: extractionProperties,
+						Required:   extractionRequired,
+					},
 					CacheControl: anthropic.CacheControlEphemeralParam{},
 				},
 			},
@@ -411,12 +407,18 @@ func parseExtractedListing(raw json.RawMessage) (*domainllm.ExtractedListing, er
 	return listing, nil
 }
 
-// adapterSpecSchema returns the JSON schema for the AdapterSpec, used as the tool
-// input schema for adapter generation.
-func adapterSpecSchema() map[string]interface{} {
-	return map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
+// adapterSchema holds the separated properties and required fields for the
+// adapter generation tool schema, matching what ToolInputSchemaParam expects.
+type adapterSchema struct {
+	properties map[string]interface{}
+	required   []string
+}
+
+// adapterSpecSchema returns the properties and required fields for the AdapterSpec
+// tool schema. The type:"object" wrapper is handled by ToolInputSchemaParam.
+func adapterSpecSchema() adapterSchema {
+	return adapterSchema{
+		properties: map[string]interface{}{
 			"board":      map[string]interface{}{"type": "string"},
 			"fetch_mode": map[string]interface{}{"type": "string", "enum": []string{"json_api", "html"}},
 			"search": map[string]interface{}{
@@ -450,6 +452,6 @@ func adapterSpecSchema() map[string]interface{} {
 				"required": []string{"cursor_field", "overlap_buffer", "safety_max_pages"},
 			},
 		},
-		"required": []string{"board", "fetch_mode", "search", "listing", "incremental"},
+		required: []string{"board", "fetch_mode", "search", "listing", "incremental"},
 	}
 }
