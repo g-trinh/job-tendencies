@@ -56,18 +56,20 @@ erDiagram
 - **scrape_run_board** — per-board progress within a run. `run_id`, `board_id`, `status`,
   counts, `error`.
 - **raw_listing** — one captured listing, stored verbatim. `id`, `run_board_id`,
-  `board_id`, `source_url`, `raw_ref` (GCS path), `posted_at`, `content_hash`
-  (idempotency/dedup), `extraction_status`.
+  `board_id`, `source_url`, `title`, `company`, `location`, `raw_ref` (GCS path),
+  `posted_at`, `content_hash` (idempotency/dedup), `extraction_status`. `title`/`company`/
+  `location` are captured verbatim off the search card (not LLM-extracted).
 - **scrape_high_water_mark** — incremental cursor per `(board_id, profile_id)`.
   `cursor_posted_at` (most recent `posted_at` seen last run), `updated_at`. Drives the
   `posted_at`-based incremental stop condition. PK `(board_id, profile_id)`.
 
 ### Jobs
-- **job** — deduped structured listing (aggregate root). Structured fields: `skills[]`,
-  `remote_policy`, `office_days`, `contract_type`, `working_days`, `salary_min/max`,
-  `seniority`. Plus `field_confidence` (JSON, per-field 0–100), `understanding_score`
-  (0–100), `fingerprint` (cross-board dedup key), `contact_id`, `first_seen`, `last_seen`,
-  `expired_at`.
+- **job** — deduped structured listing (aggregate root). Identity fields (card-captured
+  verbatim, not extracted): `title`, `company`, `location`, `url`. Structured fields:
+  `skills[]`, `remote_policy`, `office_days`, `contract_type`, `working_days`,
+  `salary_min/max`, `seniority`. Plus `field_confidence` (JSON, per-field 0–100),
+  `understanding_score` (0–100), `fingerprint` (cross-board dedup key, deterministic over
+  the identity fields), `contact_id`, `first_seen`, `last_seen`, `expired_at`.
 - **job_source** — the "found on: WTTJ, Indeed" links. `job_id`, `raw_listing_id`,
   `board_id` (many sources → one job).
 - **job_score** — fit score per `(job_id, profile_id)`. `passes_dealbreakers` (bool gate),

@@ -29,6 +29,9 @@ search:
     listing_url: "$.url"
     posted_at:   "$.published_at"         # captured board-side, no detail fetch needed
     external_id: "$.id"                    # stable id for dedup when present
+    title:    "$.name"                     # identity fields, captured verbatim off the card
+    company:  "$.organization.name"
+    location: "$.office.city"
 listing:
   fetch: detail_page          # or: use_search_payload when search returns the full listing
   raw_capture: full_response  # raw JSON/HTML stored verbatim in GCS, never translated
@@ -87,6 +90,9 @@ scrapeBoardForProfile(board, profile):
 Each `listing.extract` message → extract-worker loads the raw payload from GCS and calls
 Claude through the `llm` port (`internal/domain/llm`, implemented in `internal/infra/llm`).
 
+- **Identity fields not extracted**: `title`/`company`/`location`/`url` are captured
+  verbatim off the search card (§1 `result_fields`) and carried on `raw_listing` → `job`;
+  the LLM only produces the structured/enum fields below.
 - **Structured output**: a JSON schema where every field is `{value, confidence:0..100}`
   plus a top-level `understanding:0..100` (overall parse quality). Confidence/understanding
   are produced by the model and stored on `job.field_confidence` / `job.understanding_score`.
