@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -26,11 +27,12 @@ const defaultFetchTimeout = 20 * time.Second
 // AdapterSpec. It satisfies app/scraping.SearchFetcher.
 type Fetcher struct {
 	client *http.Client
+	logger *slog.Logger
 }
 
 // NewFetcher constructs a json_api Fetcher with a bounded HTTP timeout.
-func NewFetcher() *Fetcher {
-	return &Fetcher{client: &http.Client{Timeout: defaultFetchTimeout}}
+func NewFetcher(logger *slog.Logger) *Fetcher {
+	return &Fetcher{client: &http.Client{Timeout: defaultFetchTimeout}, logger: logger}
 }
 
 // FetchPage requests one search page and returns its result cards. For adapters with
@@ -48,6 +50,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, spec llm.AdapterSpec, target ap
 	if err != nil {
 		return nil, fmt.Errorf("parsing search cards: %w", err)
 	}
+	cards = f.dropCardsWithoutURL(ctx, cards)
 
 	if spec.Listing.Fetch == llm.ListingFetchDetailPage {
 		for i := range cards {
@@ -59,6 +62,22 @@ func (f *Fetcher) FetchPage(ctx context.Context, spec llm.AdapterSpec, target ap
 		}
 	}
 	return cards, nil
+}
+
+// dropCardsWithoutURL removes cards whose listing URL is empty. An empty URL would flow
+// through to the job browser as a broken link, and would fail the detail-page fetch, so
+// such cards are skipped and logged rather than captured.
+func (f *Fetcher) dropCardsWithoutURL(ctx context.Context, cards []appscraping.Card) []appscraping.Card {
+	kept := cards[:0]
+	for _, c := range cards {
+		if c.ListingURL == "" {
+			f.logger.WarnContext(ctx, "skipping search card with empty listing url",
+				"title", c.Title, "company", c.Company)
+			continue
+		}
+		kept = append(kept, c)
+	}
+	return kept
 }
 
 // get performs a GET and returns the response body, failing on non-2xx status.

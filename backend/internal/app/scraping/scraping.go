@@ -190,7 +190,12 @@ func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target S
 func (s *Service) captureCard(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, card Card) error {
 	contentHash := hashContent(card.Raw)
 
-	seen, err := s.rawRepo.ExistsByContentHash(ctx, boardID, contentHash)
+	// The exists-check and Save below are not a single transaction, so two concurrent
+	// crawls could both pass the check and try to Save. The scrape-worker runs at Cloud
+	// Run concurrency=1, max-instances=1 (ADR-003), so that race cannot occur today; the
+	// (board_id, profile_id, content_hash) unique index (migration 00007) is the backstop
+	// that makes a racing Save fail rather than insert a duplicate.
+	seen, err := s.rawRepo.ExistsByContentHash(ctx, boardID, profileID, contentHash)
 	if err != nil {
 		return fmt.Errorf("checking content hash: %w", err)
 	}

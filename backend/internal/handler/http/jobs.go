@@ -48,11 +48,9 @@ type jobResponse struct {
 // ListJobs handles GET /api/jobs, returning jobs scoped to the active profile.
 func ListJobs(reader JobReader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		profileID, ok := ActiveProfileID(r)
-		if !ok {
-			RespondError(w, r, &kernel.ValidationError{Field: activeProfileHeader, Message: "header is required"})
-			return
-		}
+		// requireActiveProfile (mounted on every scoped route) has already validated the
+		// X-Active-Profile header and stored the id in context; read it back here.
+		profileID, _ := ActiveProfileID(r)
 
 		list, err := reader.ListJobs(r.Context(), profileID)
 		if err != nil {
@@ -71,11 +69,9 @@ func ListJobs(reader JobReader) http.HandlerFunc {
 // GetJob handles GET /api/jobs/{id}, returning one job scoped to the active profile.
 func GetJob(reader JobReader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		profileID, ok := ActiveProfileID(r)
-		if !ok {
-			RespondError(w, r, &kernel.ValidationError{Field: activeProfileHeader, Message: "header is required"})
-			return
-		}
+		// requireActiveProfile (mounted on every scoped route) has already validated the
+		// X-Active-Profile header and stored the id in context; read it back here.
+		profileID, _ := ActiveProfileID(r)
 
 		id := kernel.JobID(chi.URLParam(r, "id"))
 		job, err := reader.GetJob(r.Context(), profileID, id)

@@ -24,11 +24,12 @@ func NewRawListingRepository(pool *pgxpool.Pool) *RawListingRepository {
 	return &RawListingRepository{pool: pool}
 }
 
-// ExistsByContentHash reports whether a raw listing with this hash exists for the board.
-func (r *RawListingRepository) ExistsByContentHash(ctx context.Context, boardID kernel.BoardID, contentHash string) (bool, error) {
-	const query = `SELECT EXISTS(SELECT 1 FROM raw_listing WHERE board_id = $1 AND content_hash = $2)`
+// ExistsByContentHash reports whether a raw listing with this hash exists for the
+// (board, profile). Dedup is scoped per profile (migration 00007).
+func (r *RawListingRepository) ExistsByContentHash(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, contentHash string) (bool, error) {
+	const query = `SELECT EXISTS(SELECT 1 FROM raw_listing WHERE board_id = $1 AND profile_id = $2 AND content_hash = $3)`
 	var exists bool
-	if err := r.pool.QueryRow(ctx, query, string(boardID), contentHash).Scan(&exists); err != nil {
+	if err := r.pool.QueryRow(ctx, query, string(boardID), string(profileID), contentHash).Scan(&exists); err != nil {
 		return false, fmt.Errorf("checking raw listing content hash: %w", err)
 	}
 	return exists, nil

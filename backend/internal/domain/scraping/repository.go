@@ -12,8 +12,9 @@ import (
 // ADR-005 the aggregate repository interface lives in the domain.
 type RawListingRepository interface {
 	// ExistsByContentHash reports whether a raw listing with this hash already exists
-	// for the board.
-	ExistsByContentHash(ctx context.Context, boardID kernel.BoardID, contentHash string) (bool, error)
+	// for the (board, profile). Dedup is scoped per profile because two profiles may
+	// independently capture the same listing (see migration 00007).
+	ExistsByContentHash(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, contentHash string) (bool, error)
 	// Save stores a raw listing and returns its assigned id.
 	Save(ctx context.Context, listing RawListing) (kernel.RawListingID, error)
 }

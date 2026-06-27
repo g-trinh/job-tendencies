@@ -61,7 +61,7 @@ type fakeRawRepo struct {
 	saved int
 }
 
-func (r *fakeRawRepo) ExistsByContentHash(_ context.Context, _ kernel.BoardID, hash string) (bool, error) {
+func (r *fakeRawRepo) ExistsByContentHash(_ context.Context, _ kernel.BoardID, _ kernel.ProfileID, hash string) (bool, error) {
 	return r.seen[hash], nil
 }
 

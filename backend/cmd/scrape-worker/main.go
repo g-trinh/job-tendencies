@@ -70,9 +70,9 @@ func main() {
 	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
 
 	scrapingSvc := appscraping.New(
-		adapterSource{boards: boardSvc},
+		adapterSource{boards: boardSvc, logger: logger},
 		targetSource{profiles: profileSvc},
-		infrascraping.NewFetcher(),
+		infrascraping.NewFetcher(logger),
 		rawStore,
 		infrascraping.NewRawListingRepository(pool),
 		infrascraping.NewHighWaterMarkRepository(pool),
@@ -119,6 +119,7 @@ func main() {
 // port, keeping the two contexts from sharing domain objects.
 type adapterSource struct {
 	boards *appboards.Service
+	logger *slog.Logger
 }
 
 func (a adapterSource) ApprovedBoardAdapters(ctx context.Context) ([]appscraping.BoardAdapter, error) {
@@ -128,6 +129,14 @@ func (a adapterSource) ApprovedBoardAdapters(ctx context.Context) ([]appscraping
 	}
 	out := make([]appscraping.BoardAdapter, 0, len(adapters))
 	for _, ad := range adapters {
+		// Re-validate the declarative spec before the crawler evaluates it. Specs are
+		// schema-validated at approval time (ADR-004), but one stored before a schema
+		// change could be stale; an invalid spec is skipped and logged, not crawled.
+		if err := ad.Spec.Validate(); err != nil {
+			a.logger.WarnContext(ctx, "skipping board with invalid adapter spec",
+				"board_id", string(ad.BoardID), "err", err)
+			continue
+		}
 		out = append(out, appscraping.BoardAdapter{BoardID: ad.BoardID, Spec: ad.Spec})
 	}
 	return out, nil

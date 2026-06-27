@@ -80,6 +80,11 @@ func New(
 // HandleListingExtract is invoked for each verified listing.extract push delivery. It
 // loads the raw payload, extracts structured fields via Claude, and creates one Job.
 func (s *Service) HandleListingExtract(ctx context.Context, msg messaging.Message) error {
+	// The scrape-worker publishes the raw listing id in both the typed attribute and the
+	// message body (see app/scraping.captureCard). The attribute is the canonical source;
+	// the body is a defensive fallback so an id is never silently lost if a transport (or
+	// a test) populates only one of them. Reading both cannot mask data loss: when neither
+	// carries an id we fail loudly below rather than extract a blank listing.
 	rawListingID := kernel.RawListingID(msg.Attributes[appscraping.ExtractRawListingIDAttr])
 	if rawListingID == "" {
 		rawListingID = kernel.RawListingID(msg.Data)
@@ -110,6 +115,11 @@ func (s *Service) HandleListingExtract(ctx context.Context, msg messaging.Messag
 		return fmt.Errorf("creating job from listing %q: %w", rawListingID, err)
 	}
 
+	// ponytail: Create and MarkExtracted are not atomic. If Create succeeds but
+	// MarkExtracted fails, Pub/Sub redelivers listing.extract, the listing is still
+	// "pending", and a second job is created from the same raw listing. Phase 2 is a
+	// walking skeleton with one job per raw listing and no dedup; the Phase-3 dedup/merge
+	// stage (pipeline.md §3) is the ceiling that collapses such duplicates by fingerprint.
 	if err := s.rawListings.MarkExtracted(ctx, rawListingID); err != nil {
 		return fmt.Errorf("marking listing %q extracted: %w", rawListingID, err)
 	}
