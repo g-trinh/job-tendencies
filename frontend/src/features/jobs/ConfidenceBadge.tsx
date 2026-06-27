@@ -35,4 +35,4 @@ function ConfidenceBadge({ label, score }: ConfidenceBadgeProps) {
   );
 }
 
-export { ConfidenceBadge, confidenceTier };
+export { ConfidenceBadge };
