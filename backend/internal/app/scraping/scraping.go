@@ -73,21 +73,8 @@ type SearchFetcher interface {
 	FetchPage(ctx context.Context, spec llm.AdapterSpec, target ScrapeTarget, page int) ([]Card, error)
 }
 
-// RawListingRepository persists captured raw listings and answers content-hash dedup.
-type RawListingRepository interface {
-	// ExistsByContentHash reports whether a raw listing with this hash already exists for the board.
-	ExistsByContentHash(ctx context.Context, boardID kernel.BoardID, contentHash string) (bool, error)
-	// Save stores a raw listing and returns its assigned id.
-	Save(ctx context.Context, listing scraping.RawListing) (kernel.RawListingID, error)
-}
-
-// HighWaterMarkRepository reads and advances the per-(board, profile) incremental cursor.
-type HighWaterMarkRepository interface {
-	// Get returns the most recent posted_at seen on the previous run, or nil on first crawl.
-	Get(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID) (*time.Time, error)
-	// Set advances the cursor to cursorPostedAt.
-	Set(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, cursorPostedAt time.Time) error
-}
+// The RawListing capture port and the high-water-mark port are the scraping
+// aggregate's repositories and live in domain/scraping (ADR-005), consumed here.
 
 // Service runs the scrape pipeline stage in response to scrape.tick deliveries.
 type Service struct {
@@ -95,8 +82,8 @@ type Service struct {
 	targets   TargetSource
 	fetcher   SearchFetcher
 	rawStore  blobstore.Storer
-	rawRepo   RawListingRepository
-	hwm       HighWaterMarkRepository
+	rawRepo   scraping.RawListingRepository
+	hwm       scraping.HighWaterMarkRepository
 	publisher messaging.Publisher
 	logger    *slog.Logger
 }
@@ -107,8 +94,8 @@ func New(
 	targets TargetSource,
 	fetcher SearchFetcher,
 	rawStore blobstore.Storer,
-	rawRepo RawListingRepository,
-	hwm HighWaterMarkRepository,
+	rawRepo scraping.RawListingRepository,
+	hwm scraping.HighWaterMarkRepository,
 	publisher messaging.Publisher,
 	logger *slog.Logger,
 ) *Service {

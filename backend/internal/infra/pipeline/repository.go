@@ -7,11 +7,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	apppipeline "github.com/g-trinh/job-tendencies/internal/app/pipeline"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
+	"github.com/g-trinh/job-tendencies/internal/domain/pipeline"
 )
 
-// Repository records scrape runs in Postgres. It satisfies app/pipeline.RunRepository.
+// Repository records scrape runs in Postgres. It satisfies domain/pipeline.RunRepository.
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -34,5 +34,5 @@ func (r *Repository) CreateRun(ctx context.Context, profileID kernel.ProfileID, 
 	return kernel.ScrapeRunID(id), nil
 }
 
-// Ensure the repository satisfies the app-layer port at compile time.
-var _ apppipeline.RunRepository = (*Repository)(nil)
+// Ensure the repository satisfies the domain-layer port at compile time.
+var _ pipeline.RunRepository = (*Repository)(nil)

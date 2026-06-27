@@ -1,6 +1,8 @@
-// Package jobs provides the Postgres implementation of the job-browser repository and
-// the extraction context's JobWriter. A Job and its JobSource rows are written in one
-// transaction; reads are scoped to a profile via the job_source → raw_listing link.
+// Package jobs provides the Postgres implementation of the Job aggregate's write
+// repository (domain/jobs.Repository) and the job-browser read query
+// (app/jobs.JobQuery). A Job and its JobSource rows are written in one transaction;
+// reads are scoped to a profile via the job_source → raw_listing link and projected
+// into read DTOs (ADR-005).
 package jobs
 
 import (
@@ -12,14 +14,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	appextraction "github.com/g-trinh/job-tendencies/internal/app/extraction"
 	appjobs "github.com/g-trinh/job-tendencies/internal/app/jobs"
 	"github.com/g-trinh/job-tendencies/internal/domain/jobs"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 )
 
-// Repository persists and reads jobs in Postgres. It satisfies app/jobs.Repository
-// and app/extraction.JobWriter.
+// Repository persists and reads jobs in Postgres. It satisfies domain/jobs.Repository
+// (write side) and app/jobs.JobQuery (read side).
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -77,13 +78,13 @@ func (r *Repository) Create(ctx context.Context, job jobs.Job) (kernel.JobID, er
 	return kernel.JobID(jobID), nil
 }
 
-// ListByProfile returns every job with a source listing captured for the profile.
-func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.ProfileID) ([]jobs.Job, error) {
+// ListByProfile returns every job view with a source listing captured for the profile.
+func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.ProfileID) ([]appjobs.JobView, error) {
 	const query = `
 		SELECT DISTINCT j.id, j.title, j.company, j.location, j.url, j.skills,
 		       j.remote_policy, j.office_days, j.contract_type,
 		       j.working_days, j.salary_min, j.salary_max, j.seniority,
-		       j.field_confidence, j.understanding_score, j.first_seen, j.last_seen
+		       j.field_confidence, j.understanding_score, j.first_seen
 		FROM job j
 		JOIN job_source js ON js.job_id = j.id
 		JOIN raw_listing rl ON rl.id = js.raw_listing_id
@@ -96,13 +97,13 @@ func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.Profile
 	}
 	defer rows.Close()
 
-	var out []jobs.Job
+	var out []appjobs.JobView
 	for rows.Next() {
-		job, err := scanJob(rows)
+		view, err := scanJobView(rows)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, job)
+		out = append(out, view)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating job rows: %w", err)
@@ -110,13 +111,13 @@ func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.Profile
 	return out, nil
 }
 
-// GetByProfile returns one job scoped to the profile, with its sources loaded.
-func (r *Repository) GetByProfile(ctx context.Context, profileID kernel.ProfileID, id kernel.JobID) (jobs.Job, error) {
+// GetByProfile returns one job view scoped to the profile, with its sources loaded.
+func (r *Repository) GetByProfile(ctx context.Context, profileID kernel.ProfileID, id kernel.JobID) (appjobs.JobView, error) {
 	const query = `
 		SELECT j.id, j.title, j.company, j.location, j.url, j.skills,
 		       j.remote_policy, j.office_days, j.contract_type,
 		       j.working_days, j.salary_min, j.salary_max, j.seniority,
-		       j.field_confidence, j.understanding_score, j.first_seen, j.last_seen
+		       j.field_confidence, j.understanding_score, j.first_seen
 		FROM job j
 		WHERE j.id = $1
 		  AND EXISTS (
@@ -125,23 +126,23 @@ func (r *Repository) GetByProfile(ctx context.Context, profileID kernel.ProfileI
 		    WHERE js.job_id = j.id AND rl.profile_id = $2)`
 
 	row := r.pool.QueryRow(ctx, query, string(id), string(profileID))
-	job, err := scanJob(row)
+	view, err := scanJobView(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return jobs.Job{}, &kernel.NotFoundError{Kind: "job", ID: string(id)}
+		return appjobs.JobView{}, &kernel.NotFoundError{Kind: "job", ID: string(id)}
 	}
 	if err != nil {
-		return jobs.Job{}, err
+		return appjobs.JobView{}, err
 	}
 
 	sources, err := r.sourcesByJob(ctx, id)
 	if err != nil {
-		return jobs.Job{}, err
+		return appjobs.JobView{}, err
 	}
-	job.Sources = sources
-	return job, nil
+	view.Sources = sources
+	return view, nil
 }
 
-func (r *Repository) sourcesByJob(ctx context.Context, id kernel.JobID) ([]jobs.JobSource, error) {
+func (r *Repository) sourcesByJob(ctx context.Context, id kernel.JobID) ([]appjobs.JobSourceView, error) {
 	const query = `SELECT board_id, raw_listing_id, source_url FROM job_source WHERE job_id = $1`
 	rows, err := r.pool.Query(ctx, query, string(id))
 	if err != nil {
@@ -149,13 +150,13 @@ func (r *Repository) sourcesByJob(ctx context.Context, id kernel.JobID) ([]jobs.
 	}
 	defer rows.Close()
 
-	var sources []jobs.JobSource
+	var sources []appjobs.JobSourceView
 	for rows.Next() {
 		var boardID, rawListingID, sourceURL string
 		if err := rows.Scan(&boardID, &rawListingID, &sourceURL); err != nil {
 			return nil, fmt.Errorf("scanning job source: %w", err)
 		}
-		sources = append(sources, jobs.JobSource{
+		sources = append(sources, appjobs.JobSourceView{
 			BoardID:      kernel.BoardID(boardID),
 			RawListingID: kernel.RawListingID(rawListingID),
 			SourceURL:    sourceURL,
@@ -172,8 +173,9 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
-// scanJob scans a job row into a domain Job (without sources).
-func scanJob(row rowScanner) (jobs.Job, error) {
+// scanJobView scans a job row into a job-browser read DTO (without sources). first_seen
+// drives ordering but is not part of the read model, so it is scanned and discarded.
+func scanJobView(row rowScanner) (appjobs.JobView, error) {
 	var (
 		id            string
 		remotePolicy  string
@@ -182,33 +184,34 @@ func scanJob(row rowScanner) (jobs.Job, error) {
 		seniority     string
 		confidence    []byte
 		understanding int
-		job           jobs.Job
+		firstSeen     any
+		view          appjobs.JobView
 	)
-	if err := row.Scan(&id, &job.Title, &job.Company, &job.Location, &job.URL,
-		&job.Skills, &remotePolicy, &job.OfficeDays, &contractType,
-		&workingDays, &job.SalaryMin, &job.SalaryMax, &seniority,
-		&confidence, &understanding, &job.FirstSeen, &job.LastSeen); err != nil {
-		return jobs.Job{}, fmt.Errorf("scanning job row: %w", err)
+	if err := row.Scan(&id, &view.Title, &view.Company, &view.Location, &view.URL,
+		&view.Skills, &remotePolicy, &view.OfficeDays, &contractType,
+		&workingDays, &view.SalaryMin, &view.SalaryMax, &seniority,
+		&confidence, &understanding, &firstSeen); err != nil {
+		return appjobs.JobView{}, fmt.Errorf("scanning job row: %w", err)
 	}
 
-	job.ID = kernel.JobID(id)
-	job.RemotePolicy = kernel.RemotePolicy(remotePolicy)
-	job.ContractType = kernel.ContractType(contractType)
-	job.WorkingDays = kernel.WorkingDays(workingDays)
-	job.Seniority = kernel.Seniority(seniority)
+	view.ID = kernel.JobID(id)
+	view.RemotePolicy = kernel.RemotePolicy(remotePolicy)
+	view.ContractType = kernel.ContractType(contractType)
+	view.WorkingDays = kernel.WorkingDays(workingDays)
+	view.Seniority = kernel.Seniority(seniority)
 	if u, err := kernel.NewUnderstanding(uint8(min(understanding, 100))); err == nil {
-		job.UnderstandingScore = u
+		view.UnderstandingScore = u
 	}
 	if len(confidence) > 0 {
-		if err := json.Unmarshal(confidence, &job.FieldConfidence); err != nil {
-			return jobs.Job{}, fmt.Errorf("unmarshalling field confidence: %w", err)
+		if err := json.Unmarshal(confidence, &view.FieldConfidence); err != nil {
+			return appjobs.JobView{}, fmt.Errorf("unmarshalling field confidence: %w", err)
 		}
 	}
-	return job, nil
+	return view, nil
 }
 
-// Ensure the repository satisfies the app-layer ports at compile time.
+// Ensure the repository satisfies the write and read ports at compile time.
 var (
-	_ appjobs.Repository      = (*Repository)(nil)
-	_ appextraction.JobWriter = (*Repository)(nil)
+	_ jobs.Repository  = (*Repository)(nil)
+	_ appjobs.JobQuery = (*Repository)(nil)
 )

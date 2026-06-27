@@ -11,14 +11,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	appboards "github.com/g-trinh/job-tendencies/internal/app/boards"
 	"github.com/g-trinh/job-tendencies/internal/domain/boards"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 	"github.com/g-trinh/job-tendencies/internal/domain/llm"
 )
 
 // Repository reads boards and adapters from Postgres. It satisfies
-// app/boards.Repository. Construct via NewRepository at the composition root.
+// domain/boards.Repository. Construct via NewRepository at the composition root.
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -29,7 +28,7 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 }
 
 // ListBoards returns every board left-joined to its approved adapter.
-func (r *Repository) ListBoards(ctx context.Context) ([]appboards.BoardView, error) {
+func (r *Repository) ListBoards(ctx context.Context) ([]boards.BoardView, error) {
 	const query = `
 		SELECT b.id, b.name, b.base_url, b.enabled,
 		       a.id, a.status, a.fetch_mode, a.spec, a.version
@@ -43,7 +42,7 @@ func (r *Repository) ListBoards(ctx context.Context) ([]appboards.BoardView, err
 	}
 	defer rows.Close()
 
-	var views []appboards.BoardView
+	var views []boards.BoardView
 	for rows.Next() {
 		var (
 			b         boards.Board
@@ -58,7 +57,7 @@ func (r *Repository) ListBoards(ctx context.Context) ([]appboards.BoardView, err
 			return nil, fmt.Errorf("scanning board row: %w", err)
 		}
 
-		view := appboards.BoardView{Board: b}
+		view := boards.BoardView{Board: b}
 		if adapterID != nil {
 			adapter, err := buildAdapter(b.ID, *adapterID, *status, *fetchMode, specJSON, *version)
 			if err != nil {
@@ -140,3 +139,6 @@ func buildAdapter(boardID kernel.BoardID, id, status, fetchMode string, specJSON
 		Version:   version,
 	}, nil
 }
+
+// Ensure the repository satisfies the domain-layer port at compile time.
+var _ boards.Repository = (*Repository)(nil)

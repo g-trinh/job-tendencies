@@ -9,6 +9,7 @@ import (
 
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 	"github.com/g-trinh/job-tendencies/internal/domain/messaging"
+	"github.com/g-trinh/job-tendencies/internal/domain/pipeline"
 )
 
 const (
@@ -21,20 +22,14 @@ const (
 	ScrapeTickRunAttr = "run_id"
 )
 
-// RunRepository records scrape runs.
-type RunRepository interface {
-	// CreateRun inserts a run for the profile with the given trigger and returns its id.
-	CreateRun(ctx context.Context, profileID kernel.ProfileID, trigger string) (kernel.ScrapeRunID, error)
-}
-
 // Service triggers on-demand pipeline runs.
 type Service struct {
-	runs      RunRepository
+	runs      pipeline.RunRepository
 	publisher messaging.Publisher
 }
 
 // New constructs a pipeline Service over a run repository and the scrape.tick publisher.
-func New(runs RunRepository, publisher messaging.Publisher) *Service {
+func New(runs pipeline.RunRepository, publisher messaging.Publisher) *Service {
 	return &Service{runs: runs, publisher: publisher}
 }
 

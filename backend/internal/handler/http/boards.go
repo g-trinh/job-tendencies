@@ -4,14 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	appboards "github.com/g-trinh/job-tendencies/internal/app/boards"
 	"github.com/g-trinh/job-tendencies/internal/domain/boards"
 	"github.com/g-trinh/job-tendencies/internal/domain/llm"
 )
 
 // BoardLister lists boards with their approved adapter. Implemented by app/boards.Service.
 type BoardLister interface {
-	ListBoards(ctx context.Context) ([]appboards.BoardView, error)
+	ListBoards(ctx context.Context) ([]boards.BoardView, error)
 }
 
 // boardResponse is the JSON shape of a board returned by GET /api/boards.
@@ -50,7 +49,7 @@ func ListBoards(lister BoardLister) http.HandlerFunc {
 	}
 }
 
-func toBoardResponse(v appboards.BoardView) boardResponse {
+func toBoardResponse(v boards.BoardView) boardResponse {
 	resp := boardResponse{
 		ID:      string(v.Board.ID),
 		Name:    v.Board.Name,

@@ -1,6 +1,6 @@
 // Package profiles contains the profiles application service. Phase 2 exposes only
-// active-profile resolution; the repository interface is declared here (consumer)
-// and implemented in infra/profiles.
+// active-profile resolution; the aggregate repository interface lives in the domain
+// (domain/profiles.Repository, ADR-005) and is implemented in infra/profiles.
 package profiles
 
 import (
@@ -11,22 +11,13 @@ import (
 	"github.com/g-trinh/job-tendencies/internal/domain/profiles"
 )
 
-// Repository reads profiles from the datastore.
-type Repository interface {
-	// ActiveProfile returns the single active profile, or a kernel.NotFoundError
-	// when no profile is marked active.
-	ActiveProfile(ctx context.Context) (profiles.Profile, error)
-	// ProfileByID returns one profile, or a kernel.NotFoundError.
-	ProfileByID(ctx context.Context, id kernel.ProfileID) (profiles.Profile, error)
-}
-
 // Service exposes profile read use cases to the API and the scrape-worker.
 type Service struct {
-	repo Repository
+	repo profiles.Repository
 }
 
 // New constructs a profiles Service.
-func New(repo Repository) *Service {
+func New(repo profiles.Repository) *Service {
 	return &Service{repo: repo}
 }
 

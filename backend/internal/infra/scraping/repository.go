@@ -9,14 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	appextraction "github.com/g-trinh/job-tendencies/internal/app/extraction"
-	appscraping "github.com/g-trinh/job-tendencies/internal/app/scraping"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 	"github.com/g-trinh/job-tendencies/internal/domain/scraping"
 )
 
 // RawListingRepository persists captured raw listings in Postgres.
-// It satisfies app/scraping.RawListingRepository.
+// It satisfies domain/scraping.RawListingRepository and domain/scraping.RawListingSource.
 type RawListingRepository struct {
 	pool *pgxpool.Pool
 }
@@ -62,26 +60,26 @@ func (r *RawListingRepository) Save(ctx context.Context, listing scraping.RawLis
 	return kernel.RawListingID(id), nil
 }
 
-// Get returns the extraction context's view of a raw listing, or a kernel.NotFoundError.
-func (r *RawListingRepository) Get(ctx context.Context, id kernel.RawListingID) (appextraction.RawListingRef, error) {
+// Get returns the captured raw listing aggregate, or a kernel.NotFoundError.
+func (r *RawListingRepository) Get(ctx context.Context, id kernel.RawListingID) (scraping.RawListing, error) {
 	const query = `
 		SELECT id, board_id, profile_id, title, company, location, source_url, raw_ref
 		FROM raw_listing WHERE id = $1`
-	var ref appextraction.RawListingRef
+	var listing scraping.RawListing
 	var rawID, boardID, profileID string
 	err := r.pool.QueryRow(ctx, query, string(id)).
-		Scan(&rawID, &boardID, &profileID, &ref.Title, &ref.Company, &ref.Location,
-			&ref.SourceURL, &ref.RawRef)
+		Scan(&rawID, &boardID, &profileID, &listing.Title, &listing.Company, &listing.Location,
+			&listing.SourceURL, &listing.RawRef)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return appextraction.RawListingRef{}, &kernel.NotFoundError{Kind: "raw_listing", ID: string(id)}
+		return scraping.RawListing{}, &kernel.NotFoundError{Kind: "raw_listing", ID: string(id)}
 	}
 	if err != nil {
-		return appextraction.RawListingRef{}, fmt.Errorf("querying raw listing %q: %w", id, err)
+		return scraping.RawListing{}, fmt.Errorf("querying raw listing %q: %w", id, err)
 	}
-	ref.ID = kernel.RawListingID(rawID)
-	ref.BoardID = kernel.BoardID(boardID)
-	ref.ProfileID = kernel.ProfileID(profileID)
-	return ref, nil
+	listing.ID = kernel.RawListingID(rawID)
+	listing.BoardID = kernel.BoardID(boardID)
+	listing.ProfileID = kernel.ProfileID(profileID)
+	return listing, nil
 }
 
 // MarkExtracted flips a raw listing's extraction_status to extracted.
@@ -94,7 +92,7 @@ func (r *RawListingRepository) MarkExtracted(ctx context.Context, id kernel.RawL
 }
 
 // HighWaterMarkRepository reads and advances the per-(board, profile) incremental cursor.
-// It satisfies app/scraping.HighWaterMarkRepository.
+// It satisfies domain/scraping.HighWaterMarkRepository.
 type HighWaterMarkRepository struct {
 	pool *pgxpool.Pool
 }
@@ -133,9 +131,9 @@ func (r *HighWaterMarkRepository) Set(ctx context.Context, boardID kernel.BoardI
 	return nil
 }
 
-// Ensure the repositories satisfy the app-layer ports at compile time.
+// Ensure the repositories satisfy the domain-layer ports at compile time.
 var (
-	_ appscraping.RawListingRepository    = (*RawListingRepository)(nil)
-	_ appscraping.HighWaterMarkRepository = (*HighWaterMarkRepository)(nil)
-	_ appextraction.RawListingSource      = (*RawListingRepository)(nil)
+	_ scraping.RawListingRepository    = (*RawListingRepository)(nil)
+	_ scraping.RawListingSource        = (*RawListingRepository)(nil)
+	_ scraping.HighWaterMarkRepository = (*HighWaterMarkRepository)(nil)
 )

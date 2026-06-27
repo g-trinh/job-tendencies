@@ -6,14 +6,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/g-trinh/job-tendencies/internal/domain/jobs"
+	appjobs "github.com/g-trinh/job-tendencies/internal/app/jobs"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 )
 
-// JobReader lists and fetches jobs scoped to a profile. Implemented by app/jobs.Service.
+// JobReader lists and fetches job views scoped to a profile. Implemented by
+// app/jobs.Service (the read side, ADR-005).
 type JobReader interface {
-	ListJobs(ctx context.Context, profileID kernel.ProfileID) ([]jobs.Job, error)
-	GetJob(ctx context.Context, profileID kernel.ProfileID, id kernel.JobID) (jobs.Job, error)
+	ListJobs(ctx context.Context, profileID kernel.ProfileID) ([]appjobs.JobView, error)
+	GetJob(ctx context.Context, profileID kernel.ProfileID, id kernel.JobID) (appjobs.JobView, error)
 }
 
 // jobSourceResponse is the JSON shape of a job's source linkage.
@@ -86,7 +87,7 @@ func GetJob(reader JobReader) http.HandlerFunc {
 	}
 }
 
-func toJobResponse(j jobs.Job) jobResponse {
+func toJobResponse(j appjobs.JobView) jobResponse {
 	sources := make([]jobSourceResponse, 0, len(j.Sources))
 	for _, s := range j.Sources {
 		sources = append(sources, jobSourceResponse{

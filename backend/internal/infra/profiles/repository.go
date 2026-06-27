@@ -14,10 +14,13 @@ import (
 	"github.com/g-trinh/job-tendencies/internal/domain/profiles"
 )
 
-// Repository reads profiles from Postgres. It satisfies app/profiles.Repository.
+// Repository reads profiles from Postgres. It satisfies domain/profiles.Repository.
 type Repository struct {
 	pool *pgxpool.Pool
 }
+
+// Ensure the repository satisfies the domain-layer port at compile time.
+var _ profiles.Repository = (*Repository)(nil)
 
 // NewRepository constructs a Postgres profile repository over the given pool.
 func NewRepository(pool *pgxpool.Pool) *Repository {

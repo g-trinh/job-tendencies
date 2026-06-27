@@ -17,6 +17,7 @@ import (
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 	"github.com/g-trinh/job-tendencies/internal/domain/llm"
 	"github.com/g-trinh/job-tendencies/internal/domain/messaging"
+	domainscraping "github.com/g-trinh/job-tendencies/internal/domain/scraping"
 )
 
 // RawListingRef is the extraction context's view of a captured raw listing: enough to
@@ -32,32 +33,39 @@ type RawListingRef struct {
 	RawRef    string
 }
 
-// RawListingSource loads raw-listing metadata and marks listings extracted.
-type RawListingSource interface {
-	Get(ctx context.Context, id kernel.RawListingID) (RawListingRef, error)
-	MarkExtracted(ctx context.Context, id kernel.RawListingID) error
+// toRef maps the scraping context's RawListing aggregate into the extraction context's
+// own view, keeping extraction decoupled from the scraping aggregate's full shape.
+func toRef(l domainscraping.RawListing) RawListingRef {
+	return RawListingRef{
+		ID:        l.ID,
+		BoardID:   l.BoardID,
+		ProfileID: l.ProfileID,
+		Title:     l.Title,
+		Company:   l.Company,
+		Location:  l.Location,
+		SourceURL: l.SourceURL,
+		RawRef:    l.RawRef,
+	}
 }
 
-// JobWriter creates a Job (with its source linkage) and returns its id.
-type JobWriter interface {
-	Create(ctx context.Context, job jobs.Job) (kernel.JobID, error)
-}
-
-// Service handles listing.extract pipeline events.
+// Service handles listing.extract pipeline events. Its raw-listing read/lifecycle port
+// and Job write port are the scraping and jobs aggregate repositories declared in the
+// domain (ADR-005); the extraction stage maps the scraping aggregate to its own
+// RawListingRef before building a Job.
 type Service struct {
-	rawListings RawListingSource
+	rawListings domainscraping.RawListingSource
 	rawStore    blobstore.Loader
 	extractor   llm.ListingExtractor
-	jobs        JobWriter
+	jobs        jobs.Repository
 	logger      *slog.Logger
 }
 
 // New constructs an extraction Service with all dependencies wired.
 func New(
-	rawListings RawListingSource,
+	rawListings domainscraping.RawListingSource,
 	rawStore blobstore.Loader,
 	extractor llm.ListingExtractor,
-	jobWriter JobWriter,
+	jobWriter jobs.Repository,
 	logger *slog.Logger,
 ) *Service {
 	return &Service{
@@ -80,10 +88,11 @@ func (s *Service) HandleListingExtract(ctx context.Context, msg messaging.Messag
 		return fmt.Errorf("listing.extract message carries no raw listing id")
 	}
 
-	ref, err := s.rawListings.Get(ctx, rawListingID)
+	rawListing, err := s.rawListings.Get(ctx, rawListingID)
 	if err != nil {
 		return fmt.Errorf("loading raw listing %q: %w", rawListingID, err)
 	}
+	ref := toRef(rawListing)
 
 	raw, err := s.rawStore.Load(ctx, ref.RawRef)
 	if err != nil {
