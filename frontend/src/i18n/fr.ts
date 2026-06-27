@@ -12,17 +12,28 @@ export const fr: Record<string, string> = {
   'application.status.rejected': 'Refusé',
   'application.status.abandoned': 'Abandonné',
 
-  // Job contract type
+  // Job contract type — values mirror kernel.ContractType.
   'job.contract.cdi': 'CDI',
   'job.contract.cdd': 'CDD',
   'job.contract.freelance': 'Freelance',
-  'job.contract.internship': 'Stage',
-  'job.contract.apprenticeship': 'Alternance',
+  'job.contract.interim': 'Intérim',
 
-  // Remote policy
-  'job.remote.none': 'Présentiel',
-  'job.remote.partial': 'Hybride',
-  'job.remote.full': 'Télétravail complet',
+  // Remote policy — values mirror kernel.RemotePolicy.
+  'job.remote.on_site': 'Présentiel',
+  'job.remote.hybrid': 'Hybride',
+  'job.remote.full_remote': 'Télétravail complet',
+
+  // Seniority — values mirror kernel.Seniority.
+  'job.seniority.entry': 'Débutant',
+  'job.seniority.mid': 'Confirmé',
+  'job.seniority.senior': 'Senior',
+  'job.seniority.lead': 'Lead',
+  'job.seniority.exec': 'Direction',
+
+  // Working days — values mirror kernel.WorkingDays.
+  'job.working_days.full_time': 'Temps plein',
+  'job.working_days.part_time': 'Temps partiel',
+  'job.working_days.four_day': 'Semaine de 4 jours',
 };
 
 /**

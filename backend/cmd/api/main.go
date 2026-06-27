@@ -1,10 +1,7 @@
 // Command api is the Job Tendencies REST API server. It serves the React SPA's
 // REST calls and publishes on-demand pipeline events to Pub/Sub. This binary wires
-// only the dependencies the API needs: Postgres pool, application services, chi
-// router, and a Pub/Sub publisher.
-//
-// Phase 0: boots a minimal HTTP server exposing /healthz only. Domain wiring
-// will be added in later phases.
+// the dependencies the API needs: Postgres pool, application services, chi router,
+// and a Pub/Sub publisher for on-demand pipeline runs.
 package main
 
 import (
@@ -17,9 +14,19 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 
+	appboards "github.com/g-trinh/job-tendencies/internal/app/boards"
+	appjobs "github.com/g-trinh/job-tendencies/internal/app/jobs"
+	apppipeline "github.com/g-trinh/job-tendencies/internal/app/pipeline"
+	appprofiles "github.com/g-trinh/job-tendencies/internal/app/profiles"
 	"github.com/g-trinh/job-tendencies/internal/config"
+	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
+	infraboards "github.com/g-trinh/job-tendencies/internal/infra/boards"
+	"github.com/g-trinh/job-tendencies/internal/infra/db"
+	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
+	"github.com/g-trinh/job-tendencies/internal/infra/messaging"
+	infrapipeline "github.com/g-trinh/job-tendencies/internal/infra/pipeline"
+	infraprofiles "github.com/g-trinh/job-tendencies/internal/infra/profiles"
 )
 
 func main() {
@@ -32,23 +39,54 @@ func main() {
 	logger := newLogger(cfg.LogLevel)
 	slog.SetDefault(logger)
 
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Recoverer)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 
-	// /healthz is reserved by Cloud Run's ingress (requests never reach the
-	// container), so also expose /livez for reachable health checks.
+	pool, closePool, err := db.NewPool(ctx, cfg.CloudSQLInstance, cfg.DBIAMUser, cfg.DBName)
+	if err != nil {
+		slog.Error("connecting to database", "err", err)
+		os.Exit(1)
+	}
+
+	scrapePublisher, err := messaging.NewPubSubPublisher(ctx, cfg.GCPProjectID, cfg.PubSubScrapeTopicID)
+	if err != nil {
+		slog.Error("creating scrape publisher", "err", err)
+		os.Exit(1)
+	}
+
+	// Register cleanup only after all fatal startup steps succeed so the os.Exit
+	// branches above run with no pending defers.
+	defer stop()
+	defer closePool()
+	defer scrapePublisher.Stop()
+
+	// Application services wired over the Postgres repositories.
+	boardSvc := appboards.New(infraboards.NewRepository(pool))
+	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
+	jobSvc := appjobs.New(infrajobs.NewRepository(pool))
+	pipelineSvc := apppipeline.New(infrapipeline.NewRepository(pool), scrapePublisher)
+
+	r := handler.NewRouter(logger)
 	r.Get("/healthz", handleHealthz)
 	r.Get("/livez", handleHealthz)
+
+	r.Route("/api", func(api chi.Router) {
+		api.Get("/boards", handler.ListBoards(boardSvc))
+		api.Get("/active-profile", handler.GetActiveProfile(profileSvc))
+		api.Post("/pipeline/runs", handler.CreatePipelineRun(pipelineSvc, profileSvc))
+
+		// Profile-scoped routes require a valid X-Active-Profile header.
+		api.Group(func(scoped chi.Router) {
+			handler.ScopedRoutes(scoped)
+			scoped.Get("/jobs", handler.ListJobs(jobSvc))
+			scoped.Get("/jobs/{id}", handler.GetJob(jobSvc))
+		})
+	})
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	go func() {
 		slog.Info("api server starting", "addr", srv.Addr)

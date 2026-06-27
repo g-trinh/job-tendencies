@@ -72,7 +72,7 @@ Apply SOLID proportionally — a 20-line utility script does not need a DI conta
 | **Value Object** | No identity, immutable, compared by value |
 | **Aggregate** | Cluster of entities/VOs with one root; enforce invariants inside the aggregate |
 | **Domain Service** | Stateless operation that doesn't belong to a single entity |
-| **Repository** | Abstracts persistence; returns domain objects, not DB rows |
+| **Repository** | Write side: load/save whole aggregates, returns domain objects not DB rows. Split off a read model (query→DTOs) for list/search; never serve UI queries through the aggregate repository |
 | **Domain Event** | Something that happened in the domain; past tense, immutable |
 | **Factory** | Encapsulates complex construction logic |
 

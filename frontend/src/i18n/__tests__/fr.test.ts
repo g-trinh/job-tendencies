@@ -10,7 +10,11 @@ describe('t() — French i18n resolver', () => {
   });
 
   it('resolves a known remote-policy enum key to French', () => {
-    expect(t('job.remote.full')).toBe('Télétravail complet');
+    expect(t('job.remote.full_remote')).toBe('Télétravail complet');
+  });
+
+  it('resolves a known seniority enum key to French', () => {
+    expect(t('job.seniority.senior')).toBe('Senior');
   });
 
   it('falls back to the key itself for unregistered keys', () => {

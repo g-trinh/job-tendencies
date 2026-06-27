@@ -260,6 +260,42 @@ Only distribute when at least one of these is true:
 
 > Apply KISS: choose the simplest pattern that satisfies the actual requirements. Patterns can be combined (e.g. CQRS inside an event-driven microservice), but each addition must be justified.
 
+### Default Persistence & Port Placement
+
+Unless the user opts out, apply these defaults whenever the design has a persistent domain:
+
+1. **Repository interfaces live in the domain layer.** The repository is a domain
+   concept (the "collection of aggregates" in the ubiquitous language), so its
+   interface is declared with the aggregate in the domain — named in domain language,
+   not storage terms. Infrastructure implements it; application/use-case services
+   consume it. This is the DDD placement, chosen deliberately over Go's
+   "interface-with-the-consumer" convention so the persistence contract stays part of
+   the domain and remains reachable by future domain services.
+   - Trade-off to police: domain repositories tend to bloat with finders and tempt
+     infra leakage (cursors, tx handles, SQL-shaped filters). Keep them to
+     aggregate **load/save** plus a small set of domain-meaningful lookups; push
+     everything query-shaped to the read side below.
+
+2. **Separate the read model from the write model (CQRS-lite by default).**
+   - **Write side** — one canonical *aggregate repository* per aggregate, in the
+     domain, dealing only in whole aggregates (load/save). It protects invariants.
+   - **Read side** — *query services* that return DTOs / read models, never
+     aggregates. They own filtering, sorting, pagination, and projections, and live
+     in the application (or a dedicated read package), free to query storage directly.
+   - Never route list/search/detail screens through the aggregate repository, and
+     never reshape an aggregate repository to serve a UI query.
+
+3. **The application service owns *when* to persist; aggregates never persist
+   themselves.** Persistence timing and transaction/unit-of-work scope are
+   application concerns (they can span multiple aggregates). Aggregates guarantee
+   they are consistent *whenever* saved; they hold no repository reference. This is
+   DDD/Persistence Ignorance — explicitly not Active Record. Note this is orthogonal
+   to rule 1: declaring the port in the domain does not make the aggregate call it.
+
+> Escape hatch: for a genuinely CRUD-shaped, logic-thin context, Active Record or a
+> single app-side repository may be the lazier correct choice — but call it out and
+> get user consent, since it trades the pure model away.
+
 ---
 
 ## 3. Bounded Context Mapping

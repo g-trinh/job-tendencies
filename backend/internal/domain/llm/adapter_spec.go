@@ -4,6 +4,12 @@
 // This package has no SDK import; the Anthropic implementation lives in infra/llm.
 package llm
 
+import (
+	"time"
+
+	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
+)
+
 // FetchMode specifies whether the board exposes a JSON/GraphQL API or HTML pages.
 type FetchMode string
 
@@ -98,4 +104,48 @@ type IncrementalConfig struct {
 	OverlapBuffer string `json:"overlap_buffer"`
 	// SafetyMaxPages is an absolute page-count cap; the primary stop condition is the HWM.
 	SafetyMaxPages int `json:"safety_max_pages"`
+}
+
+// ResultFieldListingURL is the required key in SearchConfig.ResultFields that points
+// at each card's listing URL.
+const ResultFieldListingURL = "listing_url"
+
+// Validate checks that the spec carries the fields a generic crawler needs to evaluate
+// it. It enforces the schema constraints that an approved adapter must satisfy before
+// going live (see ADR-004: declarative specs are validated against a schema before
+// approval). A nil return means the spec is structurally valid; it does not guarantee
+// the board endpoint is reachable.
+func (s AdapterSpec) Validate() error {
+	if s.Board == "" {
+		return &kernel.ValidationError{Field: "board", Message: "is required"}
+	}
+	if s.FetchMode != FetchModeJSONAPI && s.FetchMode != FetchModeHTML {
+		return &kernel.ValidationError{Field: "fetch_mode", Message: "must be json_api or html"}
+	}
+	if s.Search.URLTemplate == "" {
+		return &kernel.ValidationError{Field: "search.url_template", Message: "is required"}
+	}
+	if s.Search.ResultNodePath == "" {
+		return &kernel.ValidationError{Field: "search.result_node_path", Message: "is required"}
+	}
+	if s.Search.ResultFields[ResultFieldListingURL] == "" {
+		return &kernel.ValidationError{Field: "search.result_fields.listing_url", Message: "is required"}
+	}
+	switch s.Search.Pagination.Kind {
+	case PaginationKindQueryParam, PaginationKindCursor:
+	default:
+		return &kernel.ValidationError{Field: "search.pagination.kind", Message: "must be query_param or cursor"}
+	}
+	switch s.Listing.Fetch {
+	case ListingFetchDetailPage, ListingFetchUseSearchPayload:
+	default:
+		return &kernel.ValidationError{Field: "listing.fetch", Message: "must be detail_page or use_search_payload"}
+	}
+	if _, err := time.ParseDuration(s.Incremental.OverlapBuffer); err != nil {
+		return &kernel.ValidationError{Field: "incremental.overlap_buffer", Message: "must be a valid Go duration"}
+	}
+	if s.Incremental.SafetyMaxPages <= 0 {
+		return &kernel.ValidationError{Field: "incremental.safety_max_pages", Message: "must be > 0"}
+	}
+	return nil
 }
