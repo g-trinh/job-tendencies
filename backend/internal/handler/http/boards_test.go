@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -64,7 +65,7 @@ func (f *fakeBoardService) DeleteBoard(_ context.Context, id kernel.BoardID) err
 	}
 	for i, v := range f.views {
 		if v.Board.ID == id {
-			f.views = append(f.views[:i], f.views[i+1:]...)
+			f.views = slices.Delete(f.views, i, i+1)
 			return nil
 		}
 	}

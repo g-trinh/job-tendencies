@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -91,7 +92,7 @@ func (f *fakeProfileService) DeleteProfile(_ context.Context, id kernel.ProfileI
 	}
 	for i, p := range f.list {
 		if p.ID == id {
-			f.list = append(f.list[:i], f.list[i+1:]...)
+			f.list = slices.Delete(f.list, i, i+1)
 			return nil
 		}
 	}
