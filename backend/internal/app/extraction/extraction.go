@@ -115,11 +115,8 @@ func (s *Service) HandleListingExtract(ctx context.Context, msg messaging.Messag
 		return fmt.Errorf("creating job from listing %q: %w", rawListingID, err)
 	}
 
-	// ponytail: Create and MarkExtracted are not atomic. If Create succeeds but
-	// MarkExtracted fails, Pub/Sub redelivers listing.extract, the listing is still
-	// "pending", and a second job is created from the same raw listing. Phase 2 is a
-	// walking skeleton with one job per raw listing and no dedup; the Phase-3 dedup/merge
-	// stage (pipeline.md §3) is the ceiling that collapses such duplicates by fingerprint.
+	// Not atomic with Create above: on redelivery this can duplicate a job. See
+	// tech_debt.md "Extraction is not idempotent".
 	if err := s.rawListings.MarkExtracted(ctx, rawListingID); err != nil {
 		return fmt.Errorf("marking listing %q extracted: %w", rawListingID, err)
 	}

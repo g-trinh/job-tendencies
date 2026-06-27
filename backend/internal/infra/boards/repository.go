@@ -140,5 +140,4 @@ func buildAdapter(boardID kernel.BoardID, id, status, fetchMode string, specJSON
 	}, nil
 }
 
-// Ensure the repository satisfies the domain-layer port at compile time.
 var _ boards.Repository = (*Repository)(nil)

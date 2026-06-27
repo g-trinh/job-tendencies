@@ -13,9 +13,8 @@ type BoardView struct {
 	Adapter *Adapter
 }
 
-// Repository is the board-manager aggregate's persistence port. Per ADR-005 the
-// aggregate repository interface lives in the domain. The board-manager is read-only
-// in Phase 2; the scrape-worker consumes ApprovedAdapters to know what to crawl.
+// Repository is the board-manager aggregate's persistence port. The board-manager is
+// read-only in Phase 2; the scrape-worker consumes ApprovedAdapters to know what to crawl.
 type Repository interface {
 	// ListBoards returns every board with its approved adapter (nil when none).
 	ListBoards(ctx context.Context) ([]BoardView, error)

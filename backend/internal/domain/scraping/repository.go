@@ -8,8 +8,7 @@ import (
 )
 
 // RawListingRepository is the RawListing aggregate's capture-side persistence port: it
-// stores newly captured listings and answers content-hash dedup during a crawl. Per
-// ADR-005 the aggregate repository interface lives in the domain.
+// stores newly captured listings and answers content-hash dedup during a crawl.
 type RawListingRepository interface {
 	// ExistsByContentHash reports whether a raw listing with this hash already exists
 	// for the (board, profile). Dedup is scoped per profile because two profiles may

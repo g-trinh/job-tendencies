@@ -58,6 +58,17 @@ is only a guard.
   precision for it — do **not** silently fall back to LLM-extracting identity fields, which
   reintroduces nondeterminism into `fingerprint`.
 
+## Extraction is not idempotent (Create + MarkExtracted not atomic)
+`extract-worker` creates a `job`, then marks the `raw_listing` extracted in a separate
+step. The two are not in one transaction.
+- **Why it matters**: if `Create` succeeds but `MarkExtracted` fails, Pub/Sub redelivers
+  `listing.extract`, the listing is still `pending`, and a second job is created from the
+  same raw listing.
+- **Watch for**: relying on extract-worker for exactly-once job creation. Phase 2 is a
+  walking skeleton (one job per raw listing, no dedup). The Phase-3 dedup/merge stage
+  (pipeline.md §3) collapses such duplicates by `fingerprint`; real idempotency needs a
+  `job_source` uniqueness check or a single transaction across both writes.
+
 ## Deferred: LinkedIn PDF re-import merge strategy
 Re-importing a LinkedIn PDF currently assumes **overwrite** of identity. Merge-vs-overwrite
 is deferred (per v0). Decide at build time before exposing re-import.

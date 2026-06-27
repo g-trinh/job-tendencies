@@ -10,8 +10,7 @@ import (
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 )
 
-// RunRepository records scrape runs. Per ADR-005 the aggregate repository interface
-// lives in the domain.
+// RunRepository records scrape runs.
 type RunRepository interface {
 	// CreateRun inserts a run for the profile with the given trigger and returns its id.
 	CreateRun(ctx context.Context, profileID kernel.ProfileID, trigger string) (kernel.ScrapeRunID, error)

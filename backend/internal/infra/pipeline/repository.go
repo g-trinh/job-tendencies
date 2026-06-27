@@ -34,5 +34,4 @@ func (r *Repository) CreateRun(ctx context.Context, profileID kernel.ProfileID, 
 	return kernel.ScrapeRunID(id), nil
 }
 
-// Ensure the repository satisfies the domain-layer port at compile time.
 var _ pipeline.RunRepository = (*Repository)(nil)

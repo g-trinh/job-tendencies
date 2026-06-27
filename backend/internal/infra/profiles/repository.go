@@ -19,7 +19,6 @@ type Repository struct {
 	pool *pgxpool.Pool
 }
 
-// Ensure the repository satisfies the domain-layer port at compile time.
 var _ profiles.Repository = (*Repository)(nil)
 
 // NewRepository constructs a Postgres profile repository over the given pool.

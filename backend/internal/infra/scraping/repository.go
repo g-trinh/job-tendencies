@@ -132,7 +132,6 @@ func (r *HighWaterMarkRepository) Set(ctx context.Context, boardID kernel.BoardI
 	return nil
 }
 
-// Ensure the repositories satisfy the domain-layer ports at compile time.
 var (
 	_ scraping.RawListingRepository    = (*RawListingRepository)(nil)
 	_ scraping.RawListingSource        = (*RawListingRepository)(nil)

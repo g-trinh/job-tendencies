@@ -210,7 +210,6 @@ func scanJobView(row rowScanner) (appjobs.JobView, error) {
 	return view, nil
 }
 
-// Ensure the repository satisfies the write and read ports at compile time.
 var (
 	_ jobs.Repository  = (*Repository)(nil)
 	_ appjobs.JobQuery = (*Repository)(nil)
