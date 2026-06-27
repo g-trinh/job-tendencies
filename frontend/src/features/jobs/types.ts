@@ -27,7 +27,7 @@ export interface JobSummary {
   title: string;
   company: string;
   location: string;
-  /** Link to the original posting; always populated. */
+  /** Link to the original posting; may be empty when the board omits it. */
   url: string;
   contractType: ContractType | '';
   remotePolicy: RemotePolicy | '';

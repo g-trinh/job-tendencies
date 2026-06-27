@@ -98,6 +98,21 @@ describe('JobsPage', () => {
     expect(sentProfile).toBe(ACTIVE_PROFILE_ID);
   });
 
+  // A board may omit the posting URL — the title must render as plain text
+  // (no dead `<a href="">`) alongside a "lien indisponible" notice.
+  it('renders the title without a link when the posting URL is empty', async () => {
+    const [job] = jobsFixture;
+    mock.onGet('/jobs').reply(200, [{ ...job, url: '' }]);
+
+    renderJobsPage();
+
+    expect(await screen.findByText('Lien indisponible')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: job.title }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(job.title)).toBeInTheDocument();
+  });
+
   it('shows an empty-state message when no jobs match the profile', async () => {
     mock.onGet('/jobs').reply(200, []);
 

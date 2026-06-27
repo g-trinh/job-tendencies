@@ -16,9 +16,11 @@ function formatSalary(min: number | null, max: number | null): string {
 
 /**
  * Presentational card for a single job. The heading links to the original
- * posting via the always-populated `url`; `company`/`location` may be empty for
- * HTML-fallback boards, so the company line is conditional. Enum fields are
- * skipped when empty (undetermined) rather than rendering a raw key.
+ * posting via `url`; `url` may be empty for boards that omit it, in which case
+ * we render the title as plain text plus a "lien indisponible" notice rather
+ * than a dead `<a href="">`. `company`/`location` may be empty for HTML-fallback
+ * boards, so the company line is conditional. Enum fields are skipped when empty
+ * (undetermined) rather than rendering a raw key.
  */
 function JobCard({ job }: { job: JobSummary }) {
   const companyLine = [job.company, job.location].filter(Boolean).join(' — ');
@@ -27,10 +29,15 @@ function JobCard({ job }: { job: JobSummary }) {
     <li>
       <article>
         <h2>
-          <a href={job.url} target="_blank" rel="noreferrer">
-            {job.title || "Voir l'offre"}
-          </a>
+          {job.url ? (
+            <a href={job.url} target="_blank" rel="noreferrer">
+              {job.title || "Voir l'offre"}
+            </a>
+          ) : (
+            <span>{job.title || 'Offre sans titre'}</span>
+          )}
         </h2>
+        {!job.url && <p>Lien indisponible</p>}
         {companyLine !== '' && <p>{companyLine}</p>}
         <ul aria-label="Caractéristiques">
           {job.contractType && <li>{t(`job.contract.${job.contractType}`)}</li>}
