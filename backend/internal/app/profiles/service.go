@@ -75,7 +75,11 @@ func (s *Service) UpdateProfile(ctx context.Context, id kernel.ProfileID, name, 
 	if err := s.repo.Update(ctx, p); err != nil {
 		return profiles.Profile{}, fmt.Errorf("updating profile %q: %w", id, err)
 	}
-	return s.repo.ProfileByID(ctx, id)
+	updated, err := s.repo.ProfileByID(ctx, id)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("reading updated profile %q: %w", id, err)
+	}
+	return updated, nil
 }
 
 // DeleteProfile removes a profile by id.

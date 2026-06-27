@@ -3,6 +3,7 @@ package handler_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +36,7 @@ func (f *fakeBoardService) CreateBoard(_ context.Context, name, baseURL string) 
 	}
 	b, err := boards.NewBoard(name, baseURL)
 	if err != nil {
-		return boards.Board{}, err
+		return boards.Board{}, fmt.Errorf("validating board: %w", err)
 	}
 	b.ID = "new-board-id"
 	f.views = append(f.views, boards.BoardView{Board: b})
@@ -85,10 +86,10 @@ func TestPostBoard_CreatesBoard(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name       string
-		body       string
-		wantStatus int
-		wantName   string
+		name        string
+		body        string
+		wantStatus  int
+		wantName    string
 		wantEnabled bool
 	}{
 		{

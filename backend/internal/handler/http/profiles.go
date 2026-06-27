@@ -38,9 +38,6 @@ type profileResponse struct {
 	IsActive       bool     `json:"is_active"`
 }
 
-// activeProfileResponse is the JSON shape returned by GET /api/active-profile.
-type activeProfileResponse = profileResponse
-
 func toProfileResponse(p profiles.Profile) profileResponse {
 	kw := p.SearchKeywords
 	if kw == nil {

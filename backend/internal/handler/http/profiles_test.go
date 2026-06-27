@@ -19,9 +19,9 @@ import (
 
 // fakeProfileService is an in-memory fake of handler.ProfileService.
 type fakeProfileService struct {
-	list     []profiles.Profile
-	active   *profiles.Profile
-	err      error
+	list   []profiles.Profile
+	active *profiles.Profile
+	err    error
 }
 
 func (f *fakeProfileService) ActiveProfile(_ context.Context) (profiles.Profile, error) {

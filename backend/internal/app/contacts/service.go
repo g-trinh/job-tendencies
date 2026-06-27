@@ -67,7 +67,11 @@ func (s *Service) UpdateContact(ctx context.Context, id kernel.ContactID, name, 
 	if err := s.repo.Update(ctx, c); err != nil {
 		return contacts.Contact{}, fmt.Errorf("updating contact %q: %w", id, err)
 	}
-	return s.repo.GetByID(ctx, id)
+	updated, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return contacts.Contact{}, fmt.Errorf("reading updated contact %q: %w", id, err)
+	}
+	return updated, nil
 }
 
 // DeleteContact removes a contact by id.

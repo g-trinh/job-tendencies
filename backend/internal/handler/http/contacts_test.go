@@ -3,6 +3,7 @@ package handler_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +22,6 @@ type fakeContactService struct {
 	records map[string]contacts.Contact // keyed by dedup_key for upsert logic
 	byID    map[kernel.ContactID]contacts.Contact
 	err     error
-	nextID  int
 }
 
 func newFakeContactService() *fakeContactService {
@@ -29,11 +29,6 @@ func newFakeContactService() *fakeContactService {
 		records: make(map[string]contacts.Contact),
 		byID:    make(map[kernel.ContactID]contacts.Contact),
 	}
-}
-
-func (f *fakeContactService) nextContactID() kernel.ContactID {
-	f.nextID++
-	return kernel.ContactID("contact-" + strings.Repeat("0", 3-len(string(rune('0'+f.nextID)))) + string(rune('0'+f.nextID)))
 }
 
 func (f *fakeContactService) ListContacts(_ context.Context) ([]contacts.Contact, error) {
@@ -64,7 +59,7 @@ func (f *fakeContactService) UpsertContact(_ context.Context, name, company, ema
 	}
 	c, err := contacts.NewContact(name, company, email, linkedInURL, phone, notes, tags)
 	if err != nil {
-		return contacts.Contact{}, false, err
+		return contacts.Contact{}, false, fmt.Errorf("validating contact: %w", err)
 	}
 
 	existing, found := f.records[c.DedupKey]
@@ -138,10 +133,10 @@ func TestPostContact_Upsert(t *testing.T) {
 		wantCount      int
 	}{
 		{
-			name:           "creates new contact and returns 201",
-			firstBody:      `{"name":"Alice","email":"alice@example.com"}`,
-			wantFirstCode:  http.StatusCreated,
-			wantCount:      1,
+			name:          "creates new contact and returns 201",
+			firstBody:     `{"name":"Alice","email":"alice@example.com"}`,
+			wantFirstCode: http.StatusCreated,
+			wantCount:     1,
 		},
 		{
 			name:           "merges on duplicate email — returns 200 and no new record",
