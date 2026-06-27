@@ -16,12 +16,14 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	appboards "github.com/g-trinh/job-tendencies/internal/app/boards"
+	appcontacts "github.com/g-trinh/job-tendencies/internal/app/contacts"
 	appjobs "github.com/g-trinh/job-tendencies/internal/app/jobs"
 	apppipeline "github.com/g-trinh/job-tendencies/internal/app/pipeline"
 	appprofiles "github.com/g-trinh/job-tendencies/internal/app/profiles"
 	"github.com/g-trinh/job-tendencies/internal/config"
 	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
 	infraboards "github.com/g-trinh/job-tendencies/internal/infra/boards"
+	infracontacts "github.com/g-trinh/job-tendencies/internal/infra/contacts"
 	"github.com/g-trinh/job-tendencies/internal/infra/db"
 	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
 	"github.com/g-trinh/job-tendencies/internal/infra/messaging"
@@ -63,6 +65,7 @@ func main() {
 	boardSvc := appboards.New(infraboards.NewRepository(pool))
 	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
 	jobSvc := appjobs.New(infrajobs.NewRepository(pool))
+	contactSvc := appcontacts.New(infracontacts.NewRepository(pool))
 	pipelineSvc := apppipeline.New(infrapipeline.NewRepository(pool), scrapePublisher)
 
 	r := handler.NewRouter(logger)
@@ -71,8 +74,30 @@ func main() {
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(handler.NewCORSMiddleware(cfg.AllowedOrigins))
+
+		// Boards.
 		api.Get("/boards", handler.ListBoards(boardSvc))
+		api.Post("/boards", handler.PostBoard(boardSvc))
+		api.Put("/boards/{id}", handler.PutBoard(boardSvc))
+		api.Delete("/boards/{id}", handler.DeleteBoard(boardSvc))
+
+		// Profiles.
+		api.Get("/profiles", handler.ListProfiles(profileSvc))
+		api.Post("/profiles", handler.PostProfile(profileSvc))
+		api.Get("/profiles/{id}", handler.GetProfile(profileSvc))
+		api.Put("/profiles/{id}", handler.PutProfile(profileSvc))
+		api.Delete("/profiles/{id}", handler.DeleteProfile(profileSvc))
 		api.Get("/active-profile", handler.GetActiveProfile(profileSvc))
+		api.Put("/active-profile", handler.PutActiveProfile(profileSvc))
+
+		// Contacts.
+		api.Get("/contacts", handler.ListContacts(contactSvc))
+		api.Post("/contacts", handler.PostContact(contactSvc))
+		api.Get("/contacts/{id}", handler.GetContact(contactSvc))
+		api.Put("/contacts/{id}", handler.PutContact(contactSvc))
+		api.Delete("/contacts/{id}", handler.DeleteContact(contactSvc))
+
+		// Pipeline.
 		api.Post("/pipeline/runs", handler.CreatePipelineRun(pipelineSvc, profileSvc))
 
 		// Profile-scoped routes require a valid X-Active-Profile header.
