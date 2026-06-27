@@ -47,9 +47,16 @@ func (r *Repository) Create(ctx context.Context, job jobs.Job) (kernel.JobID, er
 		INSERT INTO job
 			(title, company, location, url, skills, remote_policy, office_days,
 			 contract_type, working_days, salary_min, salary_max, seniority,
-			 field_confidence, understanding_score, first_seen, last_seen)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+			 field_confidence, understanding_score, first_seen, last_seen,
+			 fingerprint, contact_id, expired_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 		RETURNING id`
+
+	var contactID *string
+	if job.ContactID != nil {
+		s := string(*job.ContactID)
+		contactID = &s
+	}
 
 	var jobID string
 	err = tx.QueryRow(ctx, insertJob,
@@ -57,6 +64,7 @@ func (r *Repository) Create(ctx context.Context, job jobs.Job) (kernel.JobID, er
 		job.Skills, string(job.RemotePolicy), job.OfficeDays, string(job.ContractType),
 		string(job.WorkingDays), job.SalaryMin, job.SalaryMax, string(job.Seniority),
 		confidence, job.UnderstandingScore.Int(), job.FirstSeen, job.LastSeen,
+		job.Fingerprint, contactID, job.ExpiredAt,
 	).Scan(&jobID)
 	if err != nil {
 		return "", fmt.Errorf("inserting job: %w", err)
