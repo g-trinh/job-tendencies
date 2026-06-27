@@ -4,12 +4,15 @@
  * Raw scraped text is never translated — only structured enum fields go here.
  */
 export const fr: Record<string, string> = {
-  // Application kanban status
-  'application.status.to_apply': 'À candidater',
+  // Application kanban status — values mirror backend kernel.ApplicationStatus.
+  // `saved` is the initial state when a user saves a job for tracking.
+  'application.status.saved': 'Sauvegardé',
   'application.status.applied': 'Candidature envoyée',
   'application.status.interview': 'Entretien',
   'application.status.offer': 'Offre reçue',
   'application.status.rejected': 'Refusé',
+  // Legacy values kept for backward compatibility.
+  'application.status.to_apply': 'À candidater',
   'application.status.abandoned': 'Abandonné',
 
   // Job contract type — values mirror kernel.ContractType.

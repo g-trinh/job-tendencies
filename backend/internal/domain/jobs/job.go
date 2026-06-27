@@ -1,7 +1,6 @@
 // Package jobs is the job-browser bounded context. It owns the Job aggregate — a
-// structured, (eventually) deduplicated listing — together with the JobSource rows
-// that record which raw listings it was extracted from ("found on: WTTJ, Indeed").
-// Phase 2 creates one Job per raw listing with no dedup/merge/scoring.
+// structured, deduplicated listing — together with the JobSource rows that record
+// which raw listings it was extracted from ("found on: WTTJ, Indeed").
 package jobs
 
 import (
@@ -23,6 +22,8 @@ type JobSource struct {
 // Job is a structured job listing (aggregate root). Its structured fields are produced
 // by LLM extraction; FieldConfidence holds the per-field extraction confidence (0–100)
 // keyed by field name, and UnderstandingScore the overall parse quality (0–100).
+// Fingerprint is the cross-board dedup key computed deterministically over the identity
+// fields; nil until computed by the extraction worker.
 type Job struct {
 	// ID is the job's stable identifier (assigned on Create).
 	ID kernel.JobID
@@ -52,9 +53,18 @@ type Job struct {
 	FieldConfidence map[string]int
 	// UnderstandingScore is the overall parse-quality score (0–100).
 	UnderstandingScore kernel.Understanding
+	// Fingerprint is the cross-board dedup key (normalized title+company+location+salary).
+	// Nil until computed by the extraction worker (P3-EX-2).
+	Fingerprint *string
+	// ContactID links this job to the recruiter who posted it. Nil until populated by
+	// the extraction worker (P3-EX-3).
+	ContactID *kernel.ContactID
 	// FirstSeen and LastSeen bound when this job was observed.
 	FirstSeen time.Time
 	LastSeen  time.Time
-	// Sources are the raw listings this job was extracted from (one in Phase 2).
+	// ExpiredAt records when the listing was no longer found on the source board.
+	// Nil while the listing is still active.
+	ExpiredAt *time.Time
+	// Sources are the raw listings this job was extracted from.
 	Sources []JobSource
 }

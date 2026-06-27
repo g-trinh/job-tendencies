@@ -4,6 +4,8 @@
 package boards
 
 import (
+	"strings"
+
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 	"github.com/g-trinh/job-tendencies/internal/domain/llm"
 )
@@ -29,6 +31,26 @@ type Board struct {
 	BaseURL string
 	// Enabled reports whether the board is included in scrape runs.
 	Enabled bool
+}
+
+// NewBoard constructs a Board with a validated name and base URL. Enabled defaults
+// to true. The ID is assigned by the repository on Create.
+//
+// Example:
+//
+//	b, err := boards.NewBoard("Welcome to the Jungle", "https://www.welcometothejungle.com")
+func NewBoard(name, baseURL string) (Board, error) {
+	if strings.TrimSpace(name) == "" {
+		return Board{}, &kernel.ValidationError{Field: "name", Message: "required"}
+	}
+	if strings.TrimSpace(baseURL) == "" {
+		return Board{}, &kernel.ValidationError{Field: "base_url", Message: "required"}
+	}
+	return Board{
+		Name:    strings.TrimSpace(name),
+		BaseURL: strings.TrimSpace(baseURL),
+		Enabled: true,
+	}, nil
 }
 
 // Adapter is a board's declarative scraping configuration. Its Spec is data, never

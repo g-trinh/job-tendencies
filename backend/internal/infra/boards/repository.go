@@ -16,7 +16,7 @@ import (
 	"github.com/g-trinh/job-tendencies/internal/domain/llm"
 )
 
-// Repository reads boards and adapters from Postgres. It satisfies
+// Repository reads and writes boards and adapters in Postgres. It satisfies
 // domain/boards.Repository. Construct via NewRepository at the composition root.
 type Repository struct {
 	pool *pgxpool.Pool
@@ -122,6 +122,47 @@ func (r *Repository) BoardByID(ctx context.Context, id kernel.BoardID) (boards.B
 		return boards.Board{}, fmt.Errorf("querying board %q: %w", id, err)
 	}
 	return b, nil
+}
+
+// CreateBoard inserts a new board and returns the assigned id.
+func (r *Repository) CreateBoard(ctx context.Context, b boards.Board) (kernel.BoardID, error) {
+	const query = `
+		INSERT INTO board (name, base_url, enabled)
+		VALUES ($1, $2, $3)
+		RETURNING id`
+
+	var id string
+	err := r.pool.QueryRow(ctx, query, b.Name, b.BaseURL, b.Enabled).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("inserting board: %w", err)
+	}
+	return kernel.BoardID(id), nil
+}
+
+// UpdateBoard persists name, base_url, and enabled changes for the board.
+func (r *Repository) UpdateBoard(ctx context.Context, b boards.Board) error {
+	const query = `UPDATE board SET name = $1, base_url = $2, enabled = $3 WHERE id = $4`
+	tag, err := r.pool.Exec(ctx, query, b.Name, b.BaseURL, b.Enabled, string(b.ID))
+	if err != nil {
+		return fmt.Errorf("updating board %q: %w", b.ID, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return &kernel.NotFoundError{Kind: "board", ID: string(b.ID)}
+	}
+	return nil
+}
+
+// DeleteBoard removes a board by id.
+func (r *Repository) DeleteBoard(ctx context.Context, id kernel.BoardID) error {
+	const query = `DELETE FROM board WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, query, string(id))
+	if err != nil {
+		return fmt.Errorf("deleting board %q: %w", id, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return &kernel.NotFoundError{Kind: "board", ID: string(id)}
+	}
+	return nil
 }
 
 // buildAdapter decodes the JSONB spec column into a domain Adapter.

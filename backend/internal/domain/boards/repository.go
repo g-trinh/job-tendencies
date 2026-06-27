@@ -13,8 +13,9 @@ type BoardView struct {
 	Adapter *Adapter
 }
 
-// Repository is the board-manager aggregate's persistence port. The board-manager is
-// read-only in Phase 2; the scrape-worker consumes ApprovedAdapters to know what to crawl.
+// Repository is the board-manager aggregate's persistence port. Aggregate repository
+// interfaces live in the domain per ADR-005; the Postgres implementation lives in
+// internal/infra/boards.
 type Repository interface {
 	// ListBoards returns every board with its approved adapter (nil when none).
 	ListBoards(ctx context.Context) ([]BoardView, error)
@@ -22,4 +23,11 @@ type Repository interface {
 	ApprovedAdapters(ctx context.Context) ([]Adapter, error)
 	// BoardByID returns one board, or a kernel.NotFoundError.
 	BoardByID(ctx context.Context, id kernel.BoardID) (Board, error)
+	// CreateBoard persists a new board and returns its assigned id.
+	CreateBoard(ctx context.Context, b Board) (kernel.BoardID, error)
+	// UpdateBoard persists name, base_url, and enabled changes for the board.
+	UpdateBoard(ctx context.Context, b Board) error
+	// DeleteBoard removes a board by id. It returns a kernel.NotFoundError when
+	// the board does not exist.
+	DeleteBoard(ctx context.Context, id kernel.BoardID) error
 }
