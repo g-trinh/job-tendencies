@@ -23,9 +23,10 @@ func New(repo contacts.Repository) *Service {
 	return &Service{repo: repo}
 }
 
-// ListContacts returns all contacts.
-func (s *Service) ListContacts(ctx context.Context) ([]contacts.Contact, error) {
-	list, err := s.repo.List(ctx)
+// ListContacts returns all contacts, optionally filtered by tag. An empty tag
+// string returns all contacts.
+func (s *Service) ListContacts(ctx context.Context, tag string) ([]contacts.Contact, error) {
+	list, err := s.repo.List(ctx, tag)
 	if err != nil {
 		return nil, fmt.Errorf("listing contacts: %w", err)
 	}

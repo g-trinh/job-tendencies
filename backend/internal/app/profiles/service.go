@@ -102,3 +102,47 @@ func (s *Service) ActivateProfile(ctx context.Context, id kernel.ProfileID) (pro
 	}
 	return p, nil
 }
+
+// PatchIdentity updates the identity fields (skills and seniority) for a profile.
+// This is the manual-edit path; the LinkedIn import path (P3-PR-2) is separate.
+func (s *Service) PatchIdentity(ctx context.Context, id kernel.ProfileID, skills []string, seniority kernel.Seniority) (profiles.Profile, error) {
+	if skills == nil {
+		skills = []string{}
+	}
+	if err := s.repo.UpdateIdentity(ctx, id, skills, seniority); err != nil {
+		return profiles.Profile{}, fmt.Errorf("patching identity for profile %q: %w", id, err)
+	}
+	p, err := s.repo.ProfileByID(ctx, id)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("reading updated profile %q: %w", id, err)
+	}
+	return p, nil
+}
+
+// UpdateConditions persists the dealbreakers and preferences for a profile.
+func (s *Service) UpdateConditions(ctx context.Context, id kernel.ProfileID, c profiles.ProfileConditions) (profiles.Profile, error) {
+	if err := s.repo.UpdateConditions(ctx, id, c); err != nil {
+		return profiles.Profile{}, fmt.Errorf("updating conditions for profile %q: %w", id, err)
+	}
+	p, err := s.repo.ProfileByID(ctx, id)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("reading updated profile %q: %w", id, err)
+	}
+	return p, nil
+}
+
+// UpdateWeights validates and persists the fit-score weights for a profile.
+// Returns a validation error when the weights do not sum to 100.
+func (s *Service) UpdateWeights(ctx context.Context, id kernel.ProfileID, w profiles.FitWeights) (profiles.Profile, error) {
+	if err := w.Validate(); err != nil {
+		return profiles.Profile{}, &kernel.ValidationError{Field: "weights", Message: err.Error()}
+	}
+	if err := s.repo.UpdateWeights(ctx, id, w); err != nil {
+		return profiles.Profile{}, fmt.Errorf("updating weights for profile %q: %w", id, err)
+	}
+	p, err := s.repo.ProfileByID(ctx, id)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("reading updated profile %q: %w", id, err)
+	}
+	return p, nil
+}

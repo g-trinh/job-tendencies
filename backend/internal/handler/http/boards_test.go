@@ -71,6 +71,31 @@ func (f *fakeBoardService) DeleteBoard(_ context.Context, id kernel.BoardID) err
 	return &kernel.NotFoundError{Kind: "board", ID: string(id)}
 }
 
+func (f *fakeBoardService) GetBoardAdapter(_ context.Context, boardID kernel.BoardID) (boards.Adapter, error) {
+	if f.err != nil {
+		return boards.Adapter{}, f.err
+	}
+	for _, v := range f.views {
+		if v.Board.ID == boardID && v.Adapter != nil {
+			return *v.Adapter, nil
+		}
+	}
+	return boards.Adapter{}, &kernel.NotFoundError{Kind: "adapter", ID: string(boardID)}
+}
+
+func (f *fakeBoardService) ApproveBoardAdapter(_ context.Context, boardID kernel.BoardID) (boards.Adapter, error) {
+	if f.err != nil {
+		return boards.Adapter{}, f.err
+	}
+	for i, v := range f.views {
+		if v.Board.ID == boardID && v.Adapter != nil {
+			f.views[i].Adapter.Status = boards.AdapterStatusApproved
+			return *f.views[i].Adapter, nil
+		}
+	}
+	return boards.Adapter{}, &kernel.NotFoundError{Kind: "adapter", ID: string(boardID)}
+}
+
 func newBoardRouter(svc *fakeBoardService) *chi.Mux {
 	r := handler.NewRouter(slog.Default())
 	r.Get("/api/boards", handler.ListBoards(svc))

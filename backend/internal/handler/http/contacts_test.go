@@ -31,13 +31,22 @@ func newFakeContactService() *fakeContactService {
 	}
 }
 
-func (f *fakeContactService) ListContacts(_ context.Context) ([]contacts.Contact, error) {
+func (f *fakeContactService) ListContacts(_ context.Context, tag string) ([]contacts.Contact, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
 	out := make([]contacts.Contact, 0, len(f.byID))
 	for _, c := range f.byID {
-		out = append(out, c)
+		if tag == "" {
+			out = append(out, c)
+			continue
+		}
+		for _, t := range c.Tags {
+			if t == tag {
+				out = append(out, c)
+				break
+			}
+		}
 	}
 	return out, nil
 }

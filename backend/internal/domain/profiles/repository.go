@@ -28,4 +28,11 @@ type Repository interface {
 	// exactly one active profile afterwards. It returns a kernel.NotFoundError when
 	// id does not exist.
 	Activate(ctx context.Context, id kernel.ProfileID) error
+	// UpdateIdentity persists skills and seniority for a profile.
+	UpdateIdentity(ctx context.Context, id kernel.ProfileID, skills []string, seniority kernel.Seniority) error
+	// UpdateConditions persists the conditions (dealbreakers + preferences) for a profile.
+	UpdateConditions(ctx context.Context, id kernel.ProfileID, c ProfileConditions) error
+	// UpdateWeights persists the fit-score weights for a profile. Caller must validate
+	// that weights sum to 100 before calling (domain rule, not enforced in storage).
+	UpdateWeights(ctx context.Context, id kernel.ProfileID, w FitWeights) error
 }

@@ -1,7 +1,8 @@
 // Package profiles is the profiles bounded context. It owns the search persona used
 // to scope every job/dashboard/browser view and to drive the scraper's board-side
 // filtering (keywords + location). Each profile is a named search configuration;
-// exactly one profile is active at a time.
+// exactly one profile is active at a time. Phase 3 adds identity, conditions, and
+// fit-score weights (see identity.go).
 package profiles
 
 import (
@@ -23,11 +24,21 @@ type Profile struct {
 	Location string
 	// IsActive reports whether this is the single active profile.
 	IsActive bool
+
+	// Identity: extracted from the LinkedIn PDF import or manually maintained.
+	Skills    []string
+	Seniority kernel.Seniority
+
+	// Conditions: dealbreakers and preferences used by the scoring pipeline.
+	Conditions ProfileConditions
+
+	// Weights: user-configured fit-score weights (soft components, sum = 100).
+	Weights FitWeights
 }
 
 // NewProfile constructs a Profile with validated name, location, and keywords. It
-// validates that the name is non-empty; keywords and location default to empty slices
-// and empty string respectively when not provided.
+// validates that the name is non-empty; keywords default to an empty slice when nil.
+// Identity, conditions, and weights are zeroed and set via dedicated service methods.
 //
 // Example:
 //
@@ -43,5 +54,10 @@ func NewProfile(name, location string, keywords []string) (Profile, error) {
 		Name:           strings.TrimSpace(name),
 		Location:       location,
 		SearchKeywords: keywords,
+		Weights:        DefaultFitWeights(),
+		Conditions: ProfileConditions{
+			DealBreakerRequiredSkills: []string{},
+			PreferredSkills:           []string{},
+		},
 	}, nil
 }

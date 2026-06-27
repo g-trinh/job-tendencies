@@ -116,6 +116,49 @@ func (f *fakeProfileService) ActivateProfile(_ context.Context, id kernel.Profil
 	return profiles.Profile{}, &kernel.NotFoundError{Kind: "profile", ID: string(id)}
 }
 
+func (f *fakeProfileService) PatchIdentity(_ context.Context, id kernel.ProfileID, skills []string, seniority kernel.Seniority) (profiles.Profile, error) {
+	if f.err != nil {
+		return profiles.Profile{}, f.err
+	}
+	for i, p := range f.list {
+		if p.ID == id {
+			f.list[i].Skills = skills
+			f.list[i].Seniority = seniority
+			return f.list[i], nil
+		}
+	}
+	return profiles.Profile{}, &kernel.NotFoundError{Kind: "profile", ID: string(id)}
+}
+
+func (f *fakeProfileService) UpdateConditions(_ context.Context, id kernel.ProfileID, c profiles.ProfileConditions) (profiles.Profile, error) {
+	if f.err != nil {
+		return profiles.Profile{}, f.err
+	}
+	for i, p := range f.list {
+		if p.ID == id {
+			f.list[i].Conditions = c
+			return f.list[i], nil
+		}
+	}
+	return profiles.Profile{}, &kernel.NotFoundError{Kind: "profile", ID: string(id)}
+}
+
+func (f *fakeProfileService) UpdateWeights(_ context.Context, id kernel.ProfileID, w profiles.FitWeights) (profiles.Profile, error) {
+	if f.err != nil {
+		return profiles.Profile{}, f.err
+	}
+	if err := w.Validate(); err != nil {
+		return profiles.Profile{}, &kernel.ValidationError{Field: "weights", Message: err.Error()}
+	}
+	for i, p := range f.list {
+		if p.ID == id {
+			f.list[i].Weights = w
+			return f.list[i], nil
+		}
+	}
+	return profiles.Profile{}, &kernel.NotFoundError{Kind: "profile", ID: string(id)}
+}
+
 func newProfileRouter(svc *fakeProfileService) *chi.Mux {
 	logger := slog.Default()
 	r := handler.NewRouter(logger)
@@ -126,6 +169,9 @@ func newProfileRouter(svc *fakeProfileService) *chi.Mux {
 	r.Delete("/api/profiles/{id}", handler.DeleteProfile(svc))
 	r.Get("/api/active-profile", handler.GetActiveProfile(svc))
 	r.Put("/api/active-profile", handler.PutActiveProfile(svc))
+	r.Patch("/api/profiles/{id}/identity", handler.PatchProfileIdentity(svc))
+	r.Put("/api/profiles/{id}/conditions", handler.PutProfileConditions(svc))
+	r.Put("/api/profiles/{id}/weights", handler.PutProfileWeights(svc))
 	return r
 }
 
@@ -311,6 +357,121 @@ func TestDeleteProfile_RemovesProfile(t *testing.T) {
 
 			if rec.Code != tc.wantStatus {
 				t.Errorf("status = %d; want %d", rec.Code, tc.wantStatus)
+			}
+		})
+	}
+}
+
+// AC: PATCH /api/profiles/{id}/identity updates skills and seniority.
+
+func TestPatchProfileIdentity(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		id         string
+		body       string
+		wantStatus int
+		wantSkills []string
+	}{
+		{
+			name:       "updates skills and seniority",
+			id:         "p-1",
+			body:       `{"skills":["go","postgres"],"seniority":"senior"}`,
+			wantStatus: http.StatusOK,
+			wantSkills: []string{"go", "postgres"},
+		},
+		{
+			name:       "returns 404 for unknown profile",
+			id:         "unknown",
+			body:       `{"skills":["go"],"seniority":"mid"}`,
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "returns 400 for invalid JSON",
+			id:         "p-1",
+			body:       `bad`,
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := &fakeProfileService{
+				list: []profiles.Profile{{ID: "p-1", Name: "Profile A"}},
+			}
+			r := newProfileRouter(svc)
+
+			req := httptest.NewRequest(http.MethodPatch, "/api/profiles/"+tc.id+"/identity",
+				strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != tc.wantStatus {
+				t.Errorf("status = %d; want %d (body: %s)", rec.Code, tc.wantStatus, rec.Body.String())
+			}
+			if tc.wantSkills != nil {
+				var resp struct {
+					Skills []string `json:"skills"`
+				}
+				if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+					t.Fatalf("decoding response: %v", err)
+				}
+				if len(resp.Skills) != len(tc.wantSkills) {
+					t.Errorf("skills = %v; want %v", resp.Skills, tc.wantSkills)
+				}
+			}
+		})
+	}
+}
+
+// AC: PUT /api/profiles/{id}/weights validates sum-to-100.
+
+func TestPutProfileWeights_SumTo100Validation(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{
+			name:       "accepts weights that sum to 100",
+			body:       `{"preferred_skills":40,"salary":25,"location":15,"office_days":10,"working_days":10}`,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "rejects weights that do not sum to 100",
+			body:       `{"preferred_skills":50,"salary":25,"location":15,"office_days":10,"working_days":10}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "returns 400 for invalid JSON",
+			body:       `bad`,
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := &fakeProfileService{
+				list: []profiles.Profile{{ID: "p-1", Name: "Profile A"}},
+			}
+			r := newProfileRouter(svc)
+
+			req := httptest.NewRequest(http.MethodPut, "/api/profiles/p-1/weights",
+				strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != tc.wantStatus {
+				t.Errorf("status = %d; want %d (body: %s)", rec.Code, tc.wantStatus, rec.Body.String())
 			}
 		})
 	}

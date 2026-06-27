@@ -19,8 +19,9 @@ type UpsertResult struct {
 // interfaces live in the domain per ADR-005; the Postgres implementation lives in
 // internal/infra/contacts.
 type Repository interface {
-	// List returns all contacts ordered by name.
-	List(ctx context.Context) ([]Contact, error)
+	// List returns all contacts ordered by name. When tag is non-empty, only
+	// contacts whose tags array contains that tag are returned.
+	List(ctx context.Context, tag string) ([]Contact, error)
 	// GetByID returns one contact, or a kernel.NotFoundError.
 	GetByID(ctx context.Context, id kernel.ContactID) (Contact, error)
 	// Upsert inserts a new contact or merges with an existing one that shares the

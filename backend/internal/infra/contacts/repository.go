@@ -28,13 +28,29 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-// List returns all contacts ordered by name.
-func (r *Repository) List(ctx context.Context) ([]contacts.Contact, error) {
-	const query = `
-		SELECT id, name, company, email, linkedin_url, phone, notes, tags, dedup_key
-		FROM contact ORDER BY name`
-
-	rows, err := r.pool.Query(ctx, query)
+// List returns all contacts ordered by name. When tag is non-empty, only contacts
+// whose tags array contains that tag are returned.
+func (r *Repository) List(ctx context.Context, tag string) ([]contacts.Contact, error) {
+	var (
+		rows interface {
+			Next() bool
+			Scan(dest ...any) error
+			Err() error
+			Close()
+		}
+		err error
+	)
+	if tag != "" {
+		const q = `
+			SELECT id, name, company, email, linkedin_url, phone, notes, tags, dedup_key
+			FROM contact WHERE $1 = ANY(tags) ORDER BY name`
+		rows, err = r.pool.Query(ctx, q, tag)
+	} else {
+		const q = `
+			SELECT id, name, company, email, linkedin_url, phone, notes, tags, dedup_key
+			FROM contact ORDER BY name`
+		rows, err = r.pool.Query(ctx, q)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("querying contacts: %w", err)
 	}

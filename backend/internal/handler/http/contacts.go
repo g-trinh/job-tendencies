@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -13,7 +16,7 @@ import (
 
 // ContactService exposes contacts-CRM use cases. Implemented by app/contacts.Service.
 type ContactService interface {
-	ListContacts(ctx context.Context) ([]contacts.Contact, error)
+	ListContacts(ctx context.Context, tag string) ([]contacts.Contact, error)
 	GetContact(ctx context.Context, id kernel.ContactID) (contacts.Contact, error)
 	UpsertContact(ctx context.Context, name, company, email, linkedInURL, phone, notes string, tags []string) (contacts.Contact, bool, error)
 	UpdateContact(ctx context.Context, id kernel.ContactID, name, company, email, linkedInURL, phone, notes string, tags []string) (contacts.Contact, error)
@@ -62,10 +65,12 @@ func toContactResponse(c contacts.Contact) contactResponse {
 	}
 }
 
-// ListContacts handles GET /api/contacts, returning all contacts.
+// ListContacts handles GET /api/contacts, returning all contacts. Optional query
+// param ?tag=<value> filters to contacts whose tags array contains that value.
 func ListContacts(svc ContactService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		list, err := svc.ListContacts(r.Context())
+		tag := r.URL.Query().Get("tag")
+		list, err := svc.ListContacts(r.Context(), tag)
 		if err != nil {
 			RespondError(w, r, err)
 			return
@@ -75,6 +80,41 @@ func ListContacts(svc ContactService) http.HandlerFunc {
 			out = append(out, toContactResponse(c))
 		}
 		respond(w, http.StatusOK, out)
+	}
+}
+
+// ExportContacts handles GET /api/contacts/export.csv. Returns a CSV file with
+// all contact fields (id, name, company, email, linkedin_url, phone, notes, tags,
+// dedup_key). Tags are serialised as a comma-separated sub-list.
+func ExportContacts(svc ContactService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		list, err := svc.ListContacts(r.Context(), "")
+		if err != nil {
+			RespondError(w, r, err)
+			return
+		}
+
+		var buf bytes.Buffer
+		cw := csv.NewWriter(&buf)
+
+		_ = cw.Write([]string{"id", "name", "company", "email", "linkedin_url", "phone", "notes", "tags", "dedup_key"})
+		for _, c := range list {
+			tags := strings.Join(c.Tags, "|")
+			_ = cw.Write([]string{
+				string(c.ID), c.Name, c.Company, c.Email,
+				c.LinkedInURL, c.Phone, c.Notes, tags, c.DedupKey,
+			})
+		}
+		cw.Flush()
+		if err := cw.Error(); err != nil {
+			RespondError(w, r, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="contacts.csv"`)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(buf.Bytes())
 	}
 }
 

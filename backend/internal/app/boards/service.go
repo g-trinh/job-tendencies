@@ -76,3 +76,66 @@ func (s *Service) DeleteBoard(ctx context.Context, id kernel.BoardID) error {
 	}
 	return nil
 }
+
+// GetBoardAdapter returns the most recent adapter for the board (draft or approved).
+func (s *Service) GetBoardAdapter(ctx context.Context, boardID kernel.BoardID) (boards.Adapter, error) {
+	a, err := s.repo.GetAdapter(ctx, boardID)
+	if err != nil {
+		return boards.Adapter{}, fmt.Errorf("getting adapter for board %q: %w", boardID, err)
+	}
+	return a, nil
+}
+
+// ValidateAdapterSpec validates the AdapterSpec shape and returns field-level errors.
+// It does not persist anything.
+func (s *Service) ValidateAdapterSpec(spec boards.Adapter) error {
+	if err := spec.Spec.Validate(); err != nil {
+		return fmt.Errorf("validating adapter spec: %w", err)
+	}
+	return nil
+}
+
+// ApproveBoardAdapter validates the latest draft adapter for the board and, if valid,
+// promotes it to 'approved', superseding any previously approved adapter.
+func (s *Service) ApproveBoardAdapter(ctx context.Context, boardID kernel.BoardID) (boards.Adapter, error) {
+	a, err := s.repo.GetAdapter(ctx, boardID)
+	if err != nil {
+		return boards.Adapter{}, fmt.Errorf("getting adapter for board %q: %w", boardID, err)
+	}
+	if a.Status == boards.AdapterStatusApproved {
+		return boards.Adapter{}, &kernel.ValidationError{Field: "adapter", Message: "adapter is already approved"}
+	}
+	if err := a.Spec.Validate(); err != nil {
+		return boards.Adapter{}, fmt.Errorf("validating adapter spec: %w", err)
+	}
+	if err := s.repo.ApproveAdapter(ctx, a.ID, boardID); err != nil {
+		return boards.Adapter{}, fmt.Errorf("approving adapter for board %q: %w", boardID, err)
+	}
+	approved, err := s.repo.GetAdapter(ctx, boardID)
+	if err != nil {
+		return boards.Adapter{}, fmt.Errorf("reading approved adapter for board %q: %w", boardID, err)
+	}
+	return approved, nil
+}
+
+// GetSchedule returns the single global cron schedule.
+func (s *Service) GetSchedule(ctx context.Context) (boards.Schedule, error) {
+	sch, err := s.repo.GetSchedule(ctx)
+	if err != nil {
+		return boards.Schedule{}, fmt.Errorf("getting schedule: %w", err)
+	}
+	return sch, nil
+}
+
+// UpsertSchedule creates or replaces the global cron schedule. It validates that
+// the cron expression is non-empty.
+func (s *Service) UpsertSchedule(ctx context.Context, cron string) (boards.Schedule, error) {
+	if cron == "" {
+		return boards.Schedule{}, &kernel.ValidationError{Field: "cron", Message: "required"}
+	}
+	sch := boards.Schedule{Cron: cron}
+	if err := s.repo.UpsertSchedule(ctx, sch); err != nil {
+		return boards.Schedule{}, fmt.Errorf("upserting schedule: %w", err)
+	}
+	return sch, nil
+}

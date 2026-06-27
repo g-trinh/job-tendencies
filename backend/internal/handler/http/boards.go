@@ -19,6 +19,20 @@ type BoardService interface {
 	CreateBoard(ctx context.Context, name, baseURL string) (boards.Board, error)
 	UpdateBoard(ctx context.Context, id kernel.BoardID, name, baseURL string, enabled bool) (boards.Board, error)
 	DeleteBoard(ctx context.Context, id kernel.BoardID) error
+	GetBoardAdapter(ctx context.Context, boardID kernel.BoardID) (boards.Adapter, error)
+	ApproveBoardAdapter(ctx context.Context, boardID kernel.BoardID) (boards.Adapter, error)
+}
+
+// ScheduleService manages the single global cron schedule. Implemented by
+// app/boards.Service.
+type ScheduleService interface {
+	GetSchedule(ctx context.Context) (boards.Schedule, error)
+	UpsertSchedule(ctx context.Context, cron string) (boards.Schedule, error)
+}
+
+// scheduleResponse is the JSON shape of the global schedule.
+type scheduleResponse struct {
+	Cron string `json:"cron"`
 }
 
 // BoardLister lists boards with their approved adapter. Kept for backwards
@@ -151,5 +165,66 @@ func toAdapterResponse(a boards.Adapter) *adapterResponse {
 		FetchMode: string(a.FetchMode),
 		Version:   a.Version,
 		Spec:      a.Spec,
+	}
+}
+
+// GetBoardAdapter handles GET /api/boards/{id}/adapter. Returns the most recent
+// adapter for the board (draft or approved).
+func GetBoardAdapter(svc BoardService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := kernel.BoardID(chi.URLParam(r, "id"))
+		a, err := svc.GetBoardAdapter(r.Context(), id)
+		if err != nil {
+			RespondError(w, r, err)
+			return
+		}
+		respond(w, http.StatusOK, toAdapterResponse(a))
+	}
+}
+
+// PostApproveAdapter handles POST /api/boards/{id}/adapter/approve. Validates the
+// latest draft adapter and promotes it to approved, superseding the prior approved
+// adapter. Returns 400 with field-level errors when the spec is invalid.
+func PostApproveAdapter(svc BoardService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := kernel.BoardID(chi.URLParam(r, "id"))
+		a, err := svc.ApproveBoardAdapter(r.Context(), id)
+		if err != nil {
+			RespondError(w, r, err)
+			return
+		}
+		respond(w, http.StatusOK, toAdapterResponse(a))
+	}
+}
+
+// GetSchedule handles GET /api/schedule, returning the global cron schedule.
+func GetSchedule(svc ScheduleService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sch, err := svc.GetSchedule(r.Context())
+		if err != nil {
+			RespondError(w, r, err)
+			return
+		}
+		respond(w, http.StatusOK, scheduleResponse{Cron: sch.Cron})
+	}
+}
+
+// PutSchedule handles PUT /api/schedule. Body: {"cron":"<expression>"}.
+// Persists the global cron expression.
+func PutSchedule(svc ScheduleService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Cron string `json:"cron"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			RespondError(w, r, &kernel.ValidationError{Field: "body", Message: "invalid JSON"})
+			return
+		}
+		sch, err := svc.UpsertSchedule(r.Context(), body.Cron)
+		if err != nil {
+			RespondError(w, r, err)
+			return
+		}
+		respond(w, http.StatusOK, scheduleResponse{Cron: sch.Cron})
 	}
 }

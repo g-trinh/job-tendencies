@@ -3,7 +3,6 @@ package handler_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -345,7 +344,7 @@ func TestListJobs_FilterQueryParams(t *testing.T) {
 		},
 		{
 			name:       "returns 200 with salary filter",
-			query:      fmt.Sprintf("?salary_min=50000&salary_max=100000"),
+			query:      "?salary_min=50000&salary_max=100000",
 			wantStatus: http.StatusOK,
 		},
 		{

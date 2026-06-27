@@ -81,6 +81,12 @@ func main() {
 		api.Post("/boards", handler.PostBoard(boardSvc))
 		api.Put("/boards/{id}", handler.PutBoard(boardSvc))
 		api.Delete("/boards/{id}", handler.DeleteBoard(boardSvc))
+		api.Get("/boards/{id}/adapter", handler.GetBoardAdapter(boardSvc))
+		api.Post("/boards/{id}/adapter/approve", handler.PostApproveAdapter(boardSvc))
+
+		// Schedule.
+		api.Get("/schedule", handler.GetSchedule(boardSvc))
+		api.Put("/schedule", handler.PutSchedule(boardSvc))
 
 		// Profiles.
 		api.Get("/profiles", handler.ListProfiles(profileSvc))
@@ -90,9 +96,15 @@ func main() {
 		api.Delete("/profiles/{id}", handler.DeleteProfile(profileSvc))
 		api.Get("/active-profile", handler.GetActiveProfile(profileSvc))
 		api.Put("/active-profile", handler.PutActiveProfile(profileSvc))
+		api.Patch("/profiles/{id}/identity", handler.PatchProfileIdentity(profileSvc))
+		api.Get("/profiles/{id}/conditions", handler.GetProfile(profileSvc))
+		api.Put("/profiles/{id}/conditions", handler.PutProfileConditions(profileSvc))
+		api.Get("/profiles/{id}/weights", handler.GetProfile(profileSvc))
+		api.Put("/profiles/{id}/weights", handler.PutProfileWeights(profileSvc))
 
 		// Contacts.
 		api.Get("/contacts", handler.ListContacts(contactSvc))
+		api.Get("/contacts/export.csv", handler.ExportContacts(contactSvc))
 		api.Post("/contacts", handler.PostContact(contactSvc))
 		api.Get("/contacts/{id}", handler.GetContact(contactSvc))
 		api.Put("/contacts/{id}", handler.PutContact(contactSvc))
