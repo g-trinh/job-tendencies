@@ -64,7 +64,8 @@ func main() {
 	// Application services wired over the Postgres repositories.
 	boardSvc := appboards.New(infraboards.NewRepository(pool))
 	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
-	jobSvc := appjobs.New(infrajobs.NewRepository(pool))
+	jobRepo := infrajobs.NewRepository(pool)
+	jobSvc := appjobs.NewWithWriter(jobRepo, jobRepo)
 	contactSvc := appcontacts.New(infracontacts.NewRepository(pool))
 	pipelineSvc := apppipeline.New(infrapipeline.NewRepository(pool), scrapePublisher)
 
@@ -105,6 +106,8 @@ func main() {
 			handler.ScopedRoutes(scoped)
 			scoped.Get("/jobs", handler.ListJobs(jobSvc))
 			scoped.Get("/jobs/{id}", handler.GetJob(jobSvc))
+			scoped.Get("/jobs/{id}/original", handler.GetJobOriginal(jobSvc))
+			scoped.Patch("/jobs/{id}/application", handler.PatchJobApplication(jobSvc))
 		})
 	})
 
