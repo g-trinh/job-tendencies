@@ -29,8 +29,8 @@ import (
 	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
 	infrallm "github.com/g-trinh/job-tendencies/internal/infra/llm"
 	infraprofiles "github.com/g-trinh/job-tendencies/internal/infra/profiles"
-	infrascraping "github.com/g-trinh/job-tendencies/internal/infra/scraping"
 	infrascoring "github.com/g-trinh/job-tendencies/internal/infra/scoring"
+	infrascraping "github.com/g-trinh/job-tendencies/internal/infra/scraping"
 )
 
 func main() {

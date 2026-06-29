@@ -157,12 +157,10 @@ func defaultExtracted() *llm.ExtractedListing {
 	}
 }
 
-// newMsg builds a test Pub/Sub message carrying rawListingID.
-func newMsg(rawListingID string) messaging.Message {
+// msg builds a test Pub/Sub message carrying rawListingID in the extract attribute.
+func msg(rawListingID string) messaging.Message { //nolint:unparam // test helper: callers may vary
 	return messaging.Message{
-		Attributes: map[string]string{
-			appscraping.ExtractRawListingIDAttr: rawListingID,
-		},
+		Attributes: map[string]string{appscraping.ExtractRawListingIDAttr: rawListingID},
 	}
 }
 
@@ -185,7 +183,7 @@ func TestHandleListingExtract_NewJob(t *testing.T) {
 	scorer := &fakeJobScorer{}
 
 	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithScorer(scorer)
-	err := svc.HandleListingExtract(context.Background(), newMsg("raw-1"))
+	err := svc.HandleListingExtract(context.Background(), msg("raw-1"))
 	if err != nil {
 		t.Fatalf("HandleListingExtract returned error: %v", err)
 	}
@@ -215,7 +213,7 @@ func TestHandleListingExtract_DedupMerge(t *testing.T) {
 	scorer := &fakeJobScorer{}
 
 	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithScorer(scorer)
-	err := svc.HandleListingExtract(context.Background(), newMsg("raw-1"))
+	err := svc.HandleListingExtract(context.Background(), msg("raw-1"))
 	if err != nil {
 		t.Fatalf("HandleListingExtract returned error: %v", err)
 	}
@@ -250,7 +248,7 @@ func TestHandleListingExtract_RecruiterContact(t *testing.T) {
 	contacts := &fakeContactUpserter{returnID: "contact-99"}
 
 	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithContacts(contacts)
-	err := svc.HandleListingExtract(context.Background(), newMsg("raw-1"))
+	err := svc.HandleListingExtract(context.Background(), msg("raw-1"))
 	if err != nil {
 		t.Fatalf("HandleListingExtract returned error: %v", err)
 	}
@@ -284,7 +282,7 @@ func TestHandleListingExtract_HiddenRecruiterSkipsContact(t *testing.T) {
 	contacts := &fakeContactUpserter{returnID: "contact-should-not-be-called"}
 
 	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithContacts(contacts)
-	err := svc.HandleListingExtract(context.Background(), newMsg("raw-1"))
+	err := svc.HandleListingExtract(context.Background(), msg("raw-1"))
 	if err != nil {
 		t.Fatalf("HandleListingExtract returned error: %v", err)
 	}
@@ -313,7 +311,7 @@ func TestHandleListingExtract_MissingSalary(t *testing.T) {
 	repo := &capturingJobRepo{captureInto: &capturedJob, returnID: "job-4"}
 
 	svc := New(rawSrc, blob, extractor, repo, nopLogger())
-	err := svc.HandleListingExtract(context.Background(), newMsg("raw-1"))
+	err := svc.HandleListingExtract(context.Background(), msg("raw-1"))
 	if err != nil {
 		t.Fatalf("HandleListingExtract returned error: %v", err)
 	}
@@ -339,7 +337,7 @@ func TestHandleListingExtract_ScoringFailureIsNonFatal(t *testing.T) {
 	scorer := &fakeJobScorer{err: errors.New("scoring service unavailable")}
 
 	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithScorer(scorer)
-	err := svc.HandleListingExtract(context.Background(), newMsg("raw-1"))
+	err := svc.HandleListingExtract(context.Background(), msg("raw-1"))
 	if err != nil {
 		t.Fatalf("HandleListingExtract should not fail when scoring fails; got: %v", err)
 	}
