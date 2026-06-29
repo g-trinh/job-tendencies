@@ -17,6 +17,7 @@ import (
 
 	appboards "github.com/g-trinh/job-tendencies/internal/app/boards"
 	appcontacts "github.com/g-trinh/job-tendencies/internal/app/contacts"
+	appdashboard "github.com/g-trinh/job-tendencies/internal/app/dashboard"
 	appjobs "github.com/g-trinh/job-tendencies/internal/app/jobs"
 	apppipeline "github.com/g-trinh/job-tendencies/internal/app/pipeline"
 	appprofiles "github.com/g-trinh/job-tendencies/internal/app/profiles"
@@ -24,6 +25,7 @@ import (
 	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
 	infraboards "github.com/g-trinh/job-tendencies/internal/infra/boards"
 	infracontacts "github.com/g-trinh/job-tendencies/internal/infra/contacts"
+	infradashboard "github.com/g-trinh/job-tendencies/internal/infra/dashboard"
 	"github.com/g-trinh/job-tendencies/internal/infra/db"
 	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
 	infrallm "github.com/g-trinh/job-tendencies/internal/infra/llm"
@@ -72,6 +74,7 @@ func main() {
 	jobSvc := appjobs.NewWithWriter(jobRepo, jobRepo)
 	contactSvc := appcontacts.New(infracontacts.NewRepository(pool))
 	pipelineSvc := apppipeline.New(infrapipeline.NewRepository(pool), scrapePublisher)
+	dashboardSvc := appdashboard.New(infradashboard.NewRepository(pool))
 
 	r := handler.NewRouter(logger)
 	r.Get("/healthz", handleHealthz)
@@ -125,6 +128,12 @@ func main() {
 			scoped.Get("/jobs/{id}", handler.GetJob(jobSvc))
 			scoped.Get("/jobs/{id}/original", handler.GetJobOriginal(jobSvc))
 			scoped.Patch("/jobs/{id}/application", handler.PatchJobApplication(jobSvc))
+
+			// Dashboard.
+			scoped.Get("/dashboard/skills/frequency", handler.GetDashboardSkillFrequency(dashboardSvc))
+			scoped.Get("/dashboard/skills/trend", handler.GetDashboardSkillTrend(dashboardSvc))
+			scoped.Get("/dashboard/matches", handler.GetDashboardMatches(dashboardSvc))
+			scoped.Get("/dashboard/stats", handler.GetDashboardStats(dashboardSvc))
 		})
 	})
 
