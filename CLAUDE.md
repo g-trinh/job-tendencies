@@ -78,11 +78,19 @@ rtk prisma              # Prisma without ASCII art (88%)
 ```
 
 ### Files & Search (60-75% savings)
+
+> **Precedence for CODE browsing: code-review-graph wins.** For anything about
+> code structure — finding a function/type, callers, callees, imports, tests,
+> impact — use the code-review-graph MCP tools FIRST (see "MCP Tools" below).
+> Only fall back to `rtk grep`/`rtk find`/`rtk read` when the graph doesn't
+> cover it (non-code files, raw text, config, logs, live filesystem state) or
+> isn't built for the current branch.
+
 ```bash
 rtk ls <path>           # Tree format, compact (65%)
-rtk read <file>         # Code reading with filtering (60%)
+rtk read <file>         # Code reading with filtering (60%) — non-graph fallback
 rtk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
-rtk find <pattern>      # Find grouped by directory (70%)
+rtk find <pattern>      # Find grouped by directory (70%) — non-graph fallback
 ```
 
 ### Analysis & Debug (70-90% savings)
@@ -136,3 +144,50 @@ rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
 
 Overall average: **60-90% token reduction** on common development operations.
 <!-- /rtk-instructions -->
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read OR `rtk
+grep`/`rtk find`/`rtk read` to explore the codebase.** This takes
+precedence over the RTK "Files & Search" commands above for any
+code-structure question. The graph is faster, cheaper (fewer tokens),
+and gives you structural context (callers, dependents, test coverage)
+that file scanning cannot.
+
+These tools are **deferred** in-session — load the schema once via
+`ToolSearch` (`select:mcp__code-review-graph__semantic_search_nodes_tool,
+mcp__code-review-graph__query_graph_tool,mcp__code-review-graph__detect_changes_tool`)
+before first use. Pay that one-time cost; do NOT default to `rtk grep`
+just because it needs no load step.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+
+### Key Tools
+
+| Tool | Use when |
+| ------ | ---------- |
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.
