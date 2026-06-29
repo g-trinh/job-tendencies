@@ -1,0 +1,27 @@
+{
+  "autoMemoryEnabled": false,
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f \u0026\u0026 [ -n \"$f\" ] \u0026\u0026 git add \"$f\"; } 2\u003e/dev/null || true",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "repo=\"$(git rev-parse --show-toplevel 2>/dev/null)\" && code-review-graph update --skip-flows --repo \"$repo\" || true",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

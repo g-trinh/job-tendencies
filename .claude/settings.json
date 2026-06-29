@@ -6,8 +6,18 @@
         "matcher": "Write|Edit",
         "hooks": [
           {
-            "command": "jq -r '.tool_input.file_path // empty' | { read -r f \u0026\u0026 [ -n \"$f\" ] \u0026\u0026 git add \"$f\"; } 2\u003e/dev/null || true",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f && [ -n \"$f\" ] && git add \"$f\"; } 2>/dev/null || true",
             "type": "command"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat >/dev/null || true; git rev-parse --git-dir >/dev/null 2>&1 && code-review-graph update --skip-flows --repo \"/Users/guillaume/Projects/job-tendencies\" || true",
+            "timeout": 30
           }
         ]
       }
@@ -19,6 +29,16 @@
             "command": "repo=\"$(git rev-parse --show-toplevel 2>/dev/null)\" && code-review-graph update --skip-flows --repo \"$repo\" || true",
             "timeout": 30,
             "type": "command"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat >/dev/null || true; git rev-parse --git-dir >/dev/null 2>&1 && code-review-graph status --repo \"/Users/guillaume/Projects/job-tendencies\" || echo 'Not a git repo, skipping'",
+            "timeout": 10
           }
         ]
       }
