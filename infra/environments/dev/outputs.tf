@@ -32,3 +32,13 @@ output "listing_extract_topic" {
   value       = module.listing_extract.topic_name
   description = "listing.extract topic name."
 }
+
+output "hosting_site_id" {
+  value       = google_firebase_hosting_site.spa.site_id
+  description = "Firebase Hosting site id (deploy target for frontend/.firebaserc)."
+}
+
+output "hosting_default_url" {
+  value       = google_firebase_hosting_site.spa.default_url
+  description = "Default Firebase Hosting URL for the SPA."
+}

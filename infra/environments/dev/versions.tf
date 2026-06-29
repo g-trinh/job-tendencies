@@ -5,10 +5,20 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 6.0"
     }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 6.0"
+    }
   }
 }
 
 provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Firebase resources (google_firebase_*) live only in the beta provider.
+provider "google-beta" {
   project = var.project_id
   region  = var.region
 }
