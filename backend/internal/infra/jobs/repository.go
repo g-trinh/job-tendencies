@@ -331,6 +331,60 @@ func scanJobView(row rowScanner) (appjobs.JobView, error) {
 	return view, nil
 }
 
+// FindByFingerprint looks up an existing job row by its dedup fingerprint.
+// Returns (id, true, nil) on a hit; ("", false, nil) when no row matches.
+func (r *Repository) FindByFingerprint(ctx context.Context, fingerprint string) (kernel.JobID, bool, error) {
+	var id string
+	err := r.pool.QueryRow(ctx, `SELECT id FROM job WHERE fingerprint = $1`, fingerprint).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("finding job by fingerprint: %w", err)
+	}
+	return kernel.JobID(id), true, nil
+}
+
+// MergeSource appends a JobSource row for an existing job, advances last_seen, and
+// sets contact_id when the job's contact_id is currently NULL. The source insert is
+// idempotent: a duplicate (job_id, raw_listing_id) row is silently skipped.
+func (r *Repository) MergeSource(ctx context.Context, jobID kernel.JobID, source jobs.JobSource, lastSeen time.Time, contactID *kernel.ContactID) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning merge transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	const insertSource = `
+		INSERT INTO job_source (job_id, raw_listing_id, board_id, source_url)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (job_id, raw_listing_id) DO NOTHING`
+	if _, err := tx.Exec(ctx, insertSource,
+		string(jobID), string(source.RawListingID), string(source.BoardID), source.SourceURL,
+	); err != nil {
+		return fmt.Errorf("inserting merged source: %w", err)
+	}
+
+	var contactParam *string
+	if contactID != nil {
+		s := string(*contactID)
+		contactParam = &s
+	}
+	const updateJob = `
+		UPDATE job
+		SET last_seen  = $2,
+		    contact_id = COALESCE(contact_id, $3)
+		WHERE id = $1`
+	if _, err := tx.Exec(ctx, updateJob, string(jobID), lastSeen, contactParam); err != nil {
+		return fmt.Errorf("updating merged job metadata: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing merge transaction: %w", err)
+	}
+	return nil
+}
+
 var (
 	_ jobs.Repository              = (*Repository)(nil)
 	_ appjobs.JobQuery             = (*Repository)(nil)
