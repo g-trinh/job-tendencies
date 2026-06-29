@@ -153,6 +153,7 @@ func buildJob(e *llm.ExtractedListing, ref RawListingRef, now time.Time) jobs.Jo
 			"salary_min":    e.SalaryMin.Confidence.Int(),
 			"salary_max":    e.SalaryMax.Confidence.Int(),
 			"seniority":     e.Seniority.Confidence.Int(),
+			"recruiter":     e.Recruiter.Confidence.Int(),
 		},
 		UnderstandingScore: e.Understanding,
 		FirstSeen:          now,
