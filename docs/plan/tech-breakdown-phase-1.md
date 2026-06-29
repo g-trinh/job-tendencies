@@ -126,7 +126,7 @@ least-privilege IAM; OIDC push invoker; scrape-worker max-instances=1/concurrenc
 
 **Description:**
 Cloud Scheduler job targeting `scrape.tick`, `Europe/Paris`; cron may stay paused until
-Phase 7.
+Phase 8.
 
 **Refs:** infrastructure.md §5 (scheduler), deployment.md §1
 

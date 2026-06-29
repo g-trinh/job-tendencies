@@ -77,14 +77,15 @@ join as their deps land.
 | 1 | Dev infra + ports + http base | Cloud Run dev + Pub/Sub dev live; llm/messaging/blobstore/DB adapters | A deployed `/healthz` on dev; Pub/Sub push reaches a worker |
 | 2 | **Walking skeleton** | 1 board → on-demand run → scrape → extract → 1 job, **on dev** | End-to-end run on Cloud Run dev produces a visible job |
 | 3 | Full backend contexts | All 8 contexts complete behind app-services | Per-context DoD; API surface (`overview.md` §6) live on dev |
-| 4 | Pipeline hardening | Idempotency, DLQ, expiry, reextract, dedup, scoring | Integration tests + dev pipeline run green |
-| 5 | Frontend | All 6 feature UIs in React, French | Each feature wired to dev API; FE tests green |
-| 6 | Infra: prod + hardening | prod env, full IAM, Scheduler, SPA hosting | `tofu plan` clean both envs; prod deployable |
-| 7 | E2E & polish | Scheduled run, badges/thresholds, CSV, security tier-0 | Full scheduled pipeline verified end-to-end |
+| 4 | **Authentication** | API edge auth: backend-proxied Identity Platform, single-user, session cookie, route guard | SPA login works on dev; unauthenticated `/api` → 401; FE never calls Firebase directly |
+| 5 | Pipeline hardening | Idempotency, DLQ, expiry, reextract, dedup, scoring | Integration tests + dev pipeline run green |
+| 6 | Frontend | All 6 feature UIs in React, French | Each feature wired to dev API; FE tests green |
+| 7 | Infra: prod + hardening | prod env, full IAM, Scheduler, SPA hosting | `tofu plan` clean both envs; prod deployable |
+| 8 | E2E & polish | Scheduled run, badges/thresholds, CSV, security tier-0 | Full scheduled pipeline verified end-to-end |
 
 `template/` (ui-integrator) runs as a **parallel track from Phase 1** — no backend
 dependency. **Infra is split**: the **dev environment** is built in Phase 1 (the skeleton
-needs it); **prod + remaining hardening** is Phase 6.
+needs it); **prod + remaining hardening** is Phase 7.
 
 ---
 
@@ -210,7 +211,40 @@ app-service → http handlers → `go-testing` → quality gate → deploy-dev v
 
 **Exit:** every endpoint in `overview.md` §6 live on dev; per-context DoD met.
 
-## Phase 4 — Pipeline hardening
+## Phase 4 — Authentication
+
+**Owner:** backend-developer (+ frontend-developer for the login screen) + cloud-ops (enable
+Identity Platform). The full backend contexts (Phase 3) already exist on another branch; auth
+slots in here so every API surface is guarded and the SPA can talk to the deployed backend
+without opening the API unauthenticated.
+
+**Hard constraint:** the **frontend never calls Firebase / Identity Platform directly**. All
+identity calls are **proxied through the backend** (BFF pattern). No Firebase client SDK, no
+Firebase config, no ID tokens in browser JS.
+
+**Mechanism:** Identity Platform (Firebase Auth's GCP tier) accessed **server-side only**.
+SPA → `POST /api/auth/*` → backend → Identity Platform REST. Backend issues an **httpOnly,
+Secure, SameSite** session cookie; an auth middleware verifies it on every `/api` route.
+**Scope: single-user** — authenticate the one user; keep the multi-tenant seam
+(active-profile param) but no `tenant_id` model yet.
+
+- **infra (cloud-ops):** enable Identity Platform on the project (OpenTofu
+  `google_identity_platform_config`); store the IdP API key + admin credentials in Secret
+  Manager; wire them to the `api` service env/secrets; create the single user out of band.
+- **backend:** server-side Identity Platform client (wraps `signInWithPassword`, token
+  refresh, ID-token verification via JWKS); `POST /api/auth/login` (sets session cookie),
+  `POST /api/auth/logout`, `GET /api/auth/me`; session cookie issue/verify; auth middleware
+  guarding `/api` (401 when absent/invalid); CSRF protection for cookie-auth.
+- **frontend:** French login screen posting to `/api/auth/login`; route guard via
+  `GET /api/auth/me`; logout. No direct Firebase usage.
+- **security:** the `api` service may now be `allUsers`-invocable (the app enforces auth), so
+  the Firebase Hosting `/api` rewrite works without exposing unguarded routes. Resolves the
+  former Phase 7/8 auth open-questions.
+
+**Exit:** SPA login works end-to-end on **Cloud Run dev**; unauthenticated `/api` returns
+401; no Firebase call originates from the browser; session is an httpOnly cookie.
+
+## Phase 5 — Pipeline hardening
 
 **Owner:** backend-developer.
 
@@ -222,7 +256,7 @@ app-service → http handlers → `go-testing` → quality gate → deploy-dev v
 - Batch API option for scheduled bulk extraction (50% cost; latency not user-facing).
 - Cross-worker integration tests + a dev pipeline run.
 
-## Phase 5 — Frontend
+## Phase 6 — Frontend
 
 **`template/` track (ui-integrator)** — from Phase 1, no backend dep: design-system tokens
 + component inventory; French strings; static HTML/CSS for all 6 features + pipeline
@@ -243,7 +277,7 @@ run/status → drives `design_changes.md`. **Does not touch `frontend/`.**
 
 **Exit:** all features wired to the dev API; `frontend-testing` green per feature.
 
-## Phase 6 — Infra: prod + hardening
+## Phase 7 — Infra: prod + hardening
 
 **Owner:** cloud-ops. Dev env already exists (Phase 1); this phase adds prod and finishes.
 
@@ -255,7 +289,7 @@ run/status → drives `design_changes.md`. **Does not touch `frontend/`.**
 - Workflow: `tofu fmt -recursive` + `validate` both envs → `plan` (reviewed) → **stop**;
   `apply` only on explicit per-action confirmation.
 
-## Phase 7 — E2E & polish
+## Phase 8 — E2E & polish
 
 - Full **scheduled** run via Cloud Scheduler (dev then prod) end-to-end.
 - Multi-board dedup verified (one job, multiple `job_source`).
