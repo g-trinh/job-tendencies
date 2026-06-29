@@ -10,16 +10,20 @@ import (
 
 	"github.com/g-trinh/job-tendencies/internal/domain/boards"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
+	domainllm "github.com/g-trinh/job-tendencies/internal/domain/llm"
 )
 
 // Service exposes board-manager use cases to the API and the scrape-worker.
 type Service struct {
-	repo boards.Repository
+	repo      boards.Repository
+	generator domainllm.AdapterGenerator
 }
 
-// New constructs a board-manager Service.
-func New(repo boards.Repository) *Service {
-	return &Service{repo: repo}
+// New constructs a board-manager Service. generator is the LLM adapter generator used by
+// GenerateAdapter; it may be nil when that endpoint is not wired (e.g. in tests that only
+// exercise CRUD paths), in which case GenerateAdapter returns an error.
+func New(repo boards.Repository, generator domainllm.AdapterGenerator) *Service {
+	return &Service{repo: repo, generator: generator}
 }
 
 // ListBoards returns all boards, each with its approved adapter when present.
@@ -138,4 +142,43 @@ func (s *Service) UpsertSchedule(ctx context.Context, cron string) (boards.Sched
 		return boards.Schedule{}, fmt.Errorf("upserting schedule: %w", err)
 	}
 	return sch, nil
+}
+
+// GenerateAdapter calls the LLM to generate a declarative AdapterSpec draft for the
+// given board, using exampleResponse as the page sample the model analyses. The draft
+// is persisted with status=draft and must be reviewed and approved via
+// ApproveBoardAdapter before the scraper can evaluate it.
+//
+// exampleResponse is the raw HTML or JSON captured from the board's search or listing
+// URL — the content the LLM uses to infer selectors, URL templates, and pagination.
+func (s *Service) GenerateAdapter(ctx context.Context, boardID kernel.BoardID, exampleResponse string) (boards.Adapter, error) {
+	if exampleResponse == "" {
+		return boards.Adapter{}, &kernel.ValidationError{Field: "example_response", Message: "required"}
+	}
+	if s.generator == nil {
+		return boards.Adapter{}, fmt.Errorf("adapter generator not configured")
+	}
+
+	b, err := s.repo.BoardByID(ctx, boardID)
+	if err != nil {
+		return boards.Adapter{}, fmt.Errorf("getting board %q: %w", boardID, err)
+	}
+
+	spec, err := s.generator.GenerateAdapter(ctx, b.BaseURL, exampleResponse)
+	if err != nil {
+		return boards.Adapter{}, fmt.Errorf("generating adapter for board %q: %w", boardID, err)
+	}
+
+	draft := boards.Adapter{
+		BoardID:   boardID,
+		Status:    boards.AdapterStatusDraft,
+		FetchMode: spec.FetchMode,
+		Spec:      *spec,
+	}
+	id, err := s.repo.SaveDraftAdapter(ctx, draft)
+	if err != nil {
+		return boards.Adapter{}, fmt.Errorf("saving draft adapter for board %q: %w", boardID, err)
+	}
+	draft.ID = id
+	return draft, nil
 }

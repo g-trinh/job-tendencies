@@ -20,6 +20,7 @@ type BoardService interface {
 	UpdateBoard(ctx context.Context, id kernel.BoardID, name, baseURL string, enabled bool) (boards.Board, error)
 	DeleteBoard(ctx context.Context, id kernel.BoardID) error
 	GetBoardAdapter(ctx context.Context, boardID kernel.BoardID) (boards.Adapter, error)
+	GenerateAdapter(ctx context.Context, boardID kernel.BoardID, exampleResponse string) (boards.Adapter, error)
 	ApproveBoardAdapter(ctx context.Context, boardID kernel.BoardID) (boards.Adapter, error)
 }
 
@@ -179,6 +180,33 @@ func GetBoardAdapter(svc BoardService) http.HandlerFunc {
 			return
 		}
 		respond(w, http.StatusOK, toAdapterResponse(a))
+	}
+}
+
+// generateAdapterRequest is the JSON body for POST /api/boards/{id}/adapter/generate.
+type generateAdapterRequest struct {
+	// ExampleResponse is the raw HTML or JSON page captured from the board's search
+	// or listing URL. The LLM uses it to infer selectors, URL templates, and pagination.
+	ExampleResponse string `json:"example_response"`
+}
+
+// PostGenerateAdapter handles POST /api/boards/{id}/adapter/generate. It calls the LLM
+// to produce a declarative AdapterSpec draft from the supplied example page. The draft
+// is persisted and returned; it must be reviewed and approved before the scraper uses it.
+func PostGenerateAdapter(svc BoardService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := kernel.BoardID(chi.URLParam(r, "id"))
+		var body generateAdapterRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			RespondError(w, r, &kernel.ValidationError{Field: "body", Message: "invalid JSON"})
+			return
+		}
+		a, err := svc.GenerateAdapter(r.Context(), id, body.ExampleResponse)
+		if err != nil {
+			RespondError(w, r, err)
+			return
+		}
+		respond(w, http.StatusCreated, toAdapterResponse(a))
 	}
 }
 

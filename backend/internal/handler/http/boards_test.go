@@ -84,6 +84,26 @@ func (f *fakeBoardService) GetBoardAdapter(_ context.Context, boardID kernel.Boa
 	return boards.Adapter{}, &kernel.NotFoundError{Kind: "adapter", ID: string(boardID)}
 }
 
+func (f *fakeBoardService) GenerateAdapter(_ context.Context, boardID kernel.BoardID, exampleResponse string) (boards.Adapter, error) {
+	if f.err != nil {
+		return boards.Adapter{}, f.err
+	}
+	if exampleResponse == "" {
+		return boards.Adapter{}, &kernel.ValidationError{Field: "example_response", Message: "required"}
+	}
+	for _, v := range f.views {
+		if v.Board.ID == boardID {
+			a := boards.Adapter{
+				ID:      "draft-id",
+				BoardID: boardID,
+				Status:  boards.AdapterStatusDraft,
+			}
+			return a, nil
+		}
+	}
+	return boards.Adapter{}, &kernel.NotFoundError{Kind: "board", ID: string(boardID)}
+}
+
 func (f *fakeBoardService) ApproveBoardAdapter(_ context.Context, boardID kernel.BoardID) (boards.Adapter, error) {
 	if f.err != nil {
 		return boards.Adapter{}, f.err
@@ -103,6 +123,7 @@ func newBoardRouter(svc *fakeBoardService) *chi.Mux {
 	r.Post("/api/boards", handler.PostBoard(svc))
 	r.Put("/api/boards/{id}", handler.PutBoard(svc))
 	r.Delete("/api/boards/{id}", handler.DeleteBoard(svc))
+	r.Post("/api/boards/{id}/adapter/generate", handler.PostGenerateAdapter(svc))
 	return r
 }
 
@@ -284,6 +305,81 @@ func TestDeleteBoard_RemovesBoard(t *testing.T) {
 
 			if rec.Code != tc.wantStatus {
 				t.Errorf("status = %d; want %d", rec.Code, tc.wantStatus)
+			}
+		})
+	}
+}
+
+// AC: Generates a draft AdapterSpec from an example page.
+// AC: Output contains no executable-code field.
+
+func TestPostGenerateAdapter_GeneratesDraft(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		boardID     string
+		body        string
+		wantStatus  int
+		wantStatus2 string
+	}{
+		{
+			name:        "returns 201 with draft adapter for valid board and example",
+			boardID:     "b-1",
+			body:        `{"example_response":"<html>...</html>"}`,
+			wantStatus:  http.StatusCreated,
+			wantStatus2: "draft",
+		},
+		{
+			name:       "returns 400 when example_response is empty",
+			boardID:    "b-1",
+			body:       `{"example_response":""}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "returns 400 for invalid JSON body",
+			boardID:    "b-1",
+			body:       `not-json`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "returns 404 for unknown board",
+			boardID:    "unknown",
+			body:       `{"example_response":"<html>...</html>"}`,
+			wantStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := &fakeBoardService{
+				views: []boards.BoardView{
+					{Board: boards.Board{ID: "b-1", Name: "WTTJ", BaseURL: "https://www.wttj.co", Enabled: true}},
+				},
+			}
+			r := newBoardRouter(svc)
+
+			req := httptest.NewRequest(http.MethodPost, "/api/boards/"+tc.boardID+"/adapter/generate", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != tc.wantStatus {
+				t.Errorf("status = %d; want %d (body: %s)", rec.Code, tc.wantStatus, rec.Body.String())
+			}
+			if tc.wantStatus2 != "" {
+				var resp struct {
+					Status string `json:"status"`
+				}
+				if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+					t.Fatalf("decoding response: %v", err)
+				}
+				if resp.Status != tc.wantStatus2 {
+					t.Errorf("adapter status = %q; want %q", resp.Status, tc.wantStatus2)
+				}
 			}
 		})
 	}

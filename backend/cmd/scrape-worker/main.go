@@ -66,7 +66,8 @@ func main() {
 	defer closePool()
 	defer extractPublisher.Stop()
 
-	boardSvc := appboards.New(infraboards.NewRepository(pool))
+	// ponytail: nil adapter generator — the scrape-worker only reads approved adapters, never generates.
+	boardSvc := appboards.New(infraboards.NewRepository(pool), nil)
 	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
 
 	scrapingSvc := appscraping.New(

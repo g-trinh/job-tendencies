@@ -26,6 +26,7 @@ import (
 	infracontacts "github.com/g-trinh/job-tendencies/internal/infra/contacts"
 	"github.com/g-trinh/job-tendencies/internal/infra/db"
 	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
+	infrallm "github.com/g-trinh/job-tendencies/internal/infra/llm"
 	"github.com/g-trinh/job-tendencies/internal/infra/messaging"
 	infrapipeline "github.com/g-trinh/job-tendencies/internal/infra/pipeline"
 	infraprofiles "github.com/g-trinh/job-tendencies/internal/infra/profiles"
@@ -61,8 +62,11 @@ func main() {
 	defer closePool()
 	defer scrapePublisher.Stop()
 
+	// LLM client shared across services that need adapter generation or extraction.
+	llmClient := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
+
 	// Application services wired over the Postgres repositories.
-	boardSvc := appboards.New(infraboards.NewRepository(pool))
+	boardSvc := appboards.New(infraboards.NewRepository(pool), llmClient)
 	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
 	jobRepo := infrajobs.NewRepository(pool)
 	jobSvc := appjobs.NewWithWriter(jobRepo, jobRepo)
@@ -82,6 +86,7 @@ func main() {
 		api.Put("/boards/{id}", handler.PutBoard(boardSvc))
 		api.Delete("/boards/{id}", handler.DeleteBoard(boardSvc))
 		api.Get("/boards/{id}/adapter", handler.GetBoardAdapter(boardSvc))
+		api.Post("/boards/{id}/adapter/generate", handler.PostGenerateAdapter(boardSvc))
 		api.Post("/boards/{id}/adapter/approve", handler.PostApproveAdapter(boardSvc))
 
 		// Schedule.
