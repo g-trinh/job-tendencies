@@ -20,3 +20,15 @@ variable "scheduler_region" {
   description = "Cloud Scheduler region (europe-west9 is unsupported for Scheduler; use europe-west1)."
   default     = "europe-west1"
 }
+
+variable "image_registry" {
+  type        = string
+  description = "Artifact Registry base path for service images. Empty -> <region>-docker.pkg.dev/<project>/job-tendencies."
+  default     = ""
+}
+
+variable "image_tag" {
+  type        = string
+  description = "Container image tag deployed to Cloud Run."
+  default     = "latest"
+}

@@ -11,7 +11,7 @@
 #
 # ─────────────────────────────────────────────────────────────────────────────
 
-.PHONY: build test lint migrate sqlc \
+.PHONY: build build-linux test lint migrate sqlc \
         image-api image-scrape-worker image-extract-worker \
         deploy-dev-api deploy-dev-scrape-worker deploy-dev-extract-worker \
         help
@@ -34,9 +34,14 @@ GOOSE_VERSION := v3.27.1
 
 # ── Core targets ──────────────────────────────────────────────────────────────
 
-## build: compile all three binaries into bin/
+## build: compile all three binaries into bin/ (host target — for local runs)
 build:
 	go build -o bin/ ./cmd/...
+
+## build-linux: cross-compile static linux/amd64 binaries into bin/ (for prebuilt images)
+build-linux:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+	    go build -trimpath -ldflags="-s -w" -o bin/ ./cmd/...
 
 ## test: run all unit tests
 test:
@@ -61,7 +66,7 @@ sqlc:
 # ── Image targets (build locally; push blocked on Open Question #1) ──────────
 
 ## image-api: build the api Docker image locally
-image-api:
+image-api: build-linux
 	@if [ -z "$(IMAGE_REGISTRY)" ]; then \
 	    echo "ERROR: IMAGE_REGISTRY is not set (Open Question #1 — see Makefile header)"; exit 1; \
 	fi
@@ -73,7 +78,7 @@ image-api:
 	docker push $(IMAGE_REGISTRY)/api:$(IMAGE_TAG)
 
 ## image-scrape-worker: build the scrape-worker Docker image locally
-image-scrape-worker:
+image-scrape-worker: build-linux
 	@if [ -z "$(IMAGE_REGISTRY)" ]; then \
 	    echo "ERROR: IMAGE_REGISTRY is not set (Open Question #1 — see Makefile header)"; exit 1; \
 	fi
@@ -85,7 +90,7 @@ image-scrape-worker:
 	docker push $(IMAGE_REGISTRY)/scrape-worker:$(IMAGE_TAG)
 
 ## image-extract-worker: build the extract-worker Docker image locally
-image-extract-worker:
+image-extract-worker: build-linux
 	@if [ -z "$(IMAGE_REGISTRY)" ]; then \
 	    echo "ERROR: IMAGE_REGISTRY is not set (Open Question #1 — see Makefile header)"; exit 1; \
 	fi
@@ -137,6 +142,12 @@ deploy-dev-extract-worker:
 	    --project $(GCP_PROJECT) \
 	    --platform managed \
 	    --no-allow-unauthenticated
+
+## deploy-build-all: build and deploy all Cloud run dev functions
+deploy-build-all: image-api image-scrape-worker image-extract-worker deploy-dev-api deploy-dev-scrape-worker deploy-dev-extract-worker
+
+## deploy-all: deploy all Cloud run dev functions
+deploy-all: deploy-dev-api deploy-dev-scrape-worker deploy-dev-extract-worker
 
 # ── Help ──────────────────────────────────────────────────────────────────────
 

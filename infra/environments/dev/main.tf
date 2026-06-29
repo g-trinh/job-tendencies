@@ -1,5 +1,38 @@
 locals {
   env = "dev"
+
+  # Container image base. Defaults to the project's Artifact Registry repo; the
+  # binaries are pushed there by `make image-*` (see backend/Makefile).
+  image_base = var.image_registry != "" ? var.image_registry : "${var.region}-docker.pkg.dev/${var.project_id}/job-tendencies"
+
+  # Deterministic resource names, reconstructed instead of read from module
+  # outputs: database/blobstore/secrets already depend on the service SAs, so
+  # feeding their outputs back as service env_vars would form a dependency cycle.
+  # These names are fixed by each module's naming scheme.
+  cloud_sql_instance = "${var.project_id}:${var.region}:jt-${local.env}-pg"
+  db_name            = "job_tendencies"
+  raw_bucket         = "${var.project_id}-raw-${local.env}"
+  scrape_topic       = "scrape-tick-${local.env}"
+  extract_topic      = "listing-extract-${local.env}"
+
+  # Frontend origin allowed to call the API cross-origin (CORS ALLOWED_ORIGINS).
+  # Prod is same-origin via the Firebase Hosting /api rewrite, so CORS only
+  # matters for local dev hitting the deployed API and direct-to-Cloud-Run calls.
+  frontend_origin = "https://${google_firebase_hosting_site.spa.site_id}.web.app"
+  allowed_origins = join(",", [local.frontend_origin, "http://localhost:5173"])
+
+  # DATABASE_URL is required by config.Load() but only goose migrations use it;
+  # the runtime connects via the Cloud SQL Go connector (CLOUD_SQL_INSTANCE +
+  # DB_IAM_USER). Non-empty placeholder so the required-var check passes.
+  database_url = "postgres://iam@/${local.db_name}?host=/cloudsql/${local.cloud_sql_instance}"
+
+  # Shared DB env. DB_IAM_USER is self-injected by the cloud-run-service module.
+  svc_db_env = {
+    GCP_PROJECT_ID     = var.project_id
+    CLOUD_SQL_INSTANCE = local.cloud_sql_instance
+    DB_NAME            = local.db_name
+    DATABASE_URL       = local.database_url
+  }
 }
 
 # --- Project APIs ------------------------------------------------------------
@@ -13,6 +46,8 @@ resource "google_project_service" "apis" {
     "storage.googleapis.com",
     "iam.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "firebase.googleapis.com",
+    "firebasehosting.googleapis.com",
   ])
 
   project            = var.project_id
@@ -46,7 +81,14 @@ module "api" {
   region     = var.region
   project_id = var.project_id
   ingress    = "INGRESS_TRAFFIC_ALL"
+  image      = "${local.image_base}/api:${var.image_tag}"
   # No push invoker: the API is not a push target. SPA auth is deferred (Tier 1).
+  # No Claude secret: the API only serves reads; skipping it avoids a boot-time
+  # dependency on a secret version existing.
+  env_vars = merge(local.svc_db_env, {
+    PUBSUB_SCRAPE_TOPIC_ID = local.scrape_topic
+    ALLOWED_ORIGINS        = local.allowed_origins
+  })
 
   depends_on = [google_project_service.apis]
 }
@@ -57,10 +99,16 @@ module "scrape_worker" {
   env                = local.env
   region             = var.region
   project_id         = var.project_id
+  image              = "${local.image_base}/scrape-worker:${var.image_tag}"
   max_instances      = 1 # pinned: in-process per-board rate limiter stays authoritative
   concurrency        = 1
   allow_push_invoker = true
   push_auth_sa_email = google_service_account.push_auth.email
+  env_vars = merge(local.svc_db_env, {
+    GCS_RAW_BUCKET          = local.raw_bucket
+    PUBSUB_EXTRACT_TOPIC_ID = local.extract_topic
+    PUBSUB_PUSH_SA          = google_service_account.push_auth.email
+  })
 
   depends_on = [google_project_service.apis]
 }
@@ -71,10 +119,21 @@ module "extract_worker" {
   env                = local.env
   region             = var.region
   project_id         = var.project_id
+  image              = "${local.image_base}/extract-worker:${var.image_tag}"
   max_instances      = 5
   concurrency        = 4
   allow_push_invoker = true
   push_auth_sa_email = google_service_account.push_auth.email
+  env_vars = merge(local.svc_db_env, {
+    GCS_RAW_BUCKET = local.raw_bucket
+    PUBSUB_PUSH_SA = google_service_account.push_auth.email
+  })
+  # Claude key from Secret Manager. Requires a secret VERSION to exist before
+  # apply (gcloud secrets versions add claude-api-key-dev ...), else the revision
+  # fails to start.
+  secret_env = {
+    ANTHROPIC_API_KEY = { secret = "claude-api-key-${local.env}" }
+  }
 
   depends_on = [google_project_service.apis]
 }

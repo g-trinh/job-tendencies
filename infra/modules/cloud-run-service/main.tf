@@ -7,6 +7,16 @@ resource "google_service_account" "svc" {
   display_name = "${var.name} (${var.env}) runtime SA"
 }
 
+locals {
+  # The service's own SA is also its Cloud SQL IAM DB user (email minus the
+  # .gserviceaccount.com suffix). Self-injected here so callers don't form a
+  # module-output -> module-input cycle (database/blobstore/secrets already
+  # depend on this SA). Caller env_vars override on key collision.
+  injected_env = {
+    DB_IAM_USER = trimsuffix(google_service_account.svc.email, ".gserviceaccount.com")
+  }
+}
+
 resource "google_cloud_run_v2_service" "svc" {
   project = var.project_id
   # No env suffix: dev and prod are separate projects, so the project already scopes the env.
@@ -36,7 +46,7 @@ resource "google_cloud_run_v2_service" "svc" {
       }
 
       dynamic "env" {
-        for_each = var.env_vars
+        for_each = merge(local.injected_env, var.env_vars)
         content {
           name  = env.key
           value = env.value
