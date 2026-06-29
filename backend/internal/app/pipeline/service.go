@@ -22,7 +22,7 @@ const (
 	ScrapeTickRunAttr = "run_id"
 )
 
-// Service triggers on-demand pipeline runs.
+// Service triggers on-demand pipeline runs and exposes run history for polling.
 type Service struct {
 	runs      pipeline.RunRepository
 	publisher messaging.Publisher
@@ -51,4 +51,22 @@ func (s *Service) CreateRun(ctx context.Context, profileID kernel.ProfileID) (ke
 		return "", fmt.Errorf("publishing scrape.tick for run %q: %w", runID, err)
 	}
 	return runID, nil
+}
+
+// ListRuns returns recent scrape runs ordered newest-first for the pipeline dashboard.
+func (s *Service) ListRuns(ctx context.Context) ([]pipeline.ScrapeRun, error) {
+	runs, err := s.runs.ListRuns(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing scrape runs: %w", err)
+	}
+	return runs, nil
+}
+
+// GetRun returns a scrape run with its per-board breakdown for status polling.
+func (s *Service) GetRun(ctx context.Context, id kernel.ScrapeRunID) (pipeline.ScrapeRun, error) {
+	run, err := s.runs.GetRun(ctx, id)
+	if err != nil {
+		return pipeline.ScrapeRun{}, fmt.Errorf("getting scrape run: %w", err)
+	}
+	return run, nil
 }

@@ -26,6 +26,7 @@ import (
 	infraboards "github.com/g-trinh/job-tendencies/internal/infra/boards"
 	"github.com/g-trinh/job-tendencies/internal/infra/db"
 	"github.com/g-trinh/job-tendencies/internal/infra/messaging"
+	infrapipeline "github.com/g-trinh/job-tendencies/internal/infra/pipeline"
 	infraprofiles "github.com/g-trinh/job-tendencies/internal/infra/profiles"
 	infrascraping "github.com/g-trinh/job-tendencies/internal/infra/scraping"
 )
@@ -69,6 +70,7 @@ func main() {
 	// ponytail: nil adapter generator — the scrape-worker only reads approved adapters, never generates.
 	boardSvc := appboards.New(infraboards.NewRepository(pool), nil)
 	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
+	runTracker := infrapipeline.NewRepository(pool)
 
 	scrapingSvc := appscraping.New(
 		adapterSource{boards: boardSvc, logger: logger},
@@ -78,6 +80,7 @@ func main() {
 		infrascraping.NewRawListingRepository(pool),
 		infrascraping.NewHighWaterMarkRepository(pool),
 		extractPublisher,
+		runTracker,
 		logger,
 	)
 

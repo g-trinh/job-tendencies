@@ -55,6 +55,10 @@ type AdapterSpec struct {
 	Search      SearchConfig      `json:"search"`
 	Listing     ListingConfig     `json:"listing"`
 	Incremental IncrementalConfig `json:"incremental"`
+	// RatePerSecond is the maximum request rate for this board enforced by the
+	// in-process per-board rate limiter in the scrape-worker (tech_debt.md). Zero or
+	// negative means no rate limiting is applied.
+	RatePerSecond float64 `json:"rate_per_second,omitempty"`
 }
 
 // SearchConfig describes the search/index crawl phase for a board.

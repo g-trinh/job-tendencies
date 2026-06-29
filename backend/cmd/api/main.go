@@ -120,6 +120,8 @@ func main() {
 
 		// Pipeline.
 		api.Post("/pipeline/runs", handler.CreatePipelineRun(pipelineSvc, profileSvc))
+		api.Get("/pipeline/runs", handler.ListPipelineRuns(pipelineSvc))
+		api.Get("/pipeline/runs/{id}", handler.GetPipelineRun(pipelineSvc))
 
 		// Profile-scoped routes require a valid X-Active-Profile header.
 		api.Group(func(scoped chi.Router) {

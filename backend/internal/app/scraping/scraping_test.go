@@ -2,6 +2,7 @@ package scraping
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"testing"
@@ -15,17 +16,23 @@ import (
 
 const testBoardID = kernel.BoardID("board-1")
 
-type fakeAdapterSource struct{}
+type fakeAdapterSource struct{ spec llm.AdapterSpec }
 
-func (fakeAdapterSource) ApprovedBoardAdapters(context.Context) ([]BoardAdapter, error) {
-	return []BoardAdapter{{
-		BoardID: testBoardID,
-		Spec: llm.AdapterSpec{
-			Search:      llm.SearchConfig{Pagination: llm.PaginationConfig{Start: 1}},
-			Listing:     llm.ListingConfig{Fetch: llm.ListingFetchUseSearchPayload},
-			Incremental: llm.IncrementalConfig{OverlapBuffer: "36h", SafetyMaxPages: 5},
-		},
-	}}, nil
+func (f fakeAdapterSource) ApprovedBoardAdapters(context.Context) ([]BoardAdapter, error) {
+	spec := f.spec
+	if spec.Incremental.OverlapBuffer == "" {
+		spec.Incremental.OverlapBuffer = "36h"
+	}
+	if spec.Incremental.SafetyMaxPages == 0 {
+		spec.Incremental.SafetyMaxPages = 5
+	}
+	if spec.Listing.Fetch == "" {
+		spec.Listing.Fetch = llm.ListingFetchUseSearchPayload
+	}
+	if spec.Search.Pagination.Start == 0 {
+		spec.Search.Pagination.Start = 1
+	}
+	return []BoardAdapter{{BoardID: testBoardID, Spec: spec}}, nil
 }
 
 type fakeTargetSource struct{}
@@ -45,6 +52,21 @@ func (f fakeFetcher) FetchPage(_ context.Context, _ llm.AdapterSpec, _ ScrapeTar
 	return []Card{
 		{ListingURL: "u1", Title: "A", PostedAt: &f.posted, Raw: []byte(`{"id":1}`)},
 		{ListingURL: "u2", Title: "B", PostedAt: &f.posted, Raw: []byte(`{"id":2}`)},
+	}, nil
+}
+
+// cutoffFetcher returns cards with progressively older timestamps so the HWM cutoff
+// test can verify the crawl stops mid-page. Each page holds one card whose PostedAt
+// decrements by 48 h relative to the previous page (newest-first order).
+type cutoffFetcher struct {
+	newest time.Time
+}
+
+func (f cutoffFetcher) FetchPage(_ context.Context, _ llm.AdapterSpec, _ ScrapeTarget, page int) ([]Card, error) {
+	t := f.newest.Add(-time.Duration(page-1) * 48 * time.Hour)
+	raw := []byte(fmt.Sprintf(`{"page":%d}`, page))
+	return []Card{
+		{ListingURL: fmt.Sprintf("u%d", page), PostedAt: &t, Raw: raw},
 	}, nil
 }
 
@@ -86,19 +108,35 @@ type fakePublisher struct{ published int }
 
 func (p *fakePublisher) Publish(context.Context, messaging.Message) error { p.published++; return nil }
 
-func newTestService(store *fakeStore, raw *fakeRawRepo, hwm *fakeHWM, pub *fakePublisher) *Service {
-	return New(fakeAdapterSource{}, fakeTargetSource{}, fakeFetcher{posted: time.Now().UTC()},
-		store, raw, hwm, pub, slog.New(slog.NewTextHandler(io.Discard, nil)))
+func newTestService(fetcher SearchFetcher, raw *fakeRawRepo, hwm *fakeHWM, pub *fakePublisher) *Service {
+	return newTestServiceWithSpec(llm.AdapterSpec{}, fetcher, raw, hwm, pub)
 }
+
+func newTestServiceWithSpec(spec llm.AdapterSpec, fetcher SearchFetcher, raw *fakeRawRepo, hwm *fakeHWM, pub *fakePublisher) *Service {
+	store := &fakeStore{}
+	return New(
+		fakeAdapterSource{spec: spec},
+		fakeTargetSource{},
+		fetcher,
+		store,
+		raw,
+		hwm,
+		pub,
+		nil, // no-op tracker
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+}
+
+// --- P3-SCR-1/2: basic crawl + content_hash dedup ---
 
 func TestService_HandleScrapeTick(t *testing.T) {
 	t.Parallel()
 
-	store := &fakeStore{}
+	now := time.Now().UTC()
 	raw := &fakeRawRepo{seen: map[string]bool{}}
 	hwm := &fakeHWM{}
 	pub := &fakePublisher{}
-	svc := newTestService(store, raw, hwm, pub)
+	svc := newTestService(fakeFetcher{posted: now}, raw, hwm, pub)
 	ctx := context.Background()
 
 	if err := svc.HandleScrapeTick(ctx, messaging.Message{}); err != nil {
@@ -124,5 +162,105 @@ func TestService_HandleScrapeTick(t *testing.T) {
 	}
 	if raw.saved != 2 {
 		t.Fatalf("second run saved = %d, want still 2", raw.saved)
+	}
+}
+
+// --- P3-SCR-3: HWM cutoff + safety cap ---
+
+// TestCrawlBoard_SafetyCapEnforced verifies that the first crawl (no HWM) stops at
+// safety_max_pages even when the fetcher would return pages indefinitely.
+func TestCrawlBoard_SafetyCapEnforced(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	// cutoffFetcher returns one card per page with posted_at going backward; with no HWM
+	// the cutoff is nil so the crawler must stop at safety_max_pages.
+	raw := &fakeRawRepo{seen: map[string]bool{}}
+	hwm := &fakeHWM{} // nil HWM → first crawl
+	pub := &fakePublisher{}
+
+	spec := llm.AdapterSpec{
+		Incremental: llm.IncrementalConfig{OverlapBuffer: "36h", SafetyMaxPages: 3},
+		Listing:     llm.ListingConfig{Fetch: llm.ListingFetchUseSearchPayload},
+		Search:      llm.SearchConfig{Pagination: llm.PaginationConfig{Start: 1}},
+	}
+	svc := newTestServiceWithSpec(spec, cutoffFetcher{newest: now}, raw, hwm, pub)
+
+	if err := svc.HandleScrapeTick(context.Background(), messaging.Message{}); err != nil {
+		t.Fatalf("HandleScrapeTick error = %v", err)
+	}
+
+	// 3 pages × 1 card each = 3 listings (safety cap = 3 pages)
+	if raw.saved != 3 {
+		t.Fatalf("saved = %d, want 3 (one per page up to safety cap)", raw.saved)
+	}
+	if hwm.value == nil {
+		t.Fatalf("HWM not set after first crawl")
+	}
+}
+
+// TestCrawlBoard_CutoffStopsPagination verifies that a subsequent crawl stops when
+// cards' posted_at falls below (hwm − overlap_buffer), not at the safety cap.
+func TestCrawlBoard_CutoffStopsPagination(t *testing.T) {
+	t.Parallel()
+
+	// HWM = now → cutoff = now - 36h.
+	// cutoffFetcher page 1: now (> cutoff) → captured.
+	// cutoffFetcher page 2: now - 48h (< cutoff) → stop.
+	// Safety cap = 20, so it must stop at page 2, not at the cap.
+	now := time.Now().UTC()
+	hwmTime := now
+
+	raw := &fakeRawRepo{seen: map[string]bool{}}
+	hwm := &fakeHWM{value: &hwmTime}
+	pub := &fakePublisher{}
+
+	spec := llm.AdapterSpec{
+		Incremental: llm.IncrementalConfig{OverlapBuffer: "36h", SafetyMaxPages: 20},
+		Listing:     llm.ListingConfig{Fetch: llm.ListingFetchUseSearchPayload},
+		Search:      llm.SearchConfig{Pagination: llm.PaginationConfig{Start: 1}},
+	}
+	svc := newTestServiceWithSpec(spec, cutoffFetcher{newest: now}, raw, hwm, pub)
+
+	if err := svc.HandleScrapeTick(context.Background(), messaging.Message{}); err != nil {
+		t.Fatalf("HandleScrapeTick error = %v", err)
+	}
+
+	// page 1 captured, page 2 triggers cutoff → stop before reaching safety cap.
+	if raw.saved != 1 {
+		t.Fatalf("saved = %d, want 1 (stopped at cutoff after page 1, not safety cap)", raw.saved)
+	}
+}
+
+// TestComputeCutoff_NilHWMYieldsNil verifies the first-ever-crawl path: a nil HWM
+// produces a nil cutoff so the crawler runs to the safety cap.
+func TestComputeCutoff_NilHWMYieldsNil(t *testing.T) {
+	t.Parallel()
+
+	cutoff, err := computeCutoff(nil, "36h")
+	if err != nil {
+		t.Fatalf("computeCutoff(nil) error = %v", err)
+	}
+	if cutoff != nil {
+		t.Fatalf("computeCutoff(nil) = %v, want nil", cutoff)
+	}
+}
+
+// TestComputeCutoff_AppliesOverlapBuffer verifies that the cutoff is hwm minus the
+// overlap buffer, so late-indexed posts inside the window are re-scanned.
+func TestComputeCutoff_AppliesOverlapBuffer(t *testing.T) {
+	t.Parallel()
+
+	base := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
+	cutoff, err := computeCutoff(&base, "36h")
+	if err != nil {
+		t.Fatalf("computeCutoff error = %v", err)
+	}
+	if cutoff == nil {
+		t.Fatalf("computeCutoff = nil, want time")
+	}
+	want := base.Add(-36 * time.Hour)
+	if !cutoff.Equal(want) {
+		t.Fatalf("cutoff = %v, want %v", *cutoff, want)
 	}
 }
