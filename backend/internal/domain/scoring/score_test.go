@@ -211,8 +211,8 @@ func TestComputeWeightedScore(t *testing.T) {
 			job: scoring.JobFacts{
 				Skills: []string{"Go"},
 			},
-			cond:    scoring.ProfileConditions{},
-			weights: scoring.FitWeights{PreferredSkills: 100},
+			cond:      scoring.ProfileConditions{},
+			weights:   scoring.FitWeights{PreferredSkills: 100},
 			wantScore: 1.0,
 			wantBreakdown: scoring.ComponentBreakdown{
 				PreferredSkills: 1.0,

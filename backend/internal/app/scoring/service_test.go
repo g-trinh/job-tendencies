@@ -139,7 +139,7 @@ func TestService_ScoreJob(t *testing.T) {
 			// Weighted score still computed: no preferred skills set → 1.0.
 			name: "passes_dealbreakers is false when required skill is absent",
 			job: domscoring.JobFacts{
-				Skills:   []string{"Java"},
+				Skills:    []string{"Java"},
 				SalaryMax: ptr(int64(60_000)),
 			},
 			criteria: domscoring.ProfileCriteria{
