@@ -70,6 +70,7 @@ func main() {
 	r.Get("/livez", handleHealthz)
 
 	r.Route("/api", func(api chi.Router) {
+		api.Use(handler.NewCORSMiddleware(cfg.AllowedOrigins))
 		api.Get("/boards", handler.ListBoards(boardSvc))
 		api.Get("/active-profile", handler.GetActiveProfile(profileSvc))
 		api.Post("/pipeline/runs", handler.CreatePipelineRun(pipelineSvc, profileSvc))

@@ -8,6 +8,7 @@ require (
 	cloud.google.com/go/storage v1.63.0
 	github.com/anthropics/anthropic-sdk-go v1.52.0
 	github.com/go-chi/chi/v5 v5.3.0
+	github.com/go-chi/cors v1.2.2
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/tidwall/gjson v1.18.0
 	google.golang.org/api v0.286.0

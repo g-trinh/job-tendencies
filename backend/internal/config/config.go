@@ -23,6 +23,9 @@
 //   - DB_NAME            — Postgres database name (default: job_tendencies).
 //   - WORKER_SERVICE_URL — Cloud Run service URL used as the OIDC token audience.
 //   - PUBSUB_PUSH_SA     — Service account email authorised to deliver Pub/Sub push messages.
+//   - ALLOWED_ORIGINS   — Comma-separated list of browser origins permitted to call the API
+//     cross-origin. Example: https://job-tendencies-dev.web.app,http://localhost:5173
+//     Optional. When unset, no cross-origin requests are permitted (no wildcard fallback).
 package config
 
 import (
@@ -91,6 +94,11 @@ type Config struct {
 	// PubSubPushSA is the service account email authorised to deliver Pub/Sub push
 	// messages (pubsub-push-dev@job-tendencies-dev.iam.gserviceaccount.com).
 	PubSubPushSA string
+
+	// AllowedOrigins is the list of browser origins permitted to make cross-origin
+	// requests to the API. Populated from the ALLOWED_ORIGINS environment variable
+	// (comma-separated). Empty means no cross-origin requests are allowed.
+	AllowedOrigins []string
 }
 
 // Load reads configuration from environment variables and returns a populated
@@ -112,6 +120,7 @@ func Load() (*Config, error) {
 		DBName:               envOrDefault("DB_NAME", DefaultDBName),
 		WorkerServiceURL:     os.Getenv("WORKER_SERVICE_URL"),
 		PubSubPushSA:         os.Getenv("PUBSUB_PUSH_SA"),
+		AllowedOrigins:       parseOrigins(os.Getenv("ALLOWED_ORIGINS")),
 	}
 
 	var missing []string
@@ -133,4 +142,20 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// parseOrigins splits a comma-separated list of origins into a slice, trimming
+// whitespace from each entry and dropping empty tokens. Returns nil when v is empty.
+func parseOrigins(v string) []string {
+	if v == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if s := strings.TrimSpace(p); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
