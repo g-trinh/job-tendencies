@@ -69,7 +69,7 @@ func main() {
 
 	// Application services wired over the Postgres repositories.
 	boardSvc := appboards.New(infraboards.NewRepository(pool), llmClient)
-	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
+	profileSvc := appprofiles.NewWithExtractor(infraprofiles.NewRepository(pool), llmClient)
 	jobRepo := infrajobs.NewRepository(pool)
 	jobSvc := appjobs.NewWithWriter(jobRepo, jobRepo)
 	contactSvc := appcontacts.New(infracontacts.NewRepository(pool))
@@ -105,6 +105,7 @@ func main() {
 		api.Get("/active-profile", handler.GetActiveProfile(profileSvc))
 		api.Put("/active-profile", handler.PutActiveProfile(profileSvc))
 		api.Patch("/profiles/{id}/identity", handler.PatchProfileIdentity(profileSvc))
+		api.Post("/profiles/{id}/identity/import", handler.PostImportIdentity(profileSvc))
 		api.Get("/profiles/{id}/conditions", handler.GetProfile(profileSvc))
 		api.Put("/profiles/{id}/conditions", handler.PutProfileConditions(profileSvc))
 		api.Get("/profiles/{id}/weights", handler.GetProfile(profileSvc))

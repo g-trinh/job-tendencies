@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -28,6 +29,7 @@ type ProfileService interface {
 	DeleteProfile(ctx context.Context, id kernel.ProfileID) error
 	ActivateProfile(ctx context.Context, id kernel.ProfileID) (profiles.Profile, error)
 	PatchIdentity(ctx context.Context, id kernel.ProfileID, skills []string, seniority kernel.Seniority) (profiles.Profile, error)
+	ImportIdentity(ctx context.Context, id kernel.ProfileID, pdf []byte) (profiles.Profile, error)
 	UpdateConditions(ctx context.Context, id kernel.ProfileID, c profiles.ProfileConditions) (profiles.Profile, error)
 	UpdateWeights(ctx context.Context, id kernel.ProfileID, w profiles.FitWeights) (profiles.Profile, error)
 }
@@ -62,6 +64,7 @@ type profileResponse struct {
 	IsActive       bool                      `json:"is_active"`
 	Skills         []string                  `json:"skills"`
 	Seniority      string                    `json:"seniority"`
+	RawExperience  string                    `json:"raw_experience"`
 	Conditions     profileConditionsResponse `json:"conditions"`
 	Weights        profileWeightsResponse    `json:"weights"`
 }
@@ -103,6 +106,7 @@ func toProfileResponse(p profiles.Profile) profileResponse {
 		IsActive:       p.IsActive,
 		Skills:         skills,
 		Seniority:      string(p.Seniority),
+		RawExperience:  p.RawExperience,
 		Conditions: profileConditionsResponse{
 			DealBreakerContractType:   dct,
 			DealBreakerRemotePolicy:   drp,
@@ -336,6 +340,46 @@ func PutProfileWeights(svc ProfileService) http.HandlerFunc {
 			WorkingDays:     body.WorkingDays,
 		}
 		p, err := svc.UpdateWeights(r.Context(), id, weights)
+		if err != nil {
+			RespondError(w, r, err)
+			return
+		}
+		respond(w, http.StatusOK, toProfileResponse(p))
+	}
+}
+
+// PostImportIdentity handles POST /api/profiles/{id}/identity/import.
+// Accepts a multipart/form-data upload with a "file" field containing the LinkedIn
+// PDF export. Extracts skills, experience, and seniority via the LLM client and
+// persists them on the profile. Returns 409 when identity is already populated
+// (single-import guard) and 400 when the file field is missing or empty.
+func PostImportIdentity(svc ProfileService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := kernel.ProfileID(chi.URLParam(r, "id"))
+
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			RespondError(w, r, &kernel.ValidationError{Field: "file", Message: "invalid multipart form"})
+			return
+		}
+
+		file, _, err := r.FormFile("file")
+		if err != nil {
+			RespondError(w, r, &kernel.ValidationError{Field: "file", Message: "required"})
+			return
+		}
+		defer func() { _ = file.Close() }()
+
+		pdf, err := io.ReadAll(file)
+		if err != nil {
+			RespondError(w, r, &kernel.ValidationError{Field: "file", Message: "could not read file"})
+			return
+		}
+		if len(pdf) == 0 {
+			RespondError(w, r, &kernel.ValidationError{Field: "file", Message: "empty file"})
+			return
+		}
+
+		p, err := svc.ImportIdentity(r.Context(), id, pdf)
 		if err != nil {
 			RespondError(w, r, err)
 			return

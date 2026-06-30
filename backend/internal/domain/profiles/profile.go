@@ -26,8 +26,9 @@ type Profile struct {
 	IsActive bool
 
 	// Identity: extracted from the LinkedIn PDF import or manually maintained.
-	Skills    []string
-	Seniority kernel.Seniority
+	Skills        []string
+	Seniority     kernel.Seniority
+	RawExperience string
 
 	// Conditions: dealbreakers and preferences used by the scoring pipeline.
 	Conditions ProfileConditions

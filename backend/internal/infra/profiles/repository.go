@@ -33,7 +33,7 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 // always consistent.
 const selectCols = `
 	id, name, search_keywords, location, is_active,
-	skills, seniority,
+	skills, seniority, raw_experience,
 	dealbreaker_contract_type, dealbreaker_remote_policy,
 	dealbreaker_salary_min, dealbreaker_required_skills,
 	preferred_skills, preferred_max_office_days,
@@ -173,6 +173,19 @@ func (r *Repository) UpdateIdentity(ctx context.Context, id kernel.ProfileID, sk
 	return nil
 }
 
+// UpdateIdentityFromImport persists skills, seniority, and raw experience from a PDF import.
+func (r *Repository) UpdateIdentityFromImport(ctx context.Context, id kernel.ProfileID, skills []string, seniority kernel.Seniority, rawExperience string) error {
+	const query = `UPDATE profile SET skills = $1, seniority = $2, raw_experience = $3 WHERE id = $4`
+	tag, err := r.pool.Exec(ctx, query, skills, string(seniority), rawExperience, string(id))
+	if err != nil {
+		return fmt.Errorf("persisting imported identity for profile %q: %w", id, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return &kernel.NotFoundError{Kind: "profile", ID: string(id)}
+	}
+	return nil
+}
+
 // UpdateConditions persists the dealbreakers and preferences for a profile.
 func (r *Repository) UpdateConditions(ctx context.Context, id kernel.ProfileID, c profiles.ProfileConditions) error {
 	const query = `
@@ -264,7 +277,7 @@ func scanProfile(row interface {
 	)
 	if err := row.Scan(
 		&p.ID, &p.Name, &p.SearchKeywords, &p.Location, &p.IsActive,
-		&p.Skills, &seniority,
+		&p.Skills, &seniority, &p.RawExperience,
 		&dealBreakerCT, &dealBreakerRP,
 		&p.Conditions.DealBreakerSalaryMin, &p.Conditions.DealBreakerRequiredSkills,
 		&p.Conditions.PreferredSkills, &p.Conditions.PreferredMaxOfficeDays,

@@ -9,6 +9,7 @@ package llm
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -405,6 +406,111 @@ func parseExtractedListing(raw json.RawMessage) (*domainllm.ExtractedListing, er
 	listing.Understanding = u
 
 	return listing, nil
+}
+
+// identitySystemPrompt is the system prompt for LinkedIn PDF identity extraction.
+const identitySystemPrompt = `You are an expert at reading LinkedIn PDF exports and extracting professional identity.
+Given a LinkedIn PDF, extract:
+- skills: a flat list of all technical and professional skills mentioned anywhere in the document
+- experience: the full work experience section, copied verbatim as a single text block
+- seniority: the overall career level based on job titles and years of experience
+
+Seniority values: "entry", "mid", "senior", "lead", or "exec" only.
+Return skills as a non-empty array of lowercase strings. Return experience as-is from the document.`
+
+// identityProperties is the JSON Schema "properties" map for the identity extraction tool.
+var identityProperties = map[string]interface{}{
+	"skills": map[string]interface{}{
+		"type":  "array",
+		"items": map[string]interface{}{"type": "string"},
+	},
+	"experience": map[string]interface{}{
+		"type": "string",
+	},
+	"seniority": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"entry", "mid", "senior", "lead", "exec"},
+	},
+}
+
+// identityRequired is the list of required fields for the identity extraction schema.
+var identityRequired = []string{"skills", "experience", "seniority"}
+
+// ExtractIdentity sends a LinkedIn PDF to Claude via a document content block and
+// returns the extracted professional identity (skills, raw experience, seniority).
+// The PDF bytes are base64-encoded and sent as a native document input.
+//
+// Use this to populate a profile's identity on first import. The caller is
+// responsible for enforcing the single-import guard before calling.
+func (c *Client) ExtractIdentity(ctx context.Context, pdf []byte) (*domainllm.ExtractedIdentity, error) {
+	msg, err := c.api.Messages.New(ctx, anthropic.MessageNewParams{
+		Model:     c.modelID,
+		MaxTokens: 4096,
+		System: []anthropic.TextBlockParam{
+			{Text: identitySystemPrompt},
+		},
+		Tools: []anthropic.ToolUnionParam{
+			{
+				OfTool: &anthropic.ToolParam{
+					Name:        "extract_identity",
+					Description: anthropic.String("Extract professional identity from a LinkedIn PDF export"),
+					InputSchema: anthropic.ToolInputSchemaParam{
+						Properties: identityProperties,
+						Required:   identityRequired,
+					},
+				},
+			},
+		},
+		ToolChoice: anthropic.ToolChoiceParamOfTool("extract_identity"),
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(
+				anthropic.NewDocumentBlock(anthropic.Base64PDFSourceParam{
+					Data: base64.StdEncoding.EncodeToString(pdf),
+				}),
+				anthropic.NewTextBlock("Extract professional identity from this LinkedIn PDF export."),
+			),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("calling claude for identity extraction: %w", err)
+	}
+
+	raw, err := extractToolInput(msg.Content)
+	if err != nil {
+		return nil, fmt.Errorf("extracting identity tool input: %w", err)
+	}
+
+	identity, err := parseExtractedIdentity(raw)
+	if err != nil {
+		return nil, fmt.Errorf("parsing extracted identity: %w", err)
+	}
+
+	c.logger.InfoContext(ctx, "identity extracted", "model", c.modelID)
+	return identity, nil
+}
+
+// rawIdentityResponse is used to decode the flat JSON from Claude before mapping
+// to the typed ExtractedIdentity.
+type rawIdentityResponse struct {
+	Skills     []string `json:"skills"`
+	Experience string   `json:"experience"`
+	Seniority  string   `json:"seniority"`
+}
+
+// parseExtractedIdentity maps the raw Claude JSON response to the typed ExtractedIdentity.
+func parseExtractedIdentity(raw json.RawMessage) (*domainllm.ExtractedIdentity, error) {
+	var r rawIdentityResponse
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return nil, fmt.Errorf("unmarshalling raw identity response: %w", err)
+	}
+	if r.Skills == nil {
+		r.Skills = []string{}
+	}
+	return &domainllm.ExtractedIdentity{
+		Skills:        r.Skills,
+		RawExperience: r.Experience,
+		Seniority:     kernel.Seniority(r.Seniority),
+	}, nil
 }
 
 // adapterSchema holds the separated properties and required fields for the

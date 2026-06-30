@@ -1,10 +1,13 @@
 package handler_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -160,6 +163,18 @@ func (f *fakeProfileService) UpdateWeights(_ context.Context, id kernel.ProfileI
 	return profiles.Profile{}, &kernel.NotFoundError{Kind: "profile", ID: string(id)}
 }
 
+func (f *fakeProfileService) ImportIdentity(_ context.Context, id kernel.ProfileID, _ []byte) (profiles.Profile, error) {
+	if f.err != nil {
+		return profiles.Profile{}, f.err
+	}
+	for _, p := range f.list {
+		if p.ID == id {
+			return p, nil
+		}
+	}
+	return profiles.Profile{}, &kernel.NotFoundError{Kind: "profile", ID: string(id)}
+}
+
 func newProfileRouter(svc *fakeProfileService) *chi.Mux {
 	logger := slog.Default()
 	r := handler.NewRouter(logger)
@@ -171,6 +186,7 @@ func newProfileRouter(svc *fakeProfileService) *chi.Mux {
 	r.Get("/api/active-profile", handler.GetActiveProfile(svc))
 	r.Put("/api/active-profile", handler.PutActiveProfile(svc))
 	r.Patch("/api/profiles/{id}/identity", handler.PatchProfileIdentity(svc))
+	r.Post("/api/profiles/{id}/identity/import", handler.PostImportIdentity(svc))
 	r.Put("/api/profiles/{id}/conditions", handler.PutProfileConditions(svc))
 	r.Put("/api/profiles/{id}/weights", handler.PutProfileWeights(svc))
 	return r
@@ -469,6 +485,107 @@ func TestPutProfileWeights_SumTo100Validation(t *testing.T) {
 				strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != tc.wantStatus {
+				t.Errorf("status = %d; want %d (body: %s)", rec.Code, tc.wantStatus, rec.Body.String())
+			}
+		})
+	}
+}
+
+// buildMultipartRequest builds a multipart/form-data request with an optional PDF file.
+// Pass fileContent nil to omit the "file" field entirely.
+func buildMultipartRequest(t *testing.T, method, url string, fileContent []byte) *http.Request {
+	t.Helper()
+
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	if fileContent != nil {
+		fw, err := w.CreateFormFile("file", "linkedin.pdf")
+		if err != nil {
+			t.Fatalf("creating form file: %v", err)
+		}
+		if _, err := fw.Write(fileContent); err != nil {
+			t.Fatalf("writing form file: %v", err)
+		}
+	}
+	_ = w.Close()
+
+	req := httptest.NewRequest(method, url, &body)
+	req.Header.Set("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", w.Boundary()))
+	return req
+}
+
+// AC: POST /api/profiles/{id}/identity/import returns 200 with identity on valid PDF upload.
+// AC: Returns 400 when file field is missing.
+// AC: Returns 409 when identity is already populated (ErrConflict from service).
+// AC: Returns 404 when profile does not exist.
+
+func TestPostImportIdentity(t *testing.T) {
+	t.Parallel()
+
+	fakePDF := []byte("%PDF-1.4 fake content")
+
+	cases := []struct {
+		name       string
+		profileID  string
+		svc        *fakeProfileService
+		fileBody   []byte
+		omitFile   bool
+		wantStatus int
+	}{
+		{
+			name:      "returns 200 with profile on valid PDF upload",
+			profileID: "p-1",
+			svc: &fakeProfileService{
+				list: []profiles.Profile{{ID: "p-1", Name: "Alice"}},
+			},
+			fileBody:   fakePDF,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "returns 400 when file field is missing",
+			profileID:  "p-1",
+			svc:        &fakeProfileService{list: []profiles.Profile{{ID: "p-1"}}},
+			omitFile:   true,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:      "returns 409 when identity is already populated",
+			profileID: "p-1",
+			svc: &fakeProfileService{
+				list: []profiles.Profile{{ID: "p-1"}},
+				err:  kernel.ErrConflict,
+			},
+			fileBody:   fakePDF,
+			wantStatus: http.StatusConflict,
+		},
+		{
+			name:      "returns 404 when profile does not exist",
+			profileID: "unknown",
+			svc: &fakeProfileService{
+				list: []profiles.Profile{{ID: "p-1"}},
+			},
+			fileBody:   fakePDF,
+			wantStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newProfileRouter(tc.svc)
+
+			var req *http.Request
+			if tc.omitFile {
+				req = buildMultipartRequest(t, http.MethodPost, "/api/profiles/"+tc.profileID+"/identity/import", nil)
+			} else {
+				req = buildMultipartRequest(t, http.MethodPost, "/api/profiles/"+tc.profileID+"/identity/import", tc.fileBody)
+			}
+			rec := httptest.NewRecorder()
+
 			r.ServeHTTP(rec, req)
 
 			if rec.Code != tc.wantStatus {

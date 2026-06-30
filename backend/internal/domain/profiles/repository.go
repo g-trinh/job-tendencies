@@ -28,8 +28,12 @@ type Repository interface {
 	// exactly one active profile afterwards. It returns a kernel.NotFoundError when
 	// id does not exist.
 	Activate(ctx context.Context, id kernel.ProfileID) error
-	// UpdateIdentity persists skills and seniority for a profile.
+	// UpdateIdentity persists skills and seniority for a profile. Used by the manual
+	// edit path; does not touch raw_experience.
 	UpdateIdentity(ctx context.Context, id kernel.ProfileID, skills []string, seniority kernel.Seniority) error
+	// UpdateIdentityFromImport persists skills, seniority, and raw experience from a
+	// LinkedIn PDF import. This is the single-import path; for manual edits use UpdateIdentity.
+	UpdateIdentityFromImport(ctx context.Context, id kernel.ProfileID, skills []string, seniority kernel.Seniority, rawExperience string) error
 	// UpdateConditions persists the conditions (dealbreakers + preferences) for a profile.
 	UpdateConditions(ctx context.Context, id kernel.ProfileID, c ProfileConditions) error
 	// UpdateWeights persists the fit-score weights for a profile. Caller must validate

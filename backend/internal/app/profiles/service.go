@@ -9,17 +9,33 @@ import (
 	"fmt"
 
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
+	domainllm "github.com/g-trinh/job-tendencies/internal/domain/llm"
 	"github.com/g-trinh/job-tendencies/internal/domain/profiles"
 )
 
-// Service exposes profile use cases to the API and the scrape-worker.
-type Service struct {
-	repo profiles.Repository
+// IdentityExtractor parses a LinkedIn PDF export and returns the extracted professional
+// identity (skills, raw experience, seniority). Implemented by the LLM client; defined
+// here so the profiles app package owns the contract (ADR-001).
+type IdentityExtractor interface {
+	ExtractIdentity(ctx context.Context, pdf []byte) (*domainllm.ExtractedIdentity, error)
 }
 
-// New constructs a profiles Service.
+// Service exposes profile use cases to the API and the scrape-worker.
+type Service struct {
+	repo      profiles.Repository
+	extractor IdentityExtractor
+}
+
+// New constructs a profiles Service without identity extraction. Use NewWithExtractor
+// when the POST /identity/import endpoint is required.
 func New(repo profiles.Repository) *Service {
 	return &Service{repo: repo}
+}
+
+// NewWithExtractor constructs a profiles Service with LinkedIn PDF identity extraction
+// enabled. The extractor is injected at the composition root (cmd/api/main.go).
+func NewWithExtractor(repo profiles.Repository, extractor IdentityExtractor) *Service {
+	return &Service{repo: repo, extractor: extractor}
 }
 
 // ActiveProfile returns the single active profile.
@@ -129,6 +145,47 @@ func (s *Service) UpdateConditions(ctx context.Context, id kernel.ProfileID, c p
 		return profiles.Profile{}, fmt.Errorf("reading updated profile %q: %w", id, err)
 	}
 	return p, nil
+}
+
+// ImportIdentity extracts professional identity from a LinkedIn PDF and persists it on
+// the profile. The identity must be empty before import — this use case enforces a
+// single-import guard and returns kernel.ErrConflict if identity is already populated.
+//
+// The caller supplies the raw PDF bytes (multipart upload); the LLM client converts
+// them into structured skills, experience, and seniority via a document content block.
+func (s *Service) ImportIdentity(ctx context.Context, id kernel.ProfileID, pdf []byte) (profiles.Profile, error) {
+	if s.extractor == nil {
+		return profiles.Profile{}, fmt.Errorf("identity extraction not configured for this service")
+	}
+
+	p, err := s.repo.ProfileByID(ctx, id)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("loading profile for import %q: %w", id, err)
+	}
+
+	if len(p.Skills) > 0 || string(p.Seniority) != "" || p.RawExperience != "" {
+		return profiles.Profile{}, fmt.Errorf("identity already populated for profile %q: %w", id, kernel.ErrConflict)
+	}
+
+	identity, err := s.extractor.ExtractIdentity(ctx, pdf)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("extracting identity for profile %q: %w", id, err)
+	}
+
+	skills := identity.Skills
+	if skills == nil {
+		skills = []string{}
+	}
+
+	if err := s.repo.UpdateIdentityFromImport(ctx, id, skills, identity.Seniority, identity.RawExperience); err != nil {
+		return profiles.Profile{}, fmt.Errorf("persisting imported identity for profile %q: %w", id, err)
+	}
+
+	updated, err := s.repo.ProfileByID(ctx, id)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("reading updated profile after import %q: %w", id, err)
+	}
+	return updated, nil
 }
 
 // UpdateWeights validates and persists the fit-score weights for a profile.
