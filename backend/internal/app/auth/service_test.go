@@ -62,13 +62,13 @@ func TestService_Login(t *testing.T) {
 	}
 
 	cases := []struct {
-		name        string
-		idpResult   *domainauth.SignInResult
-		idpErr      error
-		wantUID     string
-		wantEmail   string
-		wantCookie  bool // true = non-empty cookie value expected
-		wantErr     error
+		name       string
+		idpResult  *domainauth.SignInResult
+		idpErr     error
+		wantUID    string
+		wantEmail  string
+		wantCookie bool // true = non-empty cookie value expected
+		wantErr    error
 	}{
 		{
 			name:       "valid credentials return user and encrypted cookie",
@@ -263,9 +263,9 @@ func TestNew_RequiresValidKey(t *testing.T) {
 	verifier := &fakeTokenVerifier{}
 
 	cases := []struct {
-		name      string
-		key       []byte
-		wantErr   bool
+		name    string
+		key     []byte
+		wantErr bool
 	}{
 		{name: "32-byte key is valid", key: bytes.Repeat([]byte("k"), 32), wantErr: false},
 		{name: "31-byte key returns error", key: bytes.Repeat([]byte("k"), 31), wantErr: true},

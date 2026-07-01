@@ -60,13 +60,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Register cleanup only after all fatal startup steps succeed so the os.Exit
-	// branches above run with no pending defers.
-	defer stop()
-	defer closePool()
-	defer scrapePublisher.Stop()
-
 	// Auth service: Identity Platform client + encrypted session cookie.
+	// Initialised before defers so that os.Exit below runs without pending defers.
 	cookieKey, err := cfg.SessionCookieKeyBytes()
 	if err != nil {
 		slog.Error("loading session cookie key", "err", err)
@@ -82,6 +77,12 @@ func main() {
 		slog.Error("creating auth service", "err", err)
 		os.Exit(1)
 	}
+
+	// Register cleanup only after all fatal startup steps succeed so the os.Exit
+	// branches above run with no pending defers.
+	defer stop()
+	defer closePool()
+	defer scrapePublisher.Stop()
 
 	// LLM client shared across services that need adapter generation or extraction.
 	llmClient := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)

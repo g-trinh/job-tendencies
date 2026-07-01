@@ -181,7 +181,7 @@ func (v *jwksVerifier) fetchCerts(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("fetching certs: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("certs endpoint returned status %d", resp.StatusCode)
@@ -224,7 +224,10 @@ func verifyRS256(signingInput, signatureB64URL string, pubKey *rsa.PublicKey) er
 		return fmt.Errorf("decoding signature: %w", err)
 	}
 	digest := sha256.Sum256([]byte(signingInput))
-	return rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, digest[:], sig)
+	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, digest[:], sig); err != nil {
+		return fmt.Errorf("RSA PKCS1v15 verification: %w", err)
+	}
+	return nil
 }
 
 // parseRSAPublicKeyFromPEM parses an RSA public key from a PEM-encoded X.509 certificate.

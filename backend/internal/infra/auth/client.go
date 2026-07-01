@@ -102,7 +102,7 @@ func (c *Client) SignIn(ctx context.Context, email, password string) (*domainaut
 	if err != nil {
 		return nil, fmt.Errorf("auth: sign-in: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, parseIDPError(resp.Body)
@@ -139,7 +139,7 @@ func (c *Client) RefreshIDToken(ctx context.Context, refreshToken string) (*doma
 	if err != nil {
 		return nil, fmt.Errorf("auth: refresh: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, parseIDPError(resp.Body)

@@ -96,5 +96,9 @@ func aesgcmDecrypt(key, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < ns {
 		return nil, fmt.Errorf("ciphertext too short (got %d bytes, need at least %d)", len(ciphertext), ns)
 	}
-	return gcm.Open(nil, ciphertext[:ns], ciphertext[ns:], nil)
+	plaintext, err := gcm.Open(nil, ciphertext[:ns], ciphertext[ns:], nil)
+	if err != nil {
+		return nil, fmt.Errorf("AES-GCM decryption: %w", err)
+	}
+	return plaintext, nil
 }
