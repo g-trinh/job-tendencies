@@ -26,11 +26,22 @@
 //   - ALLOWED_ORIGINS   — Comma-separated list of browser origins permitted to call the API
 //     cross-origin. Example: https://job-tendencies-dev.web.app,http://localhost:5173
 //     Optional. When unset, no cross-origin requests are permitted (no wildcard fallback).
+//
+// Auth-specific variables (api binary only):
+//   - IDP_API_KEY        — Identity Platform web API key. Required by the api binary for
+//     the auth endpoints.
+//   - SESSION_COOKIE_KEY — Hex-encoded 32-byte AES-256 key used to encrypt session cookies.
+//     Must be exactly 64 hex characters. Required by the api binary.
+//     Generate: openssl rand -hex 32
+//   - COOKIE_SECURE      — Set to "false" to disable the Secure flag on session cookies.
+//     Defaults to "true". Use COOKIE_SECURE=false for local HTTP development only.
 package config
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -99,6 +110,21 @@ type Config struct {
 	// requests to the API. Populated from the ALLOWED_ORIGINS environment variable
 	// (comma-separated). Empty means no cross-origin requests are allowed.
 	AllowedOrigins []string
+
+	// IDPAPIKey is the Identity Platform web API key used to call the Firebase
+	// Auth REST endpoints. Required for the api binary; loaded from IDP_API_KEY.
+	// Optional at config load time; validated by app/auth.New.
+	IDPAPIKey string
+
+	// SessionCookieKey is the hex-encoded 32-byte AES-256-GCM key used to encrypt
+	// and decrypt httpOnly session cookies. Required for the api binary.
+	// Must be exactly 64 hex characters (32 bytes). Loaded from SESSION_COOKIE_KEY.
+	// Parse it into bytes with [Config.SessionCookieKeyBytes].
+	SessionCookieKey string
+
+	// CookieSecure controls whether session cookies carry the Secure flag (HTTPS only).
+	// Defaults to true. Set COOKIE_SECURE=false for local HTTP development.
+	CookieSecure bool
 }
 
 // Load reads configuration from environment variables and returns a populated
@@ -121,6 +147,9 @@ func Load() (*Config, error) {
 		WorkerServiceURL:     os.Getenv("WORKER_SERVICE_URL"),
 		PubSubPushSA:         os.Getenv("PUBSUB_PUSH_SA"),
 		AllowedOrigins:       parseOrigins(os.Getenv("ALLOWED_ORIGINS")),
+		IDPAPIKey:            os.Getenv("IDP_API_KEY"),
+		SessionCookieKey:     os.Getenv("SESSION_COOKIE_KEY"),
+		CookieSecure:         parseBoolDefault("COOKIE_SECURE", true),
 	}
 
 	var missing []string
@@ -142,6 +171,37 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// SessionCookieKeyBytes decodes the hex-encoded SessionCookieKey into raw bytes.
+// Returns an error when the field is empty, not valid hex, or does not decode to
+// exactly 32 bytes (required for AES-256-GCM).
+func (c *Config) SessionCookieKeyBytes() ([]byte, error) {
+	if c.SessionCookieKey == "" {
+		return nil, fmt.Errorf("SESSION_COOKIE_KEY is required for the api binary")
+	}
+	key, err := hex.DecodeString(c.SessionCookieKey)
+	if err != nil {
+		return nil, fmt.Errorf("SESSION_COOKIE_KEY: invalid hex encoding: %w", err)
+	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("SESSION_COOKIE_KEY: must decode to exactly 32 bytes (64 hex chars); got %d bytes", len(key))
+	}
+	return key, nil
+}
+
+// parseBoolDefault parses a boolean environment variable. Returns defaultVal when
+// the variable is unset or the value is not a valid bool.
+func parseBoolDefault(key string, defaultVal bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return defaultVal
+	}
+	return b
 }
 
 // parseOrigins splits a comma-separated list of origins into a slice, trimming
