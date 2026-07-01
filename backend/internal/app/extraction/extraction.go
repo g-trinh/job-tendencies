@@ -48,19 +48,41 @@ func toRef(l domainscraping.RawListing) RawListingRef {
 	}
 }
 
+// ContactUpserter is the extraction context's consumer interface for the contacts
+// context (ADR-001). It carries only the fields needed to upsert a recruiter contact
+// extracted from a listing.
+type ContactUpserter interface {
+	// UpsertContact creates or merges a recruiter contact by email or LinkedIn URL
+	// and returns the stable contact id.
+	UpsertContact(ctx context.Context, name, company, email, linkedInURL, phone string) (kernel.ContactID, error)
+}
+
+// JobScorer is the extraction context's consumer interface for the scoring context
+// (ADR-001). The extraction worker calls it once per job after the job row is written.
+type JobScorer interface {
+	// ScoreJob computes and persists the fit score for the (job, profile) pair.
+	ScoreJob(ctx context.Context, jobID kernel.JobID, profileID kernel.ProfileID) error
+}
+
 // Service handles listing.extract pipeline events. Its raw-listing read/lifecycle port
 // and Job write port are the scraping and jobs aggregate repositories declared in the
 // domain (ADR-005); the extraction stage maps the scraping aggregate to its own
 // RawListingRef before building a Job.
+//
+// contacts and scorer are optional: when nil, P3-EX-3 (contact upsert) and P3-EX-4
+// (scoring) are skipped. They are wired in the full extract-worker binary.
 type Service struct {
 	rawListings domainscraping.RawListingSource
 	rawStore    blobstore.Loader
 	extractor   llm.ListingExtractor
 	jobs        jobs.Repository
+	contacts    ContactUpserter
+	scorer      JobScorer
 	logger      *slog.Logger
 }
 
-// New constructs an extraction Service with all dependencies wired.
+// New constructs an extraction Service with the core extraction dependencies. Use
+// WithContacts and WithScorer to wire optional pipeline stages.
 func New(
 	rawListings domainscraping.RawListingSource,
 	rawStore blobstore.Loader,
@@ -77,8 +99,24 @@ func New(
 	}
 }
 
+// WithContacts attaches a ContactUpserter so the extraction pipeline upserts recruiter
+// contacts and links them to newly created jobs (P3-EX-3).
+func (s *Service) WithContacts(c ContactUpserter) *Service {
+	s.contacts = c
+	return s
+}
+
+// WithScorer attaches a JobScorer so the extraction pipeline triggers scoring
+// immediately after each job is created or merged (P3-EX-4).
+func (s *Service) WithScorer(sc JobScorer) *Service {
+	s.scorer = sc
+	return s
+}
+
 // HandleListingExtract is invoked for each verified listing.extract push delivery. It
-// loads the raw payload, extracts structured fields via Claude, and creates one Job.
+// loads the raw payload, extracts structured fields via Claude, deduplicates across
+// boards via the fingerprint, optionally upserts the recruiter contact, creates or
+// merges the Job, then triggers scoring for the active profile.
 func (s *Service) HandleListingExtract(ctx context.Context, msg messaging.Message) error {
 	// The scrape-worker publishes the raw listing id in both the typed attribute and the
 	// message body (see app/scraping.captureCard). The attribute is the canonical source;
@@ -109,22 +147,81 @@ func (s *Service) HandleListingExtract(ctx context.Context, msg messaging.Messag
 		return fmt.Errorf("extracting listing %q: %w", rawListingID, err)
 	}
 
-	job := buildJob(extracted, ref, time.Now().UTC())
-	jobID, err := s.jobs.Create(ctx, job)
+	// P3-EX-3: upsert recruiter contact before creating the job so we have the
+	// contact id available to set on the job row.
+	contactID, err := s.upsertRecruiter(ctx, extracted)
 	if err != nil {
-		return fmt.Errorf("creating job from listing %q: %w", rawListingID, err)
+		return fmt.Errorf("upserting recruiter contact for listing %q: %w", rawListingID, err)
 	}
 
-	// Not atomic with Create above: on redelivery this can duplicate a job. See
-	// tech_debt.md "Extraction is not idempotent".
+	now := time.Now().UTC()
+	fingerprint := computeFingerprint(ref.Title, ref.Company, ref.Location)
+	source := jobs.JobSource{
+		BoardID:      ref.BoardID,
+		RawListingID: ref.ID,
+		SourceURL:    ref.SourceURL,
+	}
+
+	// P3-EX-2: look up by fingerprint — merge into the existing job when found,
+	// create a new one otherwise.
+	jobID, found, err := s.jobs.FindByFingerprint(ctx, fingerprint)
+	if err != nil {
+		return fmt.Errorf("checking fingerprint for listing %q: %w", rawListingID, err)
+	}
+
+	if found {
+		if err := s.jobs.MergeSource(ctx, jobID, source, now, contactID); err != nil {
+			return fmt.Errorf("merging source for listing %q into job %q: %w", rawListingID, jobID, err)
+		}
+		s.logger.InfoContext(ctx, "listing merged into existing job",
+			"job_id", string(jobID), "raw_listing_id", string(rawListingID))
+	} else {
+		job := buildJob(extracted, ref, now)
+		job.Fingerprint = &fingerprint
+		job.ContactID = contactID
+		jobID, err = s.jobs.Create(ctx, job)
+		if err != nil {
+			return fmt.Errorf("creating job from listing %q: %w", rawListingID, err)
+		}
+		s.logger.InfoContext(ctx, "job created from listing",
+			"job_id", string(jobID), "raw_listing_id", string(rawListingID),
+			"understanding", extracted.Understanding.Int())
+	}
+
+	// Not atomic with the job write above: on redelivery this can produce a duplicate
+	// job. See tech_debt.md "Extraction is not idempotent".
 	if err := s.rawListings.MarkExtracted(ctx, rawListingID); err != nil {
 		return fmt.Errorf("marking listing %q extracted: %w", rawListingID, err)
 	}
 
-	s.logger.InfoContext(ctx, "job created from listing",
-		"job_id", string(jobID), "raw_listing_id", string(rawListingID),
-		"understanding", extracted.Understanding.Int())
+	// P3-EX-4: trigger scoring for the profile that owns this raw listing.
+	if s.scorer != nil {
+		if err := s.scorer.ScoreJob(ctx, jobID, ref.ProfileID); err != nil {
+			// Scoring failure is non-fatal: log and continue so the job is not lost.
+			s.logger.WarnContext(ctx, "scoring failed after extraction",
+				"job_id", string(jobID), "profile_id", string(ref.ProfileID), "err", err)
+		}
+	}
+
 	return nil
+}
+
+// upsertRecruiter upserts a contact when the extracted listing carries a recruiter.
+// Returns nil when no recruiter was present (hidden or Easy Apply listings).
+func (s *Service) upsertRecruiter(ctx context.Context, e *llm.ExtractedListing) (*kernel.ContactID, error) {
+	if s.contacts == nil || e.Recruiter.Value == nil {
+		return nil, nil
+	}
+	rec := e.Recruiter.Value
+	if rec.Email == "" && rec.LinkedInURL == "" {
+		// Recruiter block present but no dedup-key fields; skip to avoid a validation error.
+		return nil, nil
+	}
+	id, err := s.contacts.UpsertContact(ctx, rec.Name, "", rec.Email, rec.LinkedInURL, rec.Phone)
+	if err != nil {
+		return nil, fmt.Errorf("upserting recruiter %q: %w", rec.Email, err)
+	}
+	return &id, nil
 }
 
 // buildJob maps an ExtractedListing plus its source reference into a Job aggregate,
@@ -153,6 +250,7 @@ func buildJob(e *llm.ExtractedListing, ref RawListingRef, now time.Time) jobs.Jo
 			"salary_min":    e.SalaryMin.Confidence.Int(),
 			"salary_max":    e.SalaryMax.Confidence.Int(),
 			"seniority":     e.Seniority.Confidence.Int(),
+			"recruiter":     e.Recruiter.Confidence.Int(),
 		},
 		UnderstandingScore: e.Understanding,
 		FirstSeen:          now,

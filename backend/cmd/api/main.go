@@ -16,14 +16,19 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	appboards "github.com/g-trinh/job-tendencies/internal/app/boards"
+	appcontacts "github.com/g-trinh/job-tendencies/internal/app/contacts"
+	appdashboard "github.com/g-trinh/job-tendencies/internal/app/dashboard"
 	appjobs "github.com/g-trinh/job-tendencies/internal/app/jobs"
 	apppipeline "github.com/g-trinh/job-tendencies/internal/app/pipeline"
 	appprofiles "github.com/g-trinh/job-tendencies/internal/app/profiles"
 	"github.com/g-trinh/job-tendencies/internal/config"
 	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
 	infraboards "github.com/g-trinh/job-tendencies/internal/infra/boards"
+	infracontacts "github.com/g-trinh/job-tendencies/internal/infra/contacts"
+	infradashboard "github.com/g-trinh/job-tendencies/internal/infra/dashboard"
 	"github.com/g-trinh/job-tendencies/internal/infra/db"
 	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
+	infrallm "github.com/g-trinh/job-tendencies/internal/infra/llm"
 	"github.com/g-trinh/job-tendencies/internal/infra/messaging"
 	infrapipeline "github.com/g-trinh/job-tendencies/internal/infra/pipeline"
 	infraprofiles "github.com/g-trinh/job-tendencies/internal/infra/profiles"
@@ -59,11 +64,17 @@ func main() {
 	defer closePool()
 	defer scrapePublisher.Stop()
 
+	// LLM client shared across services that need adapter generation or extraction.
+	llmClient := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
+
 	// Application services wired over the Postgres repositories.
-	boardSvc := appboards.New(infraboards.NewRepository(pool))
-	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
-	jobSvc := appjobs.New(infrajobs.NewRepository(pool))
+	boardSvc := appboards.New(infraboards.NewRepository(pool), llmClient)
+	profileSvc := appprofiles.NewWithExtractor(infraprofiles.NewRepository(pool), llmClient)
+	jobRepo := infrajobs.NewRepository(pool)
+	jobSvc := appjobs.NewWithWriter(jobRepo, jobRepo)
+	contactSvc := appcontacts.New(infracontacts.NewRepository(pool))
 	pipelineSvc := apppipeline.New(infrapipeline.NewRepository(pool), scrapePublisher)
+	dashboardSvc := appdashboard.New(infradashboard.NewRepository(pool))
 
 	r := handler.NewRouter(logger)
 	r.Get("/healthz", handleHealthz)
@@ -71,15 +82,61 @@ func main() {
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(handler.NewCORSMiddleware(cfg.AllowedOrigins))
+
+		// Boards.
 		api.Get("/boards", handler.ListBoards(boardSvc))
+		api.Post("/boards", handler.PostBoard(boardSvc))
+		api.Put("/boards/{id}", handler.PutBoard(boardSvc))
+		api.Delete("/boards/{id}", handler.DeleteBoard(boardSvc))
+		api.Get("/boards/{id}/adapter", handler.GetBoardAdapter(boardSvc))
+		api.Post("/boards/{id}/adapter/generate", handler.PostGenerateAdapter(boardSvc))
+		api.Post("/boards/{id}/adapter/approve", handler.PostApproveAdapter(boardSvc))
+
+		// Schedule.
+		api.Get("/schedule", handler.GetSchedule(boardSvc))
+		api.Put("/schedule", handler.PutSchedule(boardSvc))
+
+		// Profiles.
+		api.Get("/profiles", handler.ListProfiles(profileSvc))
+		api.Post("/profiles", handler.PostProfile(profileSvc))
+		api.Get("/profiles/{id}", handler.GetProfile(profileSvc))
+		api.Put("/profiles/{id}", handler.PutProfile(profileSvc))
+		api.Delete("/profiles/{id}", handler.DeleteProfile(profileSvc))
 		api.Get("/active-profile", handler.GetActiveProfile(profileSvc))
+		api.Put("/active-profile", handler.PutActiveProfile(profileSvc))
+		api.Patch("/profiles/{id}/identity", handler.PatchProfileIdentity(profileSvc))
+		api.Post("/profiles/{id}/identity/import", handler.PostImportIdentity(profileSvc))
+		api.Get("/profiles/{id}/conditions", handler.GetProfile(profileSvc))
+		api.Put("/profiles/{id}/conditions", handler.PutProfileConditions(profileSvc))
+		api.Get("/profiles/{id}/weights", handler.GetProfile(profileSvc))
+		api.Put("/profiles/{id}/weights", handler.PutProfileWeights(profileSvc))
+
+		// Contacts.
+		api.Get("/contacts", handler.ListContacts(contactSvc))
+		api.Get("/contacts/export.csv", handler.ExportContacts(contactSvc))
+		api.Post("/contacts", handler.PostContact(contactSvc))
+		api.Get("/contacts/{id}", handler.GetContact(contactSvc))
+		api.Put("/contacts/{id}", handler.PutContact(contactSvc))
+		api.Delete("/contacts/{id}", handler.DeleteContact(contactSvc))
+
+		// Pipeline.
 		api.Post("/pipeline/runs", handler.CreatePipelineRun(pipelineSvc, profileSvc))
+		api.Get("/pipeline/runs", handler.ListPipelineRuns(pipelineSvc))
+		api.Get("/pipeline/runs/{id}", handler.GetPipelineRun(pipelineSvc))
 
 		// Profile-scoped routes require a valid X-Active-Profile header.
 		api.Group(func(scoped chi.Router) {
 			handler.ScopedRoutes(scoped)
 			scoped.Get("/jobs", handler.ListJobs(jobSvc))
 			scoped.Get("/jobs/{id}", handler.GetJob(jobSvc))
+			scoped.Get("/jobs/{id}/original", handler.GetJobOriginal(jobSvc))
+			scoped.Patch("/jobs/{id}/application", handler.PatchJobApplication(jobSvc))
+
+			// Dashboard.
+			scoped.Get("/dashboard/skills/frequency", handler.GetDashboardSkillFrequency(dashboardSvc))
+			scoped.Get("/dashboard/skills/trend", handler.GetDashboardSkillTrend(dashboardSvc))
+			scoped.Get("/dashboard/matches", handler.GetDashboardMatches(dashboardSvc))
+			scoped.Get("/dashboard/stats", handler.GetDashboardStats(dashboardSvc))
 		})
 	})
 

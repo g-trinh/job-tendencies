@@ -11,3 +11,9 @@ import (
 func ParseExtractedListingForTest(raw json.RawMessage) (*domainllm.ExtractedListing, error) {
 	return parseExtractedListing(raw)
 }
+
+// ParseExtractedIdentityForTest exposes the internal parseExtractedIdentity function
+// for use in package-external tests without requiring a live Claude API call.
+func ParseExtractedIdentityForTest(raw json.RawMessage) (*domainllm.ExtractedIdentity, error) {
+	return parseExtractedIdentity(raw)
+}

@@ -1,4 +1,4 @@
-import type { JobSummaryDto } from './types';
+import type { JobSummaryDto, JobDetailDto } from './types';
 
 /**
  * Local fixture mirroring the `GET /api/jobs` contract. Used to stub the jobs
@@ -22,6 +22,17 @@ export const jobsFixture: JobSummaryDto[] = [
     salary_min: 65000,
     salary_max: 85000,
     understanding_score: 92,
+    application_status: 'saved',
+    fit_score: 87,
+    sources: [
+      {
+        board_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        source_url:
+          'https://www.welcometothejungle.com/fr/companies/alan/jobs/senior-backend-engineer',
+        board_name: 'Welcome to the Jungle',
+      },
+    ],
+    first_seen: '2026-06-20T10:00:00Z',
   },
   {
     id: '22222222-2222-2222-2222-222222222222',
@@ -37,5 +48,43 @@ export const jobsFixture: JobSummaryDto[] = [
     salary_min: null,
     salary_max: null,
     understanding_score: 74,
+    application_status: null,
+    fit_score: null,
+    sources: [
+      {
+        board_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+        source_url:
+          'https://www.welcometothejungle.com/fr/companies/doctolib/jobs/developpeur-full-stack',
+        board_name: 'Welcome to the Jungle',
+      },
+    ],
+    first_seen: '2026-06-22T14:30:00Z',
   },
 ];
+
+/** Fixture for `GET /api/jobs/{id}` — extends the first summary fixture. */
+export const jobDetailFixture: JobDetailDto = {
+  ...jobsFixture[0],
+  description:
+    'Nous recherchons un Senior Backend Engineer maîtrisant Go pour rejoindre notre équipe technique.',
+  field_confidence: {
+    contract_type: 95,
+    remote_policy: 88,
+    seniority: 90,
+    skills: 85,
+    salary_min: 70,
+    salary_max: 70,
+    working_days: 80,
+  },
+  contact_id: null,
+  last_seen: '2026-06-27T08:00:00Z',
+  expired_at: null,
+};
+
+/** Fixture for an expired job — used to test the expired state in detail view. */
+export const expiredJobDetailFixture: JobDetailDto = {
+  ...jobDetailFixture,
+  id: '33333333-3333-3333-3333-333333333333',
+  title: 'Lead Engineer (Go) — Expiré',
+  expired_at: '2026-06-25T00:00:00Z',
+};

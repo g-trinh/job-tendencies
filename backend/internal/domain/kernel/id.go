@@ -23,3 +23,6 @@ type ContactID string
 
 // ScrapeRunID uniquely identifies a scrape pipeline execution.
 type ScrapeRunID string
+
+// ScrapeRunBoardID uniquely identifies one board's progress entry within a scrape run.
+type ScrapeRunBoardID string

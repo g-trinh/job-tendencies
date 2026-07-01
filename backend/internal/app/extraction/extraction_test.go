@@ -13,12 +13,14 @@ func TestBuildJob(t *testing.T) {
 
 	now := time.Date(2026, 6, 27, 12, 0, 0, 0, time.UTC)
 	salary := int64(55000)
+	recruiter := &llm.Recruiter{Name: "Alice", Email: "alice@acme.io"}
 
 	extracted := &llm.ExtractedListing{
 		Skills:        llm.ExtractedField[[]string]{Value: []string{"go", "sql"}, Confidence: 90},
 		RemotePolicy:  llm.ExtractedField[kernel.RemotePolicy]{Value: kernel.RemotePolicyHybrid, Confidence: 80},
 		SalaryMin:     llm.ExtractedField[*int64]{Value: &salary, Confidence: 70},
 		Seniority:     llm.ExtractedField[kernel.Seniority]{Value: kernel.SenioritySenior, Confidence: 60},
+		Recruiter:     llm.ExtractedField[*llm.Recruiter]{Value: recruiter, Confidence: 75},
 		Understanding: 88,
 	}
 	ref := RawListingRef{
@@ -43,6 +45,9 @@ func TestBuildJob(t *testing.T) {
 	}
 	if job.FieldConfidence["skills"] != 90 || job.FieldConfidence["remote_policy"] != 80 {
 		t.Fatalf("field confidence not flattened: %+v", job.FieldConfidence)
+	}
+	if job.FieldConfidence["recruiter"] != 75 {
+		t.Fatalf("recruiter confidence not in field_confidence map: got %d, want 75", job.FieldConfidence["recruiter"])
 	}
 	if len(job.Sources) != 1 || job.Sources[0].RawListingID != "raw-1" || job.Sources[0].BoardID != "board-1" {
 		t.Fatalf("source linkage wrong: %+v", job.Sources)

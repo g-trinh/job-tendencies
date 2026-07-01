@@ -1,11 +1,13 @@
 // Command extract-worker is the Job Tendencies extraction worker. It runs on Cloud Run
 // and receives listing.extract Pub/Sub push messages (OIDC-authenticated). It loads raw
-// listings from GCS, sends them to Claude for structured extraction, and creates one job
-// per listing. Phase 2 skips dedup/merge, contacts and scoring.
+// listings from GCS, sends them to Claude for structured extraction, deduplicates across
+// boards via fingerprint, upserts recruiter contacts, creates or merges Jobs, and
+// triggers fit scoring for the owning profile. Raw listings are never translated.
 package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,13 +15,21 @@ import (
 	"syscall"
 	"time"
 
+	appcontacts "github.com/g-trinh/job-tendencies/internal/app/contacts"
 	appextraction "github.com/g-trinh/job-tendencies/internal/app/extraction"
+	appjobs "github.com/g-trinh/job-tendencies/internal/app/jobs"
+	appprofiles "github.com/g-trinh/job-tendencies/internal/app/profiles"
+	appscoring "github.com/g-trinh/job-tendencies/internal/app/scoring"
 	"github.com/g-trinh/job-tendencies/internal/config"
+	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
 	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
 	"github.com/g-trinh/job-tendencies/internal/infra/blobstore"
+	infracontacts "github.com/g-trinh/job-tendencies/internal/infra/contacts"
 	"github.com/g-trinh/job-tendencies/internal/infra/db"
 	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
 	infrallm "github.com/g-trinh/job-tendencies/internal/infra/llm"
+	infraprofiles "github.com/g-trinh/job-tendencies/internal/infra/profiles"
+	infrascoring "github.com/g-trinh/job-tendencies/internal/infra/scoring"
 	infrascraping "github.com/g-trinh/job-tendencies/internal/infra/scraping"
 )
 
@@ -54,13 +64,29 @@ func main() {
 
 	extractor := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
 
+	jobRepo := infrajobs.NewRepository(pool)
+
+	// P3-EX-3: contacts service wrapped in the extraction context's ContactUpserter.
+	contactsSvc := appcontacts.New(infracontacts.NewRepository(pool))
+	contactsAdapter := &contactsAdapter{svc: contactsSvc}
+
+	// P3-EX-4: scoring service wired with the jobs and profiles adapters.
+	jobsSvc := appjobs.NewWithWriter(jobRepo, jobRepo)
+	profilesSvc := appprofiles.New(infraprofiles.NewRepository(pool))
+	scoringSvc := appscoring.New(
+		infrascoring.NewJobsAdapter(jobsSvc),
+		infrascoring.NewProfilesAdapter(profilesSvc),
+		infrascoring.NewRepository(pool),
+	)
+	scorerAdapter := &scorerAdapter{svc: scoringSvc}
+
 	extractionSvc := appextraction.New(
 		infrascraping.NewRawListingRepository(pool),
 		rawStore,
 		extractor,
-		infrajobs.NewRepository(pool),
+		jobRepo,
 		logger,
-	)
+	).WithContacts(contactsAdapter).WithScorer(scorerAdapter)
 
 	r := handler.NewRouter(logger)
 	r.Get("/healthz", handleHealthz)
@@ -96,6 +122,42 @@ func main() {
 		slog.Error("extract-worker shutdown error", "err", err)
 	}
 }
+
+// contactsAdapter bridges app/contacts.Service to app/extraction.ContactUpserter.
+// It narrows the contacts service signature to the fields needed for extraction
+// and returns only the stable contact id.
+type contactsAdapter struct {
+	svc *appcontacts.Service
+}
+
+func (a *contactsAdapter) UpsertContact(ctx context.Context, name, company, email, linkedInURL, phone string) (kernel.ContactID, error) {
+	c, _, err := a.svc.UpsertContact(ctx, name, company, email, linkedInURL, phone, "", nil)
+	if err != nil {
+		return "", fmt.Errorf("upserting recruiter contact: %w", err)
+	}
+	return c.ID, nil
+}
+
+// scorerAdapter bridges app/scoring.Service to app/extraction.JobScorer.
+// Scoring failures are surfaced as errors; the caller decides whether to treat
+// them as fatal or log-and-continue.
+type scorerAdapter struct {
+	svc *appscoring.Service
+}
+
+func (a *scorerAdapter) ScoreJob(ctx context.Context, jobID kernel.JobID, profileID kernel.ProfileID) error {
+	_, err := a.svc.ScoreJob(ctx, jobID, profileID)
+	if err != nil {
+		return fmt.Errorf("scoring job %q for profile %q: %w", jobID, profileID, err)
+	}
+	return nil
+}
+
+// Verify adapters satisfy the extraction consumer interfaces at compile time.
+var (
+	_ appextraction.ContactUpserter = (*contactsAdapter)(nil)
+	_ appextraction.JobScorer       = (*scorerAdapter)(nil)
+)
 
 func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
