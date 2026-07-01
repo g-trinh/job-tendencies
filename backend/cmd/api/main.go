@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	appauth "github.com/g-trinh/job-tendencies/internal/app/auth"
 	appboards "github.com/g-trinh/job-tendencies/internal/app/boards"
 	appcontacts "github.com/g-trinh/job-tendencies/internal/app/contacts"
 	appdashboard "github.com/g-trinh/job-tendencies/internal/app/dashboard"
@@ -23,6 +24,7 @@ import (
 	appprofiles "github.com/g-trinh/job-tendencies/internal/app/profiles"
 	"github.com/g-trinh/job-tendencies/internal/config"
 	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
+	infraauth "github.com/g-trinh/job-tendencies/internal/infra/auth"
 	infraboards "github.com/g-trinh/job-tendencies/internal/infra/boards"
 	infracontacts "github.com/g-trinh/job-tendencies/internal/infra/contacts"
 	infradashboard "github.com/g-trinh/job-tendencies/internal/infra/dashboard"
@@ -64,6 +66,23 @@ func main() {
 	defer closePool()
 	defer scrapePublisher.Stop()
 
+	// Auth service: Identity Platform client + encrypted session cookie.
+	cookieKey, err := cfg.SessionCookieKeyBytes()
+	if err != nil {
+		slog.Error("loading session cookie key", "err", err)
+		os.Exit(1)
+	}
+	idpClient, err := infraauth.NewClient(cfg.IDPAPIKey, cfg.GCPProjectID)
+	if err != nil {
+		slog.Error("creating Identity Platform client", "err", err)
+		os.Exit(1)
+	}
+	authSvc, err := appauth.New(idpClient, idpClient, cookieKey)
+	if err != nil {
+		slog.Error("creating auth service", "err", err)
+		os.Exit(1)
+	}
+
 	// LLM client shared across services that need adapter generation or extraction.
 	llmClient := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
 
@@ -83,60 +102,74 @@ func main() {
 	r.Route("/api", func(api chi.Router) {
 		api.Use(handler.NewCORSMiddleware(cfg.AllowedOrigins))
 
-		// Boards.
-		api.Get("/boards", handler.ListBoards(boardSvc))
-		api.Post("/boards", handler.PostBoard(boardSvc))
-		api.Put("/boards/{id}", handler.PutBoard(boardSvc))
-		api.Delete("/boards/{id}", handler.DeleteBoard(boardSvc))
-		api.Get("/boards/{id}/adapter", handler.GetBoardAdapter(boardSvc))
-		api.Post("/boards/{id}/adapter/generate", handler.PostGenerateAdapter(boardSvc))
-		api.Post("/boards/{id}/adapter/approve", handler.PostApproveAdapter(boardSvc))
+		// Auth endpoints — public (no session guard). The login and logout routes
+		// must remain reachable without a valid session cookie.
+		api.Post("/auth/login", handler.PostLogin(authSvc, cfg.CookieSecure))
+		api.Post("/auth/logout", handler.PostLogout(cfg.CookieSecure))
 
-		// Schedule.
-		api.Get("/schedule", handler.GetSchedule(boardSvc))
-		api.Put("/schedule", handler.PutSchedule(boardSvc))
+		// All remaining /api routes require a valid session cookie + CSRF check.
+		api.Group(func(guarded chi.Router) {
+			guarded.Use(handler.RequireAuth(authSvc, cfg.CookieSecure))
+			guarded.Use(handler.RequireCSRF(cfg.AllowedOrigins))
 
-		// Profiles.
-		api.Get("/profiles", handler.ListProfiles(profileSvc))
-		api.Post("/profiles", handler.PostProfile(profileSvc))
-		api.Get("/profiles/{id}", handler.GetProfile(profileSvc))
-		api.Put("/profiles/{id}", handler.PutProfile(profileSvc))
-		api.Delete("/profiles/{id}", handler.DeleteProfile(profileSvc))
-		api.Get("/active-profile", handler.GetActiveProfile(profileSvc))
-		api.Put("/active-profile", handler.PutActiveProfile(profileSvc))
-		api.Patch("/profiles/{id}/identity", handler.PatchProfileIdentity(profileSvc))
-		api.Post("/profiles/{id}/identity/import", handler.PostImportIdentity(profileSvc))
-		api.Get("/profiles/{id}/conditions", handler.GetProfile(profileSvc))
-		api.Put("/profiles/{id}/conditions", handler.PutProfileConditions(profileSvc))
-		api.Get("/profiles/{id}/weights", handler.GetProfile(profileSvc))
-		api.Put("/profiles/{id}/weights", handler.PutProfileWeights(profileSvc))
+			// Auth — me endpoint (reads session from context set by RequireAuth).
+			guarded.Get("/auth/me", handler.GetMe())
 
-		// Contacts.
-		api.Get("/contacts", handler.ListContacts(contactSvc))
-		api.Get("/contacts/export.csv", handler.ExportContacts(contactSvc))
-		api.Post("/contacts", handler.PostContact(contactSvc))
-		api.Get("/contacts/{id}", handler.GetContact(contactSvc))
-		api.Put("/contacts/{id}", handler.PutContact(contactSvc))
-		api.Delete("/contacts/{id}", handler.DeleteContact(contactSvc))
+			// Boards.
+			guarded.Get("/boards", handler.ListBoards(boardSvc))
+			guarded.Post("/boards", handler.PostBoard(boardSvc))
+			guarded.Put("/boards/{id}", handler.PutBoard(boardSvc))
+			guarded.Delete("/boards/{id}", handler.DeleteBoard(boardSvc))
+			guarded.Get("/boards/{id}/adapter", handler.GetBoardAdapter(boardSvc))
+			guarded.Post("/boards/{id}/adapter/generate", handler.PostGenerateAdapter(boardSvc))
+			guarded.Post("/boards/{id}/adapter/approve", handler.PostApproveAdapter(boardSvc))
 
-		// Pipeline.
-		api.Post("/pipeline/runs", handler.CreatePipelineRun(pipelineSvc, profileSvc))
-		api.Get("/pipeline/runs", handler.ListPipelineRuns(pipelineSvc))
-		api.Get("/pipeline/runs/{id}", handler.GetPipelineRun(pipelineSvc))
+			// Schedule.
+			guarded.Get("/schedule", handler.GetSchedule(boardSvc))
+			guarded.Put("/schedule", handler.PutSchedule(boardSvc))
 
-		// Profile-scoped routes require a valid X-Active-Profile header.
-		api.Group(func(scoped chi.Router) {
-			handler.ScopedRoutes(scoped)
-			scoped.Get("/jobs", handler.ListJobs(jobSvc))
-			scoped.Get("/jobs/{id}", handler.GetJob(jobSvc))
-			scoped.Get("/jobs/{id}/original", handler.GetJobOriginal(jobSvc))
-			scoped.Patch("/jobs/{id}/application", handler.PatchJobApplication(jobSvc))
+			// Profiles.
+			guarded.Get("/profiles", handler.ListProfiles(profileSvc))
+			guarded.Post("/profiles", handler.PostProfile(profileSvc))
+			guarded.Get("/profiles/{id}", handler.GetProfile(profileSvc))
+			guarded.Put("/profiles/{id}", handler.PutProfile(profileSvc))
+			guarded.Delete("/profiles/{id}", handler.DeleteProfile(profileSvc))
+			guarded.Get("/active-profile", handler.GetActiveProfile(profileSvc))
+			guarded.Put("/active-profile", handler.PutActiveProfile(profileSvc))
+			guarded.Patch("/profiles/{id}/identity", handler.PatchProfileIdentity(profileSvc))
+			guarded.Post("/profiles/{id}/identity/import", handler.PostImportIdentity(profileSvc))
+			guarded.Get("/profiles/{id}/conditions", handler.GetProfile(profileSvc))
+			guarded.Put("/profiles/{id}/conditions", handler.PutProfileConditions(profileSvc))
+			guarded.Get("/profiles/{id}/weights", handler.GetProfile(profileSvc))
+			guarded.Put("/profiles/{id}/weights", handler.PutProfileWeights(profileSvc))
 
-			// Dashboard.
-			scoped.Get("/dashboard/skills/frequency", handler.GetDashboardSkillFrequency(dashboardSvc))
-			scoped.Get("/dashboard/skills/trend", handler.GetDashboardSkillTrend(dashboardSvc))
-			scoped.Get("/dashboard/matches", handler.GetDashboardMatches(dashboardSvc))
-			scoped.Get("/dashboard/stats", handler.GetDashboardStats(dashboardSvc))
+			// Contacts.
+			guarded.Get("/contacts", handler.ListContacts(contactSvc))
+			guarded.Get("/contacts/export.csv", handler.ExportContacts(contactSvc))
+			guarded.Post("/contacts", handler.PostContact(contactSvc))
+			guarded.Get("/contacts/{id}", handler.GetContact(contactSvc))
+			guarded.Put("/contacts/{id}", handler.PutContact(contactSvc))
+			guarded.Delete("/contacts/{id}", handler.DeleteContact(contactSvc))
+
+			// Pipeline.
+			guarded.Post("/pipeline/runs", handler.CreatePipelineRun(pipelineSvc, profileSvc))
+			guarded.Get("/pipeline/runs", handler.ListPipelineRuns(pipelineSvc))
+			guarded.Get("/pipeline/runs/{id}", handler.GetPipelineRun(pipelineSvc))
+
+			// Profile-scoped routes require a valid X-Active-Profile header in addition to auth.
+			guarded.Group(func(scoped chi.Router) {
+				scoped.Use(handler.RequireActiveProfileMiddleware)
+				scoped.Get("/jobs", handler.ListJobs(jobSvc))
+				scoped.Get("/jobs/{id}", handler.GetJob(jobSvc))
+				scoped.Get("/jobs/{id}/original", handler.GetJobOriginal(jobSvc))
+				scoped.Patch("/jobs/{id}/application", handler.PatchJobApplication(jobSvc))
+
+				// Dashboard.
+				scoped.Get("/dashboard/skills/frequency", handler.GetDashboardSkillFrequency(dashboardSvc))
+				scoped.Get("/dashboard/skills/trend", handler.GetDashboardSkillTrend(dashboardSvc))
+				scoped.Get("/dashboard/matches", handler.GetDashboardMatches(dashboardSvc))
+				scoped.Get("/dashboard/stats", handler.GetDashboardStats(dashboardSvc))
+			})
 		})
 	})
 

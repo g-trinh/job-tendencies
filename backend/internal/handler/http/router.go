@@ -32,6 +32,19 @@ func ScopedRoutes(r chi.Router) chi.Router {
 	return r.With(requireActiveProfile)
 }
 
+// RequireActiveProfileMiddleware is the exported form of the requireActiveProfile
+// middleware, for use with chi router groups that need the middleware applied via Use.
+//
+// Example:
+//
+//	r.Group(func(scoped chi.Router) {
+//	    scoped.Use(handler.RequireActiveProfileMiddleware)
+//	    scoped.Get("/jobs", handler.ListJobs(jobSvc))
+//	})
+func RequireActiveProfileMiddleware(next http.Handler) http.Handler {
+	return requireActiveProfile(next)
+}
+
 // NewCORSMiddleware returns a CORS middleware configured for the Job Tendencies
 // API. It restricts cross-origin access to the explicit list of origins supplied
 // at startup (from ALLOWED_ORIGINS), allows the custom X-Active-Profile header
@@ -57,8 +70,12 @@ func NewCORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler 
 	}
 	return cors.Handler(cors.Options{
 		AllowedOrigins: allowedOrigins,
-		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions},
-		AllowedHeaders: []string{"Accept", "Content-Type", "X-Active-Profile"},
-		MaxAge:         300,
+		AllowedMethods: []string{
+			http.MethodGet, http.MethodPost, http.MethodPut,
+			http.MethodPatch, http.MethodDelete, http.MethodOptions,
+		},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "X-Active-Profile"},
+		AllowCredentials: true, // Required for cookie-based auth from cross-origin origins (local dev).
+		MaxAge:           300,
 	})
 }
