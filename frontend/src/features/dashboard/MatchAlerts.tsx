@@ -6,23 +6,51 @@ function MatchAlerts() {
   const { data: matches, isPending, isError } = useDashboardMatches();
 
   return (
-    <section aria-label="Meilleures correspondances">
-      <h2>Meilleures correspondances</h2>
-      {isPending && <p>Chargement…</p>}
-      {isError && <p role="alert">Impossible de charger les correspondances.</p>}
+    <section className="card" aria-label="Meilleures correspondances">
+      <div className="card__head">
+        <h2 className="card__title">Meilleures correspondances</h2>
+        <Link className="text-sm" to="/">
+          Voir toutes
+        </Link>
+      </div>
+      {isPending && <p className="muted">Chargement…</p>}
+      {isError && (
+        <div className="banner banner--danger" role="alert">
+          Impossible de charger les correspondances.
+        </div>
+      )}
       {matches !== undefined && matches.length === 0 && (
-        <p>Aucune correspondance pour le moment.</p>
+        <p className="muted">Aucune correspondance pour le moment.</p>
       )}
       {matches !== undefined && matches.length > 0 && (
-        <ul aria-label="Offres correspondantes">
+        <ul className="stack stack-3" aria-label="Offres correspondantes">
           {matches.map((m) => (
-            <li key={m.id}>
-              <Link to={`/jobs/${m.id}`}>{m.title || "Voir l'offre"}</Link>
-              {(m.company || m.location) && (
-                <p>{[m.company, m.location].filter(Boolean).join(' — ')}</p>
-              )}
+            <li
+              key={m.id}
+              className="row-between card card--pad-sm"
+              style={{ boxShadow: 'none' }}
+            >
+              <div className="row">
+                {m.weighted_score != null && (
+                  <span className="fit-score" aria-hidden="true">
+                    {Math.round(m.weighted_score)}
+                  </span>
+                )}
+                <div className="stack">
+                  <Link className="text-sm" to={`/jobs/${m.id}`}>
+                    {m.title || "Voir l'offre"}
+                  </Link>
+                  {(m.company || m.location) && (
+                    <span className="muted text-xs">
+                      {[m.company, m.location].filter(Boolean).join(' — ')}
+                    </span>
+                  )}
+                </div>
+              </div>
               {m.weighted_score != null && (
-                <p>Score pondéré : {Math.round(m.weighted_score)}/100</p>
+                <span className="muted text-xs">
+                  Score pondéré : {Math.round(m.weighted_score)}/100
+                </span>
               )}
             </li>
           ))}

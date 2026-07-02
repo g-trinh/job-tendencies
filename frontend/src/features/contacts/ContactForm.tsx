@@ -47,11 +47,21 @@ function ContactForm() {
   }
 
   return (
-    <form aria-label="Ajouter un contact" onSubmit={handleSubmit}>
-      <h2>Ajouter un contact</h2>
-      <div>
-        <label htmlFor="contact-name">Nom</label>
+    <form
+      className="card stack stack-3"
+      style={{ maxWidth: '480px' }}
+      aria-label="Ajouter un contact"
+      onSubmit={handleSubmit}
+    >
+      <div className="card__head">
+        <h2 className="card__title">Ajouter un contact</h2>
+      </div>
+      <div className="field">
+        <label className="field__label" htmlFor="contact-name">
+          Nom
+        </label>
         <input
+          className="input"
           id="contact-name"
           type="text"
           required
@@ -59,62 +69,84 @@ function ContactForm() {
           onChange={(e) => setName(e.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="contact-company">Entreprise</label>
-        <input
-          id="contact-company"
-          type="text"
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
-        />
+      <div className="grid-2">
+        <div className="field">
+          <label className="field__label" htmlFor="contact-company">
+            Entreprise
+          </label>
+          <input
+            className="input"
+            id="contact-company"
+            type="text"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label className="field__label" htmlFor="contact-phone">
+            Téléphone
+          </label>
+          <input
+            className="input"
+            id="contact-phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </div>
       </div>
-      <div>
-        <label htmlFor="contact-email">E-mail</label>
+      <div className="field">
+        <label className="field__label" htmlFor="contact-email">
+          E-mail
+        </label>
         <input
+          className="input"
           id="contact-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="contact-linkedin">Profil LinkedIn</label>
+      <div className="field">
+        <label className="field__label" htmlFor="contact-linkedin">
+          Profil LinkedIn
+        </label>
         <input
+          className="input"
           id="contact-linkedin"
           type="url"
           value={linkedinUrl}
           onChange={(e) => setLinkedinUrl(e.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="contact-phone">Téléphone</label>
-        <input
-          id="contact-phone"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-      </div>
-      <div>
-        <label htmlFor="contact-notes">Notes</label>
+      <div className="field">
+        <label className="field__label" htmlFor="contact-notes">
+          Notes
+        </label>
         <textarea
+          className="textarea"
           id="contact-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="contact-tags">Tags (séparés par des virgules)</label>
+      <div className="field">
+        <label className="field__label" htmlFor="contact-tags">
+          Tags (séparés par des virgules)
+        </label>
         <input
+          className="input"
           id="contact-tags"
           type="text"
           value={tags}
           onChange={(e) => setTags(e.target.value)}
         />
       </div>
-      <button type="submit" disabled={isPending}>
-        Enregistrer
-      </button>
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <button className="btn btn--primary" type="submit" disabled={isPending}>
+          Enregistrer
+        </button>
+      </div>
       {data !== undefined && (
         <p role="status">
           {data.created

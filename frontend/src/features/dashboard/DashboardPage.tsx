@@ -7,11 +7,18 @@ import { MatchAlerts } from './MatchAlerts';
 function DashboardPage() {
   return (
     <main>
-      <h1>Tableau de bord</h1>
-      <StatsCards />
-      <SkillsFrequencyChart />
-      <SkillsTrendChart />
-      <MatchAlerts />
+      <header className="page__head">
+        <h1 className="page__title">Tableau de bord</h1>
+        <p className="page__sub">Vue d'ensemble pour le profil actif.</p>
+      </header>
+      <div className="stack stack-5">
+        <StatsCards />
+        <div className="grid-2">
+          <SkillsFrequencyChart />
+          <SkillsTrendChart />
+        </div>
+        <MatchAlerts />
+      </div>
     </main>
   );
 }

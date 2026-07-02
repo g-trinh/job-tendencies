@@ -15,45 +15,68 @@ function PipelinePage() {
 
   return (
     <main>
-      <h1>Pipeline de scraping</h1>
+      <header className="page__head row-between">
+        <div className="stack">
+          <h1 className="page__title">Pipeline de scraping</h1>
+          <p className="page__sub">
+            Scraping → extraction LLM → scoring. Statut par source, mis à jour
+            en direct.
+          </p>
+        </div>
+        <button
+          className="btn btn--primary"
+          type="button"
+          disabled={isTriggering}
+          onClick={() =>
+            trigger(undefined, {
+              onSuccess: (runId) => setActiveRunId(runId),
+            })
+          }
+        >
+          Lancer une exécution
+        </button>
+      </header>
 
-      <button
-        type="button"
-        disabled={isTriggering}
-        onClick={() =>
-          trigger(undefined, {
-            onSuccess: (runId) => setActiveRunId(runId),
-          })
-        }
-      >
-        Lancer une exécution
-      </button>
-      {triggerFailed && (
-        <p role="alert">Échec du déclenchement de l'exécution.</p>
-      )}
-
-      {activeRunId !== null && <RunProgress runId={activeRunId} />}
-
-      <section aria-label="Historique des exécutions">
-        <h2>Historique des exécutions</h2>
-        {isPending && <p>Chargement de l'historique…</p>}
-        {isError && <p role="alert">Impossible de charger l'historique.</p>}
-        {runs !== undefined && runs.length === 0 && (
-          <p>Aucune exécution pour le moment.</p>
+      <div className="stack stack-5">
+        {triggerFailed && (
+          <div className="banner banner--danger" role="alert">
+            Échec du déclenchement de l'exécution.
+          </div>
         )}
-        {runs !== undefined && runs.length > 0 && (
-          <ul aria-label="Exécutions">
-            {runs.map((run) => (
-              <li key={run.run_id}>
-                <button type="button" onClick={() => setActiveRunId(run.run_id)}>
-                  {new Date(run.created_at).toLocaleString('fr-FR')} —{' '}
-                  {run.status} ({run.trigger})
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+
+        {activeRunId !== null && <RunProgress runId={activeRunId} />}
+
+        <section className="card" aria-label="Historique des exécutions">
+          <div className="card__head">
+            <h2 className="card__title">Historique des exécutions</h2>
+          </div>
+          {isPending && <p className="muted">Chargement de l'historique…</p>}
+          {isError && (
+            <div className="banner banner--danger" role="alert">
+              Impossible de charger l'historique.
+            </div>
+          )}
+          {runs !== undefined && runs.length === 0 && (
+            <p className="muted">Aucune exécution pour le moment.</p>
+          )}
+          {runs !== undefined && runs.length > 0 && (
+            <ul className="stack stack-2" aria-label="Exécutions">
+              {runs.map((run) => (
+                <li key={run.run_id}>
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    type="button"
+                    onClick={() => setActiveRunId(run.run_id)}
+                  >
+                    {new Date(run.created_at).toLocaleString('fr-FR')} —{' '}
+                    {run.status} ({run.trigger})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

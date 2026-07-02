@@ -14,12 +14,18 @@ function SkillsFrequencyChart() {
   const { data, isPending, isError } = useSkillFrequency();
 
   return (
-    <section aria-label="Fréquence des compétences">
-      <h2>Fréquence des compétences</h2>
-      {isPending && <p>Chargement…</p>}
-      {isError && <p role="alert">Impossible de charger les compétences.</p>}
+    <section className="card" aria-label="Fréquence des compétences">
+      <div className="card__head">
+        <h2 className="card__title">Fréquence des compétences</h2>
+      </div>
+      {isPending && <p className="muted">Chargement…</p>}
+      {isError && (
+        <div className="banner banner--danger" role="alert">
+          Impossible de charger les compétences.
+        </div>
+      )}
       {data !== undefined && data.length === 0 && (
-        <p>Aucune donnée de compétence disponible.</p>
+        <p className="muted">Aucune donnée de compétence disponible.</p>
       )}
       {data !== undefined && data.length > 0 && (
         <ResponsiveContainer width="100%" height={Math.max(200, data.length * 32)}>

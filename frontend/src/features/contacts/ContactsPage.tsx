@@ -16,49 +16,75 @@ function ContactsPage() {
 
   return (
     <main>
-      <h1>Contacts</h1>
+      <header className="page__head row-between">
+        <div className="stack">
+          <h1 className="page__title">Contacts</h1>
+          <p className="page__sub">
+            Recruteurs auto-remplis depuis l'extraction. Dédupliqués par e-mail
+            ou LinkedIn.
+          </p>
+        </div>
+        <a className="btn btn--secondary" href="/api/contacts/export.csv">
+          Exporter en CSV
+        </a>
+      </header>
 
-      <div>
-        <label htmlFor="contact-tag-filter">Filtrer par tag</label>
-        <input
-          id="contact-tag-filter"
-          type="text"
-          value={tagFilter}
-          onChange={(e) => setTagFilter(e.target.value)}
-        />
+      <div className="stack stack-5">
+        <section aria-label="Liste des contacts">
+          <div className="card__head">
+            <div className="field">
+              <label className="field__label" htmlFor="contact-tag-filter">
+                Filtrer par tag
+              </label>
+              <input
+                className="input"
+                id="contact-tag-filter"
+                type="text"
+                value={tagFilter}
+                onChange={(e) => setTagFilter(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {isPending && <p className="muted">Chargement des contacts…</p>}
+          {isError && (
+            <div className="banner banner--danger" role="alert">
+              Impossible de charger les contacts.
+            </div>
+          )}
+
+          {contacts !== undefined && contacts.length === 0 && (
+            <div className="state">
+              <span className="state__title">Aucun contact pour l'instant.</span>
+            </div>
+          )}
+
+          {contacts !== undefined && contacts.length > 0 && (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Entreprise</th>
+                    <th>E-mail</th>
+                    <th>LinkedIn</th>
+                    <th>Tags</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contacts.map((contact) => (
+                    <ContactRow key={contact.id} contact={contact} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <ContactForm />
       </div>
-
-      <a href="/api/contacts/export.csv">Exporter en CSV</a>
-
-      {isPending && <p>Chargement des contacts…</p>}
-      {isError && <p role="alert">Impossible de charger les contacts.</p>}
-
-      {contacts !== undefined && contacts.length === 0 && (
-        <p>Aucun contact pour l'instant.</p>
-      )}
-
-      {contacts !== undefined && contacts.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Entreprise</th>
-              <th>E-mail</th>
-              <th>LinkedIn</th>
-              <th>Tags</th>
-              <th>Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contacts.map((contact) => (
-              <ContactRow key={contact.id} contact={contact} />
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <ContactForm />
     </main>
   );
 }

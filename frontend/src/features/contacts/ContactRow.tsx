@@ -37,7 +37,7 @@ function ContactRow({ contact }: ContactRowProps) {
       <td>{contact.name}</td>
       <td>{contact.company}</td>
       <td>{contact.email}</td>
-      <td>
+      <td className="text-xs">
         {contact.linkedin_url && (
           <a href={contact.linkedin_url} target="_blank" rel="noreferrer">
             Profil
@@ -45,8 +45,11 @@ function ContactRow({ contact }: ContactRowProps) {
         )}
       </td>
       <td>
-        <label htmlFor={`tags-${contact.id}`}>Tags</label>
+        <label className="sr-only" htmlFor={`tags-${contact.id}`}>
+          Tags
+        </label>
         <input
+          className="input"
           id={`tags-${contact.id}`}
           type="text"
           value={tags}
@@ -54,24 +57,35 @@ function ContactRow({ contact }: ContactRowProps) {
         />
       </td>
       <td>
-        <label htmlFor={`notes-${contact.id}`}>Notes</label>
+        <label className="sr-only" htmlFor={`notes-${contact.id}`}>
+          Notes
+        </label>
         <textarea
+          className="textarea"
           id={`notes-${contact.id}`}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
       </td>
       <td>
-        <button type="button" disabled={isSaving} onClick={handleSave}>
-          Enregistrer
-        </button>
-        <button
-          type="button"
-          disabled={isDeleting}
-          onClick={() => remove(contact.id)}
-        >
-          Supprimer
-        </button>
+        <div className="row">
+          <button
+            className="btn btn--secondary btn--sm"
+            type="button"
+            disabled={isSaving}
+            onClick={handleSave}
+          >
+            Enregistrer
+          </button>
+          <button
+            className="btn btn--ghost btn--sm"
+            type="button"
+            disabled={isDeleting}
+            onClick={() => remove(contact.id)}
+          >
+            Supprimer
+          </button>
+        </div>
       </td>
     </tr>
   );

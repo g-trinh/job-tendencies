@@ -37,12 +37,19 @@ function SkillsTrendChart() {
   const pivoted = data ? pivotBySkill(data) : null;
 
   return (
-    <section aria-label="Évolution des compétences">
-      <h2>Évolution des compétences</h2>
-      {isPending && <p>Chargement…</p>}
-      {isError && <p role="alert">Impossible de charger la tendance des compétences.</p>}
+    <section className="card" aria-label="Évolution des compétences">
+      <div className="card__head">
+        <h2 className="card__title">Évolution des compétences</h2>
+        <span className="badge badge--neutral">Tendance</span>
+      </div>
+      {isPending && <p className="muted">Chargement…</p>}
+      {isError && (
+        <div className="banner banner--danger" role="alert">
+          Impossible de charger la tendance des compétences.
+        </div>
+      )}
       {pivoted !== null && pivoted.rows.length === 0 && (
-        <p>Aucune donnée de tendance disponible.</p>
+        <p className="muted">Aucune donnée de tendance disponible.</p>
       )}
       {pivoted !== null && pivoted.rows.length > 0 && (
         <ResponsiveContainer width="100%" height={300}>
