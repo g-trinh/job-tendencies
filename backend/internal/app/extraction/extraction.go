@@ -20,6 +20,12 @@ import (
 	domainscraping "github.com/g-trinh/job-tendencies/internal/domain/scraping"
 )
 
+// triggerScheduled mirrors app/scraping.TriggerScheduled; duplicated here to avoid a
+// second cross-context import for a single string literal (this package already imports
+// appscraping for ExtractRawListingIDAttr and TriggerAttr, which name the wire attributes
+// themselves, not the value being compared).
+const triggerScheduled = "scheduled"
+
 // RawListingRef is the extraction context's view of a captured raw listing: enough to
 // load the payload from GCS and link the resulting job back to its source.
 type RawListingRef struct {
@@ -71,14 +77,18 @@ type JobScorer interface {
 //
 // contacts and scorer are optional: when nil, P3-EX-3 (contact upsert) and P3-EX-4
 // (scoring) are skipped. They are wired in the full extract-worker binary.
+//
+// batchEnabled gates the (currently unimplemented) Batch API path for scheduled bulk
+// extraction, P5-5. It defaults to false; see WithBatchEnabled.
 type Service struct {
-	rawListings domainscraping.RawListingSource
-	rawStore    blobstore.Loader
-	extractor   llm.ListingExtractor
-	jobs        jobs.Repository
-	contacts    ContactUpserter
-	scorer      JobScorer
-	logger      *slog.Logger
+	rawListings  domainscraping.RawListingSource
+	rawStore     blobstore.Loader
+	extractor    llm.ListingExtractor
+	jobs         jobs.Repository
+	contacts     ContactUpserter
+	scorer       JobScorer
+	batchEnabled bool
+	logger       *slog.Logger
 }
 
 // New constructs an extraction Service with the core extraction dependencies. Use
@@ -113,6 +123,22 @@ func (s *Service) WithScorer(sc JobScorer) *Service {
 	return s
 }
 
+// WithBatchEnabled gates the Batch API cost lever for scheduled bulk extraction (P5-5,
+// ADR-004, config LLM_BATCH_ENABLED — default false).
+//
+// The real batch path (submit many listings as one Anthropic Message Batch job, poll,
+// retrieve) is deferred: it is asynchronous over minutes-to-hours and does not fit
+// inside a single Pub/Sub push handler invocation (60s ack deadline,
+// infrastructure.md §5), and it breaks the current one-message-one-extraction model
+// (ADR-003). That redesign is blocked on open question #1 (Batch API latency vs the
+// scheduled cron window, PM-blocked — docs/architecture/tech_debt.md). Enabling this
+// flag today only makes the extension point observable: a scheduled-trigger message
+// logs a warning and still extracts synchronously.
+func (s *Service) WithBatchEnabled(enabled bool) *Service {
+	s.batchEnabled = enabled
+	return s
+}
+
 // HandleListingExtract is invoked for each verified listing.extract push delivery. It
 // loads the raw payload, extracts structured fields via Claude, deduplicates across
 // boards via the fingerprint, optionally upserts the recruiter contact, creates or
@@ -129,6 +155,15 @@ func (s *Service) HandleListingExtract(ctx context.Context, msg messaging.Messag
 	}
 	if rawListingID == "" {
 		return fmt.Errorf("listing.extract message carries no raw listing id")
+	}
+
+	// P5-5: scrape-worker propagates the originating scrape.tick's trigger onto every
+	// listing.extract message it publishes. When Batch API routing is enabled and this
+	// message came from a scheduled run, log the extension point rather than silently
+	// ignoring the flag — see WithBatchEnabled for why the real batch path isn't wired yet.
+	if s.batchEnabled && msg.Attributes[appscraping.TriggerAttr] == triggerScheduled {
+		s.logger.WarnContext(ctx, "batch extraction enabled for a scheduled run but not yet implemented (P5-5 open question #1); falling back to synchronous extraction",
+			"raw_listing_id", string(rawListingID))
 	}
 
 	rawListing, err := s.rawListings.Get(ctx, rawListingID)

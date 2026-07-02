@@ -86,7 +86,7 @@ func main() {
 		extractor,
 		jobRepo,
 		logger,
-	).WithContacts(contactsAdapter).WithScorer(scorerAdapter)
+	).WithContacts(contactsAdapter).WithScorer(scorerAdapter).WithBatchEnabled(cfg.LLMBatchEnabled)
 
 	r := handler.NewRouter(logger)
 	r.Get("/healthz", handleHealthz)

@@ -104,9 +104,16 @@ func (h *fakeHWM) Set(_ context.Context, _ kernel.BoardID, _ kernel.ProfileID, t
 	return nil
 }
 
-type fakePublisher struct{ published int }
+type fakePublisher struct {
+	published int
+	messages  []messaging.Message
+}
 
-func (p *fakePublisher) Publish(context.Context, messaging.Message) error { p.published++; return nil }
+func (p *fakePublisher) Publish(_ context.Context, msg messaging.Message) error {
+	p.published++
+	p.messages = append(p.messages, msg)
+	return nil
+}
 
 func newTestService(fetcher SearchFetcher, raw *fakeRawRepo, hwm *fakeHWM, pub *fakePublisher) *Service {
 	return newTestServiceWithSpec(llm.AdapterSpec{}, fetcher, raw, hwm, pub)
@@ -225,6 +232,72 @@ func TestService_HandleScrapeTick_MarksExpiredJobs(t *testing.T) {
 	}
 	if len(call.seenURLs) != 2 || call.seenURLs[0] != "u1" || call.seenURLs[1] != "u2" {
 		t.Fatalf("seenURLs = %v, want [u1 u2]", call.seenURLs)
+	}
+}
+
+// --- P5-5: trigger resolution + propagation onto listing.extract ---
+
+// TestResolveTrigger covers the three ways a scrape.tick message can carry its trigger:
+// the attribute (on-demand, set by app/pipeline.Service.CreateRun), the Cloud Scheduler
+// JSON payload (scheduled), and the safe default when neither is present.
+func TestResolveTrigger(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		msg  messaging.Message
+		want string
+	}{
+		{
+			name: "attribute present wins",
+			msg:  messaging.Message{Attributes: map[string]string{"trigger": "scheduled"}},
+			want: "scheduled",
+		},
+		{
+			name: "falls back to scheduler JSON payload",
+			msg:  messaging.Message{Data: []byte(`{"trigger":"scheduled"}`)},
+			want: "scheduled",
+		},
+		{
+			name: "defaults to on_demand when neither is present",
+			msg:  messaging.Message{},
+			want: "on_demand",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := resolveTrigger(tc.msg); got != tc.want {
+				t.Errorf("resolveTrigger() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestService_HandleScrapeTick_PropagatesTrigger verifies P5-5: the trigger read off the
+// scrape.tick message is carried onto every listing.extract message this run publishes,
+// so extract-worker can gate Batch API routing.
+func TestService_HandleScrapeTick_PropagatesTrigger(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	raw := &fakeRawRepo{seen: map[string]bool{}}
+	hwm := &fakeHWM{}
+	pub := &fakePublisher{}
+	svc := newTestService(fakeFetcher{posted: now}, raw, hwm, pub)
+
+	msg := messaging.Message{Attributes: map[string]string{"trigger": TriggerScheduled}}
+	if err := svc.HandleScrapeTick(context.Background(), msg); err != nil {
+		t.Fatalf("HandleScrapeTick error = %v", err)
+	}
+	if len(pub.messages) != 2 {
+		t.Fatalf("published = %d messages, want 2", len(pub.messages))
+	}
+	for _, m := range pub.messages {
+		if m.Attributes[TriggerAttr] != TriggerScheduled {
+			t.Errorf("listing.extract trigger = %q, want %q", m.Attributes[TriggerAttr], TriggerScheduled)
+		}
 	}
 }
 

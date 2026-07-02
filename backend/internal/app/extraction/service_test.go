@@ -417,6 +417,40 @@ func TestHandleListingExtract_RedeliveryIsIdempotent(t *testing.T) {
 	}
 }
 
+// scheduledMsg builds a listing.extract message carrying the "scheduled" trigger, as
+// scrape-worker propagates it (P5-5).
+func scheduledMsg(rawListingID string) messaging.Message {
+	return messaging.Message{
+		Attributes: map[string]string{
+			appscraping.ExtractRawListingIDAttr: rawListingID,
+			appscraping.TriggerAttr:             appscraping.TriggerScheduled,
+		},
+	}
+}
+
+// TestHandleListingExtract_BatchEnabledScheduledStillExtractsSynchronously verifies P5-5:
+// enabling the (currently unimplemented) Batch API flag for a scheduled-trigger message
+// does not change extraction behaviour — the job is still created synchronously. The
+// flag only makes the extension point observable (a warning log), per the architect's
+// decision to defer the real async batch path behind open question #1.
+func TestHandleListingExtract_BatchEnabledScheduledStillExtractsSynchronously(t *testing.T) {
+	t.Parallel()
+
+	rawSrc := &fakeRawListingSource{listing: defaultRawListing()}
+	blob := &fakeBlobLoader{payload: []byte(`{"raw":"payload"}`)}
+	extractor := &fakeExtractor{listing: defaultExtracted()}
+	repo := &fakeJobRepo{createID: "job-batch-1"}
+
+	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithBatchEnabled(true)
+	err := svc.HandleListingExtract(context.Background(), scheduledMsg("raw-1"))
+	if err != nil {
+		t.Fatalf("HandleListingExtract returned error: %v", err)
+	}
+	if len(rawSrc.marked) != 1 {
+		t.Fatalf("expected the listing to still be extracted synchronously, got %v", rawSrc.marked)
+	}
+}
+
 // TestHandleListingExtract_MissingRawListingID verifies that a message with no id
 // is rejected early.
 func TestHandleListingExtract_MissingRawListingID(t *testing.T) {

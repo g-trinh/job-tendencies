@@ -14,6 +14,12 @@
 //   - LOG_LEVEL         — slog verbosity: debug, info, warn, error (default: info).
 //   - ANTHROPIC_API_KEY — Anthropic API key; required for LLM port.
 //   - LLM_MODEL_ID      — Claude model id (default: claude-opus-4-8).
+//   - LLM_BATCH_ENABLED — Route scheduled bulk extraction through the Anthropic Batch
+//     API cost lever (ADR-004, pipeline.md §3). Default: false. P5-5: the extension
+//     point is wired (extract-worker reads this flag and the propagated run trigger),
+//     but real batch submission is deferred behind open question #1 (Batch API latency
+//     vs the scheduled cron window, PM-blocked) — see docs/architecture/tech_debt.md.
+//     Enabling this today only logs a warning and falls back to synchronous extraction.
 //   - GCP_PROJECT_ID    — GCP project id; required for Pub/Sub and GCS.
 //   - GCS_RAW_BUCKET    — GCS bucket name for raw HTML/JSON payloads.
 //   - PUBSUB_SCRAPE_TOPIC_ID   — Pub/Sub topic id for scrape.tick events.
@@ -72,6 +78,10 @@ type Config struct {
 	// LLMModelID is the Claude model id passed to the Anthropic API.
 	// Defaults to DefaultLLMModelID when not set.
 	LLMModelID string
+
+	// LLMBatchEnabled gates routing scheduled bulk extraction through the Anthropic
+	// Batch API (P5-5). Defaults to false. See the LLM_BATCH_ENABLED doc above.
+	LLMBatchEnabled bool
 
 	// GCPProjectID is the GCP project id used by Pub/Sub and GCS clients.
 	GCPProjectID string
@@ -137,6 +147,7 @@ func Load() (*Config, error) {
 		LogLevel:             envOrDefault("LOG_LEVEL", "info"),
 		AnthropicAPIKey:      os.Getenv("ANTHROPIC_API_KEY"),
 		LLMModelID:           envOrDefault("LLM_MODEL_ID", DefaultLLMModelID),
+		LLMBatchEnabled:      parseBoolDefault("LLM_BATCH_ENABLED", false),
 		GCPProjectID:         os.Getenv("GCP_PROJECT_ID"),
 		GCSRawBucket:         os.Getenv("GCS_RAW_BUCKET"),
 		PubSubScrapeTopicID:  os.Getenv("PUBSUB_SCRAPE_TOPIC_ID"),

@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -26,9 +27,27 @@ import (
 // raw listing id to extract.
 const ExtractRawListingIDAttr = "raw_listing_id"
 
+// TriggerAttr is the listing.extract message attribute carrying the run trigger
+// propagated from scrape.tick ("scheduled" | "on_demand"). extract-worker reads it to
+// gate Batch API routing (P5-5, config-gated, default off — see tech_debt.md open
+// question #1).
+const TriggerAttr = "trigger"
+
+// TriggerScheduled marks a run started by Cloud Scheduler's global cron.
+const TriggerScheduled = "scheduled"
+
 // scrapeTickRunAttr is the scrape.tick message attribute carrying the run id.
 // Matches app/pipeline.ScrapeTickRunAttr; defined here to avoid cross-context import.
 const scrapeTickRunAttr = "run_id"
+
+// scrapeTickTriggerAttr is the scrape.tick message attribute carrying the run trigger.
+// Matches app/pipeline.ScrapeTickTriggerAttr; defined here to avoid cross-context import
+// (same rationale as scrapeTickRunAttr above).
+const scrapeTickTriggerAttr = "trigger"
+
+// triggerOnDemand is the safe default when a scrape.tick message carries no trigger at
+// all (keeps every downstream listing.extract on the synchronous extraction path).
+const triggerOnDemand = "on_demand"
 
 // BoardAdapter is a board paired with its approved scraping spec. It is the scraping
 // context's view of the board-manager data, mapped at the composition root so the two
@@ -163,6 +182,8 @@ func New(
 // the active target, then crawls every enabled board's approved adapter, tracking
 // per-board progress when the message carries a run_id attribute.
 func (s *Service) HandleScrapeTick(ctx context.Context, msg messaging.Message) error {
+	trigger := resolveTrigger(msg)
+
 	target, err := s.targets.ActiveTarget(ctx)
 	if err != nil {
 		return fmt.Errorf("resolving active target: %w", err)
@@ -191,7 +212,7 @@ func (s *Service) HandleScrapeTick(ctx context.Context, msg messaging.Message) e
 				"board_id", string(adapter.BoardID), "err", trackErr)
 		}
 
-		pages, listings, crawlErr := s.crawlBoard(ctx, adapter, target)
+		pages, listings, crawlErr := s.crawlBoard(ctx, adapter, target, trigger)
 
 		errMsg := ""
 		if crawlErr != nil {
@@ -220,7 +241,8 @@ func (s *Service) HandleScrapeTick(ctx context.Context, msg messaging.Message) e
 
 // crawlBoard runs the high-water-mark incremental crawl for one board (pipeline.md §2).
 // It returns the number of pages scanned and the number of genuinely new listings captured.
-func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target ScrapeTarget) (pagesScanned, listingsCaptured int, err error) {
+// trigger is propagated onto every listing.extract message this crawl publishes (P5-5).
+func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target ScrapeTarget, trigger string) (pagesScanned, listingsCaptured int, err error) {
 	hwm, err := s.hwm.Get(ctx, adapter.BoardID, target.ProfileID)
 	if err != nil {
 		return 0, 0, fmt.Errorf("reading high-water-mark: %w", err)
@@ -258,7 +280,7 @@ func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target S
 				break
 			}
 			seenURLs = append(seenURLs, card.ListingURL)
-			captured, err := s.captureCard(ctx, adapter.BoardID, target.ProfileID, card)
+			captured, err := s.captureCard(ctx, adapter.BoardID, target.ProfileID, card, trigger)
 			if err != nil {
 				return pagesScanned, listingsCaptured, err
 			}
@@ -289,9 +311,10 @@ func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target S
 }
 
 // captureCard stores one card's raw payload (idempotent by content hash) and publishes
-// a listing.extract message for genuinely new listings. It returns true when the card
-// was captured (not already seen by content_hash).
-func (s *Service) captureCard(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, card Card) (bool, error) {
+// a listing.extract message for genuinely new listings, carrying trigger onward so
+// extract-worker can gate Batch API routing (P5-5). It returns true when the card was
+// captured (not already seen by content_hash).
+func (s *Service) captureCard(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, card Card, trigger string) (bool, error) {
 	contentHash := hashContent(card.Raw)
 
 	// The exists-check and Save below are not a single transaction, so two concurrent
@@ -334,8 +357,11 @@ func (s *Service) captureCard(ctx context.Context, boardID kernel.BoardID, profi
 	}
 
 	msg := messaging.Message{
-		Data:       []byte(id),
-		Attributes: map[string]string{ExtractRawListingIDAttr: string(id)},
+		Data: []byte(id),
+		Attributes: map[string]string{
+			ExtractRawListingIDAttr: string(id),
+			TriggerAttr:             trigger,
+		},
 	}
 	if err := s.publisher.Publish(ctx, msg); err != nil {
 		return false, fmt.Errorf("publishing listing.extract for %q: %w", id, err)
@@ -344,6 +370,26 @@ func (s *Service) captureCard(ctx context.Context, boardID kernel.BoardID, profi
 	s.logger.InfoContext(ctx, "raw listing captured",
 		"raw_listing_id", string(id), "board_id", string(boardID), "content_hash", contentHash)
 	return true, nil
+}
+
+// resolveTrigger reads the run trigger off a scrape.tick message: the attribute when
+// present (on-demand runs, set by app/pipeline.Service.CreateRun), else the Cloud
+// Scheduler payload's {"trigger":"scheduled"} JSON body (infrastructure.md §5 scheduler
+// module), else triggerOnDemand as the safe default so an unrecognised message never
+// accidentally routes toward the (currently unimplemented) batch path.
+func resolveTrigger(msg messaging.Message) string {
+	if t := msg.Attributes[scrapeTickTriggerAttr]; t != "" {
+		return t
+	}
+	var payload struct {
+		Trigger string `json:"trigger"`
+	}
+	if len(msg.Data) > 0 {
+		if err := json.Unmarshal(msg.Data, &payload); err == nil && payload.Trigger != "" {
+			return payload.Trigger
+		}
+	}
+	return triggerOnDemand
 }
 
 // computeCutoff returns the incremental stop boundary: hwm minus the overlap buffer.
