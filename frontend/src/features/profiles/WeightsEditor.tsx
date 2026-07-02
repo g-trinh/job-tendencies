@@ -29,40 +29,54 @@ function WeightsEditor({ profileId, weights }: WeightsEditorProps) {
   const isBalanced = sum === 100;
 
   return (
-    <section aria-label="Pondération du score de pertinence">
-      <h2>Pondération du score de pertinence</h2>
-      {FIELDS.map((f) => (
-        <div key={f.key}>
-          <label htmlFor={`weight-${f.key}`}>
-            {f.label} : {draft[f.key]}%
-          </label>
-          <input
-            id={`weight-${f.key}`}
-            type="range"
-            min={0}
-            max={100}
-            value={draft[f.key]}
-            onChange={(e) =>
-              setDraft({ ...draft, [f.key]: Number(e.target.value) })
-            }
-          />
-        </div>
-      ))}
-      <p aria-live="polite">Total : {sum}%</p>
-      {!isBalanced && (
-        <p role="alert">
-          La somme des pondérations n'est pas égale à 100 % (actuellement{' '}
-          {sum}%). Vous pouvez tout de même enregistrer.
-        </p>
-      )}
+    <section className="card" aria-label="Pondération du score de pertinence">
+      <div className="card__head">
+        <h2 className="card__title">Pondération du score de pertinence</h2>
+      </div>
+      <div className="stack stack-4">
+        {FIELDS.map((f) => (
+          <div className="slider-row" key={f.key}>
+            <label htmlFor={`weight-${f.key}`}>{f.label}</label>
+            <input
+              className="slider"
+              id={`weight-${f.key}`}
+              type="range"
+              min={0}
+              max={100}
+              value={draft[f.key]}
+              onChange={(e) =>
+                setDraft({ ...draft, [f.key]: Number(e.target.value) })
+              }
+            />
+            <span className="slider-row__val">{draft[f.key]}%</span>
+          </div>
+        ))}
+      </div>
+      <p aria-live="polite" className="sr-only">
+        Total : {sum}%
+      </p>
+      <div className={`weights-sum ${isBalanced ? 'weights-sum--ok' : 'weights-sum--off'}`}>
+        <span>Total : {sum}%</span>
+        {!isBalanced && (
+          <span role="alert">
+            La somme des pondérations n'est pas égale à 100 % (actuellement{' '}
+            {sum}%). Vous pouvez tout de même enregistrer.
+          </span>
+        )}
+      </div>
       <button
+        className="btn btn--primary"
         type="button"
         disabled={isPending}
         onClick={() => mutate(draft)}
       >
         Enregistrer
       </button>
-      {isSuccess && <p role="status">Pondérations enregistrées.</p>}
+      {isSuccess && (
+        <span className="badge badge--success" role="status">
+          Pondérations enregistrées.
+        </span>
+      )}
     </section>
   );
 }

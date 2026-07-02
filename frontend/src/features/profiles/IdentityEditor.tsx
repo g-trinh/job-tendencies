@@ -41,62 +41,84 @@ function IdentityEditor({ profile }: IdentityEditorProps) {
   }
 
   return (
-    <section aria-label="Identité et compétences">
-      <h2>Identité et compétences</h2>
-
-      <div>
-        <label htmlFor="identity-pdf">Importer un CV LinkedIn (PDF)</label>
-        <input
-          id="identity-pdf"
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf"
-          onChange={handleFileChange}
-          disabled={isImporting}
-        />
-        {isImporting && <p>Import en cours…</p>}
-        {importFailed && (
-          <p role="alert">
-            Échec de l'import du PDF. Vérifiez le fichier et réessayez.
-          </p>
-        )}
+    <section className="card" aria-label="Identité et compétences">
+      <div className="card__head">
+        <h2 className="card__title">Identité et compétences</h2>
       </div>
 
-      <div>
-        <label htmlFor="identity-skills">Compétences (séparées par des virgules)</label>
-        <textarea
-          id="identity-skills"
-          value={skillsInput}
-          onChange={(e) => setSkillsInput(e.target.value)}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="identity-seniority">Séniorité</label>
-        <select
-          id="identity-seniority"
-          value={seniority}
-          onChange={(e) => setSeniority(e.target.value)}
-        >
-          <option value="">Non déterminée</option>
-          {SENIORITY_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {t(`job.seniority.${s}`)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {profile.rawExperience && (
-        <div>
-          <h3>Expérience brute extraite</h3>
-          <p>{profile.rawExperience}</p>
+      <div className="stack stack-4">
+        <div className="field">
+          <label className="btn btn--secondary" htmlFor="identity-pdf">
+            Importer un CV LinkedIn (PDF)
+          </label>
+          <input
+            className="sr-only"
+            id="identity-pdf"
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileChange}
+            disabled={isImporting}
+          />
+          {isImporting && (
+            <p className="skeleton skeleton--text skeleton--line-60" role="status">
+              Import en cours…
+            </p>
+          )}
+          {importFailed && (
+            <div className="banner banner--danger" role="alert">
+              Échec de l'import du PDF. Vérifiez le fichier et réessayez.
+            </div>
+          )}
         </div>
-      )}
 
-      <button type="button" disabled={isSaving} onClick={handleSave}>
-        Enregistrer l'identité
-      </button>
+        <div className="field">
+          <label className="field__label" htmlFor="identity-skills">
+            Compétences (séparées par des virgules)
+          </label>
+          <textarea
+            className="textarea"
+            id="identity-skills"
+            value={skillsInput}
+            onChange={(e) => setSkillsInput(e.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label className="field__label" htmlFor="identity-seniority">
+            Séniorité
+          </label>
+          <select
+            className="select"
+            id="identity-seniority"
+            value={seniority}
+            onChange={(e) => setSeniority(e.target.value)}
+          >
+            <option value="">Non déterminée</option>
+            {SENIORITY_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {t(`job.seniority.${s}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {profile.rawExperience && (
+          <div className="field">
+            <h3>Expérience brute extraite</h3>
+            <p className="muted text-sm">{profile.rawExperience}</p>
+          </div>
+        )}
+
+        <button
+          className="btn btn--primary"
+          type="button"
+          disabled={isSaving}
+          onClick={handleSave}
+        >
+          Enregistrer l'identité
+        </button>
+      </div>
     </section>
   );
 }

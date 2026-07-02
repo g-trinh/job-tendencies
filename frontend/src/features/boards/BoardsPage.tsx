@@ -24,31 +24,41 @@ function CreateBoardForm() {
   }
 
   return (
-    <form aria-label="Ajouter un board" onSubmit={handleSubmit}>
-      <h2>Ajouter un board</h2>
-      <div>
-        <label htmlFor="board-name">Nom</label>
-        <input
-          id="board-name"
-          type="text"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+    <form className="card" aria-label="Ajouter un board" onSubmit={handleSubmit}>
+      <div className="card__head">
+        <h2 className="card__title">Ajouter un board</h2>
       </div>
-      <div>
-        <label htmlFor="board-base-url">URL de base</label>
-        <input
-          id="board-base-url"
-          type="url"
-          required
-          value={baseUrl}
-          onChange={(e) => setBaseUrl(e.target.value)}
-        />
+      <div className="stack stack-4">
+        <div className="field">
+          <label className="field__label" htmlFor="board-name">
+            Nom
+          </label>
+          <input
+            className="input"
+            id="board-name"
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label className="field__label" htmlFor="board-base-url">
+            URL de base
+          </label>
+          <input
+            className="input"
+            id="board-base-url"
+            type="url"
+            required
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+          />
+        </div>
+        <button className="btn btn--primary" type="submit" disabled={isPending}>
+          Ajouter
+        </button>
       </div>
-      <button type="submit" disabled={isPending}>
-        Ajouter
-      </button>
     </form>
   );
 }
@@ -60,26 +70,30 @@ function BoardRow({ board }: { board: BoardDto }) {
 
   return (
     <li>
-      <article aria-label={board.name}>
-        <h3>{board.name}</h3>
-        <p>{board.base_url}</p>
-        <label htmlFor={`board-enabled-${board.id}`}>
-          <input
-            id={`board-enabled-${board.id}`}
-            type="checkbox"
-            checked={board.enabled}
-            onChange={(e) =>
-              update({
-                id: board.id,
-                name: board.name,
-                base_url: board.base_url,
-                enabled: e.target.checked,
-              })
-            }
-          />
-          Activé
-        </label>
+      <article className="card" aria-label={board.name}>
+        <div className="card__head">
+          <h3 className="card__title">{board.name}</h3>
+          <label className="toggle" htmlFor={`board-enabled-${board.id}`}>
+            <input
+              id={`board-enabled-${board.id}`}
+              type="checkbox"
+              checked={board.enabled}
+              onChange={(e) =>
+                update({
+                  id: board.id,
+                  name: board.name,
+                  base_url: board.base_url,
+                  enabled: e.target.checked,
+                })
+              }
+            />
+            <span className="toggle__track" />
+            Activé
+          </label>
+        </div>
+        <p className="muted text-sm">{board.base_url}</p>
         <button
+          className="btn btn--danger btn--sm"
           type="button"
           disabled={isDeleting}
           onClick={() => remove(board.id)}
@@ -106,23 +120,33 @@ function BoardsPage() {
 
   return (
     <main>
-      <h1>Boards</h1>
+      <header className="page__head">
+        <h1 className="page__title">Boards</h1>
+      </header>
 
-      {isPending && <p>Chargement des boards…</p>}
-      {isError && <p role="alert">Impossible de charger les boards.</p>}
+      {isPending && <p className="muted">Chargement des boards…</p>}
+      {isError && (
+        <div className="banner banner--danger" role="alert">
+          Impossible de charger les boards.
+        </div>
+      )}
 
       {allDisabled && (
-        <p role="alert">
+        <div className="banner banner--warning" role="alert">
           Tous les boards sont désactivés : aucune offre ne sera récupérée.
-        </p>
+        </div>
       )}
 
       {boards !== undefined && boards.length === 0 && (
-        <p>Aucun board pour l'instant. Ajoutez-en un pour commencer.</p>
+        <div className="state">
+          <span className="state__title">
+            Aucun board pour l'instant. Ajoutez-en un pour commencer.
+          </span>
+        </div>
       )}
 
       {boards !== undefined && boards.length > 0 && (
-        <ul aria-label="Boards">
+        <ul className="stack stack-4" aria-label="Boards">
           {boards.map((board) => (
             <BoardRow key={board.id} board={board} />
           ))}

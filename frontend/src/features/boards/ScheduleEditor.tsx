@@ -13,17 +13,24 @@ function ScheduleEditor() {
   }, [data]);
 
   return (
-    <section aria-label="Planification">
-      <h2>Planification</h2>
-      {isPending && <p>Chargement de la planification…</p>}
+    <section className="card" aria-label="Planification">
+      <div className="card__head">
+        <h2 className="card__title">Planification</h2>
+      </div>
+      {isPending && <p className="muted">Chargement de la planification…</p>}
       {isError && (
-        <p role="alert">Impossible de charger la planification.</p>
+        <div className="banner banner--danger" role="alert">
+          Impossible de charger la planification.
+        </div>
       )}
       {data !== undefined && (
-        <>
-          <div>
-            <label htmlFor="schedule-cron">Expression cron</label>
+        <div className="stack stack-4">
+          <div className="field">
+            <label className="field__label" htmlFor="schedule-cron">
+              Expression cron
+            </label>
             <input
+              className="input mono"
               id="schedule-cron"
               type="text"
               value={cron}
@@ -31,14 +38,19 @@ function ScheduleEditor() {
             />
           </div>
           <button
+            className="btn btn--primary"
             type="button"
             disabled={isSaving}
             onClick={() => mutate(cron)}
           >
             Enregistrer la planification
           </button>
-          {isSuccess && <p role="status">Planification enregistrée.</p>}
-        </>
+          {isSuccess && (
+            <span className="badge badge--success" role="status">
+              Planification enregistrée.
+            </span>
+          )}
+        </div>
       )}
     </section>
   );

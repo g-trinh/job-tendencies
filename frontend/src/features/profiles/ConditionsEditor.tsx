@@ -22,13 +22,14 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
   }
 
   return (
-    <section aria-label="Conditions de recherche">
-      <h2>Conditions de recherche</h2>
+    <section className="card" aria-label="Conditions de recherche">
+      <div className="card__head"><h2 className="card__title">Conditions de recherche</h2></div>
 
-      <h3>Critères éliminatoires</h3>
-      <div>
-        <label htmlFor="cond-contract">Type de contrat requis</label>
+      <fieldset className="stack stack-4"><legend className="filter-group__title">Critères éliminatoires</legend>
+      <div className="field">
+        <label className="field__label" htmlFor="cond-contract">Type de contrat requis</label>
         <select
+          className="select"
           id="cond-contract"
           value={draft.dealbreaker_contract_type ?? ''}
           onChange={(e) =>
@@ -45,9 +46,10 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
           <option value="interim">Intérim</option>
         </select>
       </div>
-      <div>
-        <label htmlFor="cond-remote">Télétravail requis</label>
+      <div className="field">
+        <label className="field__label" htmlFor="cond-remote">Télétravail requis</label>
         <select
+          className="select"
           id="cond-remote"
           value={draft.dealbreaker_remote_policy ?? ''}
           onChange={(e) =>
@@ -63,9 +65,10 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
           <option value="full_remote">Télétravail complet</option>
         </select>
       </div>
-      <div>
-        <label htmlFor="cond-salary-min">Salaire minimum (€)</label>
+      <div className="field">
+        <label className="field__label" htmlFor="cond-salary-min">Salaire minimum (€)</label>
         <input
+          className="input"
           id="cond-salary-min"
           type="number"
           min={0}
@@ -78,11 +81,12 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
           }
         />
       </div>
-      <div>
-        <label htmlFor="cond-required-skills">
+      <div className="field">
+        <label className="field__label" htmlFor="cond-required-skills">
           Compétences obligatoires (séparées par des virgules)
         </label>
         <input
+          className="input"
           id="cond-required-skills"
           type="text"
           defaultValue={draft.dealbreaker_required_skills.join(', ')}
@@ -98,12 +102,13 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
         />
       </div>
 
-      <h3>Préférences</h3>
-      <div>
-        <label htmlFor="cond-preferred-skills">
+      </fieldset><fieldset className="stack stack-4"><legend className="filter-group__title">Préférences</legend>
+      <div className="field">
+        <label className="field__label" htmlFor="cond-preferred-skills">
           Compétences préférées (séparées par des virgules)
         </label>
         <input
+          className="input"
           id="cond-preferred-skills"
           type="text"
           defaultValue={draft.preferred_skills.join(', ')}
@@ -118,9 +123,10 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
           }
         />
       </div>
-      <div>
-        <label htmlFor="cond-office-days">Jours de présence max</label>
+      <div className="field">
+        <label className="field__label" htmlFor="cond-office-days">Jours de présence max</label>
         <input
+          className="input"
           id="cond-office-days"
           type="number"
           min={0}
@@ -134,18 +140,20 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
           }
         />
       </div>
-      <div>
-        <label htmlFor="cond-location">Localisation préférée</label>
+      <div className="field">
+        <label className="field__label" htmlFor="cond-location">Localisation préférée</label>
         <input
+          className="input"
           id="cond-location"
           type="text"
           value={draft.preferred_location}
           onChange={(e) => set('preferred_location', e.target.value)}
         />
       </div>
-      <div>
-        <label htmlFor="cond-working-days">Jours travaillés préférés</label>
+      <div className="field">
+        <label className="field__label" htmlFor="cond-working-days">Jours travaillés préférés</label>
         <select
+          className="select"
           id="cond-working-days"
           value={draft.preferred_working_days}
           onChange={(e) =>
@@ -159,10 +167,15 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
         </select>
       </div>
 
-      <button type="button" disabled={isPending} onClick={() => mutate(draft)}>
+      </fieldset>
+      <button className="btn btn--primary" type="button" disabled={isPending} onClick={() => mutate(draft)}>
         Enregistrer les conditions
       </button>
-      {isSuccess && <p role="status">Conditions enregistrées.</p>}
+      {isSuccess && (
+        <span className="badge badge--success" role="status">
+          Conditions enregistrées.
+        </span>
+      )}
     </section>
   );
 }

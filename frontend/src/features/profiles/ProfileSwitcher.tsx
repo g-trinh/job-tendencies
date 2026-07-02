@@ -10,10 +10,14 @@ function ProfileSwitcher() {
   if (!profiles || profiles.length === 0) return null;
 
   return (
-    <div>
-      <label htmlFor="profile-switcher">Profil actif</label>
+    <div className="row">
+      <label className="sr-only" htmlFor="profile-switcher">
+        Profil actif
+      </label>
       <select
+        className="select"
         id="profile-switcher"
+        style={{ width: 'auto' }}
         value={activeProfileId ?? ''}
         disabled={isSwitching}
         onChange={(e) => void switchActiveProfile(e.target.value)}

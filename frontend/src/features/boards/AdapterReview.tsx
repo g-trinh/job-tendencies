@@ -35,27 +35,31 @@ function AdapterReview({ boardId, adapter }: AdapterReviewProps) {
 
   return (
     <section aria-label="Adaptateur de scraping">
-      <h3>Adaptateur de scraping</h3>
+      <h4>Adaptateur de scraping</h4>
 
       {adapter && (
-        <p>
-          Statut actuel : {adapter.status === 'approved' ? 'Approuvé' : 'Brouillon'}{' '}
-          (version {adapter.version})
-        </p>
+        <span
+          className={`badge ${adapter.status === 'approved' ? 'badge--success' : 'badge--warning'}`}
+        >
+          {adapter.status === 'approved' ? 'Prêt' : 'Brouillon à valider'} — v
+          {adapter.version}
+        </span>
       )}
-      {!adapter && <p>Aucun adaptateur approuvé pour ce board.</p>}
+      {!adapter && <span className="badge badge--neutral">Aucun</span>}
 
-      <div>
-        <label htmlFor={`adapter-example-${boardId}`}>
+      <div className="field">
+        <label className="field__label" htmlFor={`adapter-example-${boardId}`}>
           Page d'exemple (HTML ou JSON de la page de recherche)
         </label>
         <textarea
+          className="textarea mono"
           id={`adapter-example-${boardId}`}
           value={exampleResponse}
           onChange={(e) => setExampleResponse(e.target.value)}
         />
       </div>
       <button
+        className="btn btn--secondary btn--sm"
         type="button"
         disabled={isGenerating || !exampleResponse}
         onClick={() => generate(exampleResponse)}
@@ -63,25 +67,32 @@ function AdapterReview({ boardId, adapter }: AdapterReviewProps) {
         Générer un brouillon
       </button>
       {generateFailed && (
-        <p role="alert">Échec de la génération de l'adaptateur.</p>
+        <div className="banner banner--danger" role="alert">
+          Échec de la génération de l'adaptateur.
+        </div>
       )}
 
       {reviewed && (
-        <div>
+        <div className="card card--pad-sm">
           <h4>Aperçu du brouillon (version {reviewed.version})</h4>
-          <pre>{JSON.stringify(reviewed.spec, null, 2)}</pre>
+          <pre className="mono text-xs">{JSON.stringify(reviewed.spec, null, 2)}</pre>
           <button
+            className="btn btn--primary btn--sm"
             type="button"
             disabled={isApproving}
             onClick={() => approve()}
           >
             Approuver l'adaptateur
           </button>
-          {approved && <p role="status">Adaptateur approuvé.</p>}
+          {approved && (
+            <span className="badge badge--success" role="status">
+              Adaptateur approuvé.
+            </span>
+          )}
           {approveFailed && (
-            <p role="alert">
+            <div className="banner banner--danger" role="alert">
               Échec de l'approbation. Vérifiez le brouillon et réessayez.
-            </p>
+            </div>
           )}
         </div>
       )}
