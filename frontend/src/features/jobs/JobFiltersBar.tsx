@@ -201,8 +201,8 @@ function JobFiltersBar({
           value={filters.sort ?? 'date'}
           onChange={(e) => set('sort', e.target.value as SortField)}
         >
+          {/* API contract: GET /api/jobs `sort` only accepts date|salary server-side. */}
           <option value="date">Date</option>
-          <option value="fit">Pertinence</option>
           <option value="salary">Salaire</option>
         </select>
       </div>
