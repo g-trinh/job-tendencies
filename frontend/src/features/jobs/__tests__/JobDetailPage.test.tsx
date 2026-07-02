@@ -52,7 +52,12 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    expect(await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Senior Backend Engineer (Go)',
+        level: 1,
+      }),
+    ).toBeInTheDocument();
   });
 
   it('renders the original posting link', async () => {
@@ -60,11 +65,13 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 });
-    expect(screen.getByRole('link', { name: "Voir l'offre originale" })).toHaveAttribute(
-      'href',
-      jobDetailFixture.url,
-    );
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
+    expect(
+      screen.getByRole('link', { name: "Voir l'offre originale" }),
+    ).toHaveAttribute('href', jobDetailFixture.url);
   });
 
   it('renders the job description', async () => {
@@ -72,7 +79,10 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 });
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
     expect(
       screen.getByText(
         'Nous recherchons un Senior Backend Engineer maîtrisant Go pour rejoindre notre équipe technique.',
@@ -86,11 +96,18 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 });
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
     // contract_type has confidence 95 → badge aria-label encodes tier and score
-    expect(screen.getByLabelText('Contrat — confiance élevée (95%)')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Contrat — confiance élevée (95%)'),
+    ).toBeInTheDocument();
     // remote_policy confidence 88 → high tier
-    expect(screen.getByLabelText('Télétravail — confiance élevée (88%)')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Télétravail — confiance élevée (88%)'),
+    ).toBeInTheDocument();
   });
 
   // AC: understanding_score is shown
@@ -99,8 +116,13 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 });
-    expect(screen.getByLabelText('Score de compréhension : 92%')).toBeInTheDocument();
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
+    expect(
+      screen.getByLabelText('Score de compréhension : 92%'),
+    ).toBeInTheDocument();
   });
 
   // AC: source boards list shown
@@ -109,7 +131,10 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 });
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
     expect(
       screen.getByRole('link', { name: 'Welcome to the Jungle' }),
     ).toHaveAttribute('href', jobDetailFixture.sources[0].source_url);
@@ -117,12 +142,19 @@ describe('JobDetailPage', () => {
 
   // AC: expired notice shown when expired_at is set
   it('renders an expiry notice for expired jobs', async () => {
-    mock.onGet(`/jobs/${expiredJobDetailFixture.id}`).reply(200, expiredJobDetailFixture);
+    mock
+      .onGet(`/jobs/${expiredJobDetailFixture.id}`)
+      .reply(200, expiredJobDetailFixture);
 
     renderDetailPage(expiredJobDetailFixture.id);
 
-    await screen.findByRole('heading', { name: expiredJobDetailFixture.title, level: 1 });
-    expect(screen.getByRole('status')).toHaveTextContent(/Cette offre a expiré/);
+    await screen.findByRole('heading', {
+      name: expiredJobDetailFixture.title,
+      level: 1,
+    });
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /Cette offre a expiré/,
+    );
   });
 
   // AC: error state
@@ -142,11 +174,13 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 });
-    expect(screen.getByRole('link', { name: '← Retour aux offres' })).toHaveAttribute(
-      'href',
-      '/',
-    );
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
+    expect(
+      screen.getByRole('link', { name: '← Retour aux offres' }),
+    ).toHaveAttribute('href', '/');
   });
 
   // AC: application status selector is shown
@@ -155,7 +189,10 @@ describe('JobDetailPage', () => {
 
     renderDetailPage();
 
-    await screen.findByRole('heading', { name: 'Senior Backend Engineer (Go)', level: 1 });
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
     // Job has application_status: 'saved' → selector shows "Statut de candidature"
     expect(screen.getByLabelText('Statut de candidature')).toBeInTheDocument();
   });

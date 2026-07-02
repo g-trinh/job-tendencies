@@ -51,7 +51,7 @@ function JobDetailPage() {
       {job !== undefined && (
         <article>
           <header>
-            <h1>{job.title || "Offre sans titre"}</h1>
+            <h1>{job.title || 'Offre sans titre'}</h1>
             {job.expiredAt && (
               <p role="status">
                 Cette offre a expiré le {formatDate(job.expiredAt)}.
@@ -71,10 +71,14 @@ function JobDetailPage() {
 
           {/* Structured characteristics */}
           <ul aria-label="Caractéristiques">
-            {job.contractType && <li>{t(`job.contract.${job.contractType}`)}</li>}
+            {job.contractType && (
+              <li>{t(`job.contract.${job.contractType}`)}</li>
+            )}
             {job.remotePolicy && <li>{t(`job.remote.${job.remotePolicy}`)}</li>}
             {job.seniority && <li>{t(`job.seniority.${job.seniority}`)}</li>}
-            {job.workingDays && <li>{t(`job.working_days.${job.workingDays}`)}</li>}
+            {job.workingDays && (
+              <li>{t(`job.working_days.${job.workingDays}`)}</li>
+            )}
           </ul>
 
           <p>{formatSalary(job.salaryMin, job.salaryMax)}</p>
@@ -103,7 +107,9 @@ function JobDetailPage() {
             <h2>Fiabilité de l'extraction</h2>
             <p>
               Score de compréhension global :{' '}
-              <span aria-label={`Score de compréhension : ${job.understandingScore}%`}>
+              <span
+                aria-label={`Score de compréhension : ${job.understandingScore}%`}
+              >
                 {job.understandingScore}/100
               </span>
             </p>
@@ -128,7 +134,11 @@ function JobDetailPage() {
               <ul>
                 {job.sources.map((source) => (
                   <li key={source.board_id}>
-                    <a href={source.source_url} target="_blank" rel="noreferrer">
+                    <a
+                      href={source.source_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       {source.board_name}
                     </a>
                   </li>
@@ -152,7 +162,10 @@ function JobDetailPage() {
           {/* Application status */}
           <section aria-label="Candidature">
             <h2>Candidature</h2>
-            <ApplicationStatusSelector jobId={job.id} currentStatus={job.applicationStatus} />
+            <ApplicationStatusSelector
+              jobId={job.id}
+              currentStatus={job.applicationStatus}
+            />
           </section>
         </article>
       )}

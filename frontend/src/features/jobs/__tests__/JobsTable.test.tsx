@@ -19,8 +19,13 @@ describe('JobsTable', () => {
   it('renders a row per job with the title linking to the detail page', () => {
     renderTable();
 
-    const titleLink = screen.getByRole('link', { name: 'Senior Backend Engineer (Go)' });
-    expect(titleLink).toHaveAttribute('href', '/jobs/11111111-1111-1111-1111-111111111111');
+    const titleLink = screen.getByRole('link', {
+      name: 'Senior Backend Engineer (Go)',
+    });
+    expect(titleLink).toHaveAttribute(
+      'href',
+      '/jobs/11111111-1111-1111-1111-111111111111',
+    );
 
     expect(
       screen.getByRole('link', { name: 'Développeur Full-Stack' }),
@@ -61,7 +66,9 @@ describe('JobsTable', () => {
   // AC: empty state
   it('shows empty-state message when job list is empty', () => {
     renderTable([]);
-    expect(screen.getByText('Aucune offre pour ce profil.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Aucune offre pour ce profil.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 

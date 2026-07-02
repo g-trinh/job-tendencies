@@ -33,10 +33,14 @@ describe('LoginPage — rendu', () => {
     // Wait for auth bootstrap to settle
     await screen.findByRole('main', { name: 'Connexion' });
 
-    expect(screen.getByRole('heading', { name: 'Connexion' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Connexion' }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Adresse e-mail')).toBeInTheDocument();
     expect(screen.getByLabelText('Mot de passe')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Se connecter' }),
+    ).toBeInTheDocument();
 
     mock.restore();
   });
@@ -114,14 +118,16 @@ describe('LoginPage — soumission réussie', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Connexion en cours…' })).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Connexion en cours…' }),
+      ).toBeDisabled();
     });
 
     mock.restore();
   });
 });
 
-describe("LoginPage — identifiants incorrects", () => {
+describe('LoginPage — identifiants incorrects', () => {
   // AC: login form shows French error on 401
   it("affiche un message d'erreur en français quand les identifiants sont invalides", async () => {
     const mock = new MockAdapter(apiClient);
@@ -142,9 +148,9 @@ describe("LoginPage — identifiants incorrects", () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
-    expect(
-      await screen.findByRole('alert'),
-    ).toHaveTextContent('Identifiants incorrects. Veuillez réessayer.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Identifiants incorrects. Veuillez réessayer.',
+    );
 
     mock.restore();
   });
@@ -168,9 +174,9 @@ describe("LoginPage — identifiants incorrects", () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 
-    expect(
-      await screen.findByRole('alert'),
-    ).toHaveTextContent('Une erreur est survenue. Veuillez réessayer.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Une erreur est survenue. Veuillez réessayer.',
+    );
 
     mock.restore();
   });

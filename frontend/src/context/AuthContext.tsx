@@ -67,6 +67,11 @@ function AuthProvider({ children }: { children: ReactNode }) {
       // Backend P4-BE-2 must implement POST /api/auth/logout.
       // Expected contract: 200 (or 204) + clears the httpOnly session cookie.
       await apiClient.post('/auth/logout');
+    } catch {
+      // Logout must succeed locally even if the network call fails (e.g. the
+      // session already expired, or a network error) — local state is
+      // cleared unconditionally below, so the rejection is intentionally
+      // swallowed here rather than left to propagate as an unhandled promise.
     } finally {
       setUser(null);
       setStatus('unauthenticated');

@@ -35,7 +35,7 @@ function KanbanCard({ job }: KanbanCardProps) {
   const next = nextStatus(current);
 
   return (
-    <article aria-label={job.title || "Offre sans titre"}>
+    <article aria-label={job.title || 'Offre sans titre'}>
       <h3>
         <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
       </h3>
@@ -84,14 +84,19 @@ function KanbanBoard({ jobs }: KanbanBoardProps) {
   return (
     <div role="region" aria-label="Kanban candidatures">
       {KANBAN_COLUMNS.map((status) => {
-        const columnJobs = tracked.filter((j) => j.applicationStatus === status);
+        const columnJobs = tracked.filter(
+          (j) => j.applicationStatus === status,
+        );
         return (
           <section key={status} aria-label={t(`application.status.${status}`)}>
             <h2>
               {t(`application.status.${status}`)}
               {columnJobs.length > 0 && (
-                <span aria-label={`${columnJobs.length} offre${columnJobs.length > 1 ? 's' : ''}`}>
-                  {' '}({columnJobs.length})
+                <span
+                  aria-label={`${columnJobs.length} offre${columnJobs.length > 1 ? 's' : ''}`}
+                >
+                  {' '}
+                  ({columnJobs.length})
                 </span>
               )}
             </h2>

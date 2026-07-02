@@ -42,9 +42,15 @@ function JobsTable({ jobs }: JobsTableProps) {
             <td>
               <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
             </td>
-            <td>{[job.company, job.location].filter(Boolean).join(' — ') || '—'}</td>
-            <td>{job.contractType ? t(`job.contract.${job.contractType}`) : '—'}</td>
-            <td>{job.remotePolicy ? t(`job.remote.${job.remotePolicy}`) : '—'}</td>
+            <td>
+              {[job.company, job.location].filter(Boolean).join(' — ') || '—'}
+            </td>
+            <td>
+              {job.contractType ? t(`job.contract.${job.contractType}`) : '—'}
+            </td>
+            <td>
+              {job.remotePolicy ? t(`job.remote.${job.remotePolicy}`) : '—'}
+            </td>
             <td>{formatSalaryCompact(job.salaryMin, job.salaryMax)}</td>
             <td>{job.fitScore != null ? `${job.fitScore}/100` : '—'}</td>
             <td>

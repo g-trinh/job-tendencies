@@ -15,7 +15,8 @@ function LoginPage() {
 
     const form = e.currentTarget;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-    const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+    const password = (form.elements.namedItem('password') as HTMLInputElement)
+      .value;
 
     try {
       // Backend P4-BE-2 must implement POST /api/auth/login.

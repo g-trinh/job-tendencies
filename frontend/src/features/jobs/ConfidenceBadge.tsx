@@ -29,7 +29,10 @@ function ConfidenceBadge({ label, score }: ConfidenceBadgeProps) {
   const tierLabel = TIER_LABELS[tier];
 
   return (
-    <span data-tier={tier} aria-label={`${label} — confiance ${tierLabel} (${score}%)`}>
+    <span
+      data-tier={tier}
+      aria-label={`${label} — confiance ${tierLabel} (${score}%)`}
+    >
       {label} — {score}%
     </span>
   );
