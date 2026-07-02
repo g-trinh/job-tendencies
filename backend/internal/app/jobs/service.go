@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	appscraping "github.com/g-trinh/job-tendencies/internal/app/scraping"
 	"github.com/g-trinh/job-tendencies/internal/domain/kernel"
+	"github.com/g-trinh/job-tendencies/internal/domain/messaging"
 )
 
 // JobSourceView records which raw listing (and board) a job was extracted from.
@@ -88,10 +90,22 @@ type JobApplicationWriter interface {
 	UpsertApplication(ctx context.Context, profileID kernel.ProfileID, jobID kernel.JobID, status kernel.ApplicationStatus) (ApplicationResult, error)
 }
 
+// JobRawListingSource resolves the raw listing ids retained for a job's sources, scoped
+// to the profile, so P5-4 re-extraction can re-publish listing.extract for each one.
+// Implemented by infra/jobs.Repository.
+type JobRawListingSource interface {
+	// RawListingIDsByJob returns the raw listing ids the job was extracted from, scoped
+	// to the profile. Returns an empty slice (not an error) when the job exists but has
+	// no sources visible to this profile; the caller treats that as not-found.
+	RawListingIDsByJob(ctx context.Context, profileID kernel.ProfileID, jobID kernel.JobID) ([]kernel.RawListingID, error)
+}
+
 // Service exposes job-browser read and kanban write use cases to the API.
 type Service struct {
-	query JobQuery
-	appW  JobApplicationWriter
+	query       JobQuery
+	appW        JobApplicationWriter
+	rawListings JobRawListingSource
+	publisher   messaging.Publisher
 }
 
 // New constructs a jobs query Service with read-only access.
@@ -102,6 +116,14 @@ func New(query JobQuery) *Service {
 // NewWithWriter constructs a jobs Service with both read and kanban-write access.
 func NewWithWriter(query JobQuery, appW JobApplicationWriter) *Service {
 	return &Service{query: query, appW: appW}
+}
+
+// WithReextraction attaches the dependencies needed for ReextractJob (P5-4): a source of
+// a job's retained raw listing ids and the listing.extract publisher.
+func (s *Service) WithReextraction(rawListings JobRawListingSource, publisher messaging.Publisher) *Service {
+	s.rawListings = rawListings
+	s.publisher = publisher
+	return s
 }
 
 // ListJobs returns job views scoped to the active profile with optional filtering.
@@ -120,6 +142,35 @@ func (s *Service) GetJob(ctx context.Context, profileID kernel.ProfileID, id ker
 		return JobView{}, fmt.Errorf("getting job %q for profile %q: %w", id, profileID, err)
 	}
 	return view, nil
+}
+
+// ReextractJob re-publishes listing.extract for every raw listing retained for the job
+// (P5-4, pipeline.md §5 "Re-extraction"): raw payloads are never deleted from GCS, so
+// this lets an improved extractor reprocess a job without a new scrape. Returns a
+// kernel.NotFoundError when the job has no sources visible to this profile.
+func (s *Service) ReextractJob(ctx context.Context, profileID kernel.ProfileID, jobID kernel.JobID) error {
+	if s.rawListings == nil || s.publisher == nil {
+		return fmt.Errorf("job re-extraction is not configured")
+	}
+
+	ids, err := s.rawListings.RawListingIDsByJob(ctx, profileID, jobID)
+	if err != nil {
+		return fmt.Errorf("resolving raw listings for job %q: %w", jobID, err)
+	}
+	if len(ids) == 0 {
+		return &kernel.NotFoundError{Kind: "job", ID: string(jobID)}
+	}
+
+	for _, id := range ids {
+		msg := messaging.Message{
+			Data:       []byte(id),
+			Attributes: map[string]string{appscraping.ExtractRawListingIDAttr: string(id)},
+		}
+		if err := s.publisher.Publish(ctx, msg); err != nil {
+			return fmt.Errorf("publishing listing.extract for raw listing %q: %w", id, err)
+		}
+	}
+	return nil
 }
 
 // SetApplicationStatus upserts the kanban status for a (profile, job) pair.

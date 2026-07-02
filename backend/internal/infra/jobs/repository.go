@@ -385,6 +385,38 @@ func (r *Repository) MergeSource(ctx context.Context, jobID kernel.JobID, source
 	return nil
 }
 
+// RawListingIDsByJob implements app/jobs.JobRawListingSource (P5-4): it returns the raw
+// listing ids behind every source of the job, scoped to the profile via raw_listing (the
+// same scoping GetByProfile uses), so re-extraction never leaks another profile's data.
+// Returns an empty (nil) slice, not an error, when the job has no sources visible to this
+// profile — the caller (app/jobs.Service.ReextractJob) treats that as not-found.
+func (r *Repository) RawListingIDsByJob(ctx context.Context, profileID kernel.ProfileID, jobID kernel.JobID) ([]kernel.RawListingID, error) {
+	const query = `
+		SELECT js.raw_listing_id
+		FROM job_source js
+		JOIN raw_listing rl ON rl.id = js.raw_listing_id
+		WHERE js.job_id = $1 AND rl.profile_id = $2`
+
+	rows, err := r.pool.Query(ctx, query, string(jobID), string(profileID))
+	if err != nil {
+		return nil, fmt.Errorf("querying raw listings for job %q: %w", jobID, err)
+	}
+	defer rows.Close()
+
+	var ids []kernel.RawListingID
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scanning raw listing id: %w", err)
+		}
+		ids = append(ids, kernel.RawListingID(id))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating raw listing rows: %w", err)
+	}
+	return ids, nil
+}
+
 // MarkExpired implements app/scraping.JobExpirer (P5-3): it sets expired_at=now for jobs
 // sourced from boardID/profileID whose job_source.source_url is not in activeSourceURLs,
 // and clears expired_at for any job whose source_url is (a listing that disappeared and
