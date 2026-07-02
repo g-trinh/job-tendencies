@@ -79,3 +79,16 @@ resource "google_cloud_run_v2_service_iam_member" "push_invoker" {
   role     = "roles/run.invoker"
   member   = "serviceAccount:${var.push_auth_sa_email}"
 }
+
+# Public invoker (allUsers). Only for the api, which enforces auth in-app (P4):
+# the Firebase Hosting /api rewrite reaches Cloud Run unauthenticated, and the
+# app's own session-cookie guard is the real access control.
+resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
+  count = var.allow_public_invoker ? 1 : 0
+
+  project  = var.project_id
+  name     = google_cloud_run_v2_service.svc.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}

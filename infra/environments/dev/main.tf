@@ -83,7 +83,10 @@ module "api" {
   project_id = var.project_id
   ingress    = "INGRESS_TRAFFIC_ALL"
   image      = "${local.image_base}/api:${var.image_tag}"
-  # No push invoker: the API is not a push target.
+  # Public invoker: the SPA reaches the API unauthenticated via the Firebase
+  # Hosting /api rewrite; the app's session-cookie guard is the real access
+  # control (P4). No push invoker: the API is not a push target.
+  allow_public_invoker = true
   env_vars = merge(local.svc_db_env, {
     PUBSUB_SCRAPE_TOPIC_ID = local.scrape_topic
     ALLOWED_ORIGINS        = local.allowed_origins
@@ -188,15 +191,29 @@ module "claude_secret" {
 }
 
 # --- Data-plane IAM (composition root grants least-privilege to the SAs) ------
-resource "google_project_iam_member" "cloudsql_client" {
-  for_each = toset([
+locals {
+  db_sa_emails = toset([
     module.api.sa_email,
     module.scrape_worker.sa_email,
     module.extract_worker.sa_email,
   ])
+}
+
+resource "google_project_iam_member" "cloudsql_client" {
+  for_each = local.db_sa_emails
 
   project = var.project_id
   role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${each.value}"
+}
+
+# cloudsql.instances.login — required for Cloud SQL IAM database authentication.
+# cloudsql.client only grants connect; without instanceUser, IAM login fails 28000.
+resource "google_project_iam_member" "cloudsql_instance_user" {
+  for_each = local.db_sa_emails
+
+  project = var.project_id
+  role    = "roles/cloudsql.instanceUser"
   member  = "serviceAccount:${each.value}"
 }
 
