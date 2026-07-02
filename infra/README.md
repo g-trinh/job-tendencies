@@ -44,7 +44,7 @@ authenticated Cloud Run (no `allUsers` invoker) + OIDC Pub/Sub push, Cloud SQL b
 | Private-IP-only Cloud SQL + Serverless VPC connector | 1 | MAU > ~1k |
 | Automated backups with tested restore + retention | 1 | MAU > ~1k |
 | IaC / container vulnerability scanning in CI | 1 | MAU > ~1k |
-| SPA → API authentication (Identity Platform / IAP) | 1 | API exposed to a browser |
+| SPA → API authentication (Identity Platform / IAP) | 1 | ~~API exposed to a browser~~ **Done (P4)** — see Identity Platform below. |
 
 ## Environments
 
@@ -67,10 +67,40 @@ authenticated Cloud Run (no `allUsers` invoker) + OIDC Pub/Sub push, Cloud SQL b
 Cross-cutting data-plane IAM (cloudsql.client, pubsub.publisher, storage, secretAccessor) is
 granted in `environments/dev/main.tf`, the composition root — modules stay single-purpose.
 
+## Identity Platform (backend-proxied auth, P4)
+
+`environments/dev/auth.tf` enables Identity Platform (`google_identity_platform_config`,
+email/password provider) and declares two out-of-band secrets read by the `api` service:
+
+| Secret | Env var | Purpose |
+|---|---|---|
+| `idp-api-key-dev` | `IDP_API_KEY` | Identity Toolkit REST key for `signInWithPassword` (proxied by the API). |
+| `session-cookie-key-dev` | `SESSION_COOKIE_KEY` | Hex-encoded 32-byte AES-256-GCM key encrypting the httpOnly session cookie. |
+
+The SPA never calls Identity Platform — the `api` service (BFF) proxies all identity calls and
+holds the session in an httpOnly cookie. Values live only in Secret Manager, never in tf/state.
+
 ## Prerequisites for `tofu apply`
 
 1. State bucket created (above).
 2. Claude API key added to the secret after first apply creates the container:
    ```sh
    gcloud secrets versions add claude-api-key-dev --project=job-tendencies-dev --data-file=- <<<"$ANTHROPIC_API_KEY"
+   ```
+3. **Identity Platform (P4)** — after the first apply creates the secret containers and
+   enables Identity Platform, do the following out of band (the `api` revision will not boot
+   until both secret versions exist):
+   ```sh
+   # a. Create a restricted API key for the Identity Toolkit REST API (Console:
+   #    APIs & Services -> Credentials -> Create API key -> restrict to
+   #    "Identity Toolkit API"), then store its value:
+   gcloud secrets versions add idp-api-key-dev --project=job-tendencies-dev --data-file=- <<<"$IDP_API_KEY"
+
+   # b. Generate + store the 32-byte session cookie key (hex):
+   gcloud secrets versions add session-cookie-key-dev --project=job-tendencies-dev --data-file=- <<<"$(openssl rand -hex 32)"
+
+   # c. Create the single application user (single-user scope; not in tf/state):
+   gcloud identity-platform tenants  # n/a — no tenant; create the user via:
+   #    Console -> Identity Platform -> Users -> Add user (email + password), OR the
+   #    Admin SDK / REST signUp endpoint with the API key above.
    ```

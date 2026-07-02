@@ -48,6 +48,7 @@ resource "google_project_service" "apis" {
     "cloudresourcemanager.googleapis.com",
     "firebase.googleapis.com",
     "firebasehosting.googleapis.com",
+    "identitytoolkit.googleapis.com",
   ])
 
   project            = var.project_id
@@ -82,13 +83,22 @@ module "api" {
   project_id = var.project_id
   ingress    = "INGRESS_TRAFFIC_ALL"
   image      = "${local.image_base}/api:${var.image_tag}"
-  # No push invoker: the API is not a push target. SPA auth is deferred (Tier 1).
-  # No Claude secret: the API only serves reads; skipping it avoids a boot-time
-  # dependency on a secret version existing.
+  # Public invoker: the SPA reaches the API unauthenticated via the Firebase
+  # Hosting /api rewrite; the app's session-cookie guard is the real access
+  # control (P4). No push invoker: the API is not a push target.
+  allow_public_invoker = true
   env_vars = merge(local.svc_db_env, {
     PUBSUB_SCRAPE_TOPIC_ID = local.scrape_topic
     ALLOWED_ORIGINS        = local.allowed_origins
   })
+  # Backend-proxied auth (P4). The API signs in against Identity Platform with
+  # IDP_API_KEY and encrypts the session cookie with SESSION_COOKIE_KEY. Both
+  # secret VERSIONS must exist before apply (see auth.tf / infra/README.md),
+  # else the revision fails to start.
+  secret_env = {
+    IDP_API_KEY        = { secret = "idp-api-key-${local.env}" }
+    SESSION_COOKIE_KEY = { secret = "session-cookie-key-${local.env}" }
+  }
 
   depends_on = [google_project_service.apis]
 }
@@ -181,15 +191,29 @@ module "claude_secret" {
 }
 
 # --- Data-plane IAM (composition root grants least-privilege to the SAs) ------
-resource "google_project_iam_member" "cloudsql_client" {
-  for_each = toset([
+locals {
+  db_sa_emails = toset([
     module.api.sa_email,
     module.scrape_worker.sa_email,
     module.extract_worker.sa_email,
   ])
+}
+
+resource "google_project_iam_member" "cloudsql_client" {
+  for_each = local.db_sa_emails
 
   project = var.project_id
   role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${each.value}"
+}
+
+# cloudsql.instances.login — required for Cloud SQL IAM database authentication.
+# cloudsql.client only grants connect; without instanceUser, IAM login fails 28000.
+resource "google_project_iam_member" "cloudsql_instance_user" {
+  for_each = local.db_sa_emails
+
+  project = var.project_id
+  role    = "roles/cloudsql.instanceUser"
   member  = "serviceAccount:${each.value}"
 }
 

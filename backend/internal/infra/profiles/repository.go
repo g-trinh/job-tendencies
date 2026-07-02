@@ -43,13 +43,13 @@ const selectCols = `
 
 // ActiveProfile returns the single profile with is_active = true.
 func (r *Repository) ActiveProfile(ctx context.Context) (profiles.Profile, error) {
-	query := `SELECT` + selectCols + `FROM profile WHERE is_active = true LIMIT 1`
+	query := `SELECT` + selectCols + ` FROM profile WHERE is_active = true LIMIT 1`
 	return r.queryOne(ctx, query)
 }
 
 // ProfileByID returns one profile by id.
 func (r *Repository) ProfileByID(ctx context.Context, id kernel.ProfileID) (profiles.Profile, error) {
-	query := `SELECT` + selectCols + `FROM profile WHERE id = $1`
+	query := `SELECT` + selectCols + ` FROM profile WHERE id = $1`
 	p, err := r.queryOne(ctx, query, string(id))
 	if errors.Is(err, kernel.ErrNotFound) {
 		return profiles.Profile{}, &kernel.NotFoundError{Kind: "profile", ID: string(id)}
@@ -59,7 +59,7 @@ func (r *Repository) ProfileByID(ctx context.Context, id kernel.ProfileID) (prof
 
 // List returns all profiles ordered by name.
 func (r *Repository) List(ctx context.Context) ([]profiles.Profile, error) {
-	query := `SELECT` + selectCols + `FROM profile ORDER BY name`
+	query := `SELECT` + selectCols + ` FROM profile ORDER BY name`
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {

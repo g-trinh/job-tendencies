@@ -81,6 +81,12 @@ variable "allow_push_invoker" {
   default     = false
 }
 
+variable "allow_public_invoker" {
+  type        = bool
+  description = "Grant roles/run.invoker to allUsers (api only — the app enforces auth in-process)."
+  default     = false
+}
+
 variable "push_auth_sa_email" {
   type        = string
   description = "Push-auth SA email granted run.invoker when allow_push_invoker is true."
