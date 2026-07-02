@@ -31,49 +31,80 @@ function JobCard({ job }: { job: JobSummary }) {
 
   return (
     <li>
-      <article>
-        <h2>
-          <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
-        </h2>
+      <article className={`card jobcard${job.expiredAt ? ' jobcard--expired' : ''}`}>
+        <div className="row-between">
+          <h2 className="jobcard__title">
+            <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
+          </h2>
+          {job.fitScore != null && (
+            <span className="fit-score" aria-hidden="true">
+              {job.fitScore}
+            </span>
+          )}
+        </div>
+        {job.fitScore != null && <p>Pertinence : {job.fitScore}/100</p>}
         {job.expiredAt && (
           <p>
-            <span data-badge="expired" aria-label="Offre expirée">
+            <span
+              className="badge badge--danger"
+              data-badge="expired"
+              aria-label="Offre expirée"
+            >
               Expirée
             </span>
           </p>
         )}
         {job.url && (
-          <a href={job.url} target="_blank" rel="noreferrer">
+          <a className="text-sm" href={job.url} target="_blank" rel="noreferrer">
             Offre originale
           </a>
         )}
-        {!job.url && <p>Lien indisponible</p>}
-        {companyLine !== '' && <p>{companyLine}</p>}
-        <ul aria-label="Caractéristiques">
-          {job.contractType && <li>{t(`job.contract.${job.contractType}`)}</li>}
-          {job.remotePolicy && <li>{t(`job.remote.${job.remotePolicy}`)}</li>}
-          {job.seniority && <li>{t(`job.seniority.${job.seniority}`)}</li>}
+        {!job.url && <p className="muted text-sm">Lien indisponible</p>}
+        {companyLine !== '' && <p className="jobcard__company">{companyLine}</p>}
+        <ul className="jobcard__meta" aria-label="Caractéristiques">
+          {job.contractType && (
+            <li className="badge badge--neutral">
+              {t(`job.contract.${job.contractType}`)}
+            </li>
+          )}
+          {job.remotePolicy && (
+            <li className="badge badge--brand">
+              {t(`job.remote.${job.remotePolicy}`)}
+            </li>
+          )}
+          {job.seniority && (
+            <li className="badge badge--neutral">
+              {t(`job.seniority.${job.seniority}`)}
+            </li>
+          )}
           {job.workingDays && (
-            <li>{t(`job.working_days.${job.workingDays}`)}</li>
+            <li className="badge badge--neutral">
+              {t(`job.working_days.${job.workingDays}`)}
+            </li>
           )}
         </ul>
         <p>{formatSalary(job.salaryMin, job.salaryMax)}</p>
         {job.skills.length > 0 && (
-          <ul aria-label="Compétences">
+          <ul className="jobcard__meta" aria-label="Compétences">
             {job.skills.map((skill) => (
-              <li key={skill}>{skill}</li>
+              <li key={skill} className="tag">
+                {skill}
+              </li>
             ))}
           </ul>
         )}
-        {job.fitScore != null && <p>Pertinence : {job.fitScore}/100</p>}
-        <p>Compréhension : {job.understandingScore}/100</p>
+        <p className="text-xs muted">
+          Compréhension : {job.understandingScore}/100
+        </p>
         {job.applicationStatus && (
           <p>
             Candidature : {t(`application.status.${job.applicationStatus}`)}
           </p>
         )}
         {job.sources.length > 0 && (
-          <p>Trouvé sur : {job.sources.map((s) => s.board_name).join(', ')}</p>
+          <p className="text-xs muted">
+            Trouvé sur : {job.sources.map((s) => s.board_name).join(', ')}
+          </p>
         )}
       </article>
     </li>
@@ -95,24 +126,32 @@ function JobsPage() {
 
   return (
     <main>
-      <h1>Offres</h1>
+      <header className="page__head row-between">
+        <h1 className="page__title">Offres</h1>
+        <ViewToggle view={view} onChange={setView} />
+      </header>
       <JobFiltersBar
         filters={filters}
         onChange={setFilters}
         showExpired={showExpired}
         onShowExpiredChange={setShowExpired}
       />
-      <ViewToggle view={view} onChange={setView} />
-      {isPending && <p>Chargement des offres…</p>}
-      {isError && <p role="alert">Impossible de charger les offres.</p>}
+      {isPending && <p className="muted">Chargement des offres…</p>}
+      {isError && (
+        <div className="banner banner--danger" role="alert">
+          Impossible de charger les offres.
+        </div>
+      )}
       {visibleJobs !== undefined && (
         <>
           {visibleJobs.length === 0 ? (
-            <p>Aucune offre pour ce profil.</p>
+            <div className="state">
+              <span className="state__title">Aucune offre pour ce profil.</span>
+            </div>
           ) : view === 'table' ? (
             <JobsTable jobs={visibleJobs} />
           ) : (
-            <ul aria-label="Offres">
+            <ul className="grid-cards" aria-label="Offres">
               {visibleJobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}

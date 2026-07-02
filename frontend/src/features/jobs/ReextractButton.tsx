@@ -18,15 +18,24 @@ function ReextractButton({ jobId }: ReextractButtonProps) {
 
   return (
     <div>
-      <button type="button" disabled={isPending} onClick={() => mutate()}>
+      <button
+        className="btn btn--secondary btn--sm"
+        type="button"
+        disabled={isPending}
+        onClick={() => mutate()}
+      >
         Relancer l&apos;extraction
       </button>
       {isPending && <span aria-live="polite">Ré-extraction en cours…</span>}
       {isSuccess && (
-        <span aria-live="polite">Ré-extraction demandée avec succès.</span>
+        <span className="badge badge--success" aria-live="polite">
+          Ré-extraction demandée avec succès.
+        </span>
       )}
       {isError && (
-        <span role="alert">Impossible de relancer l&apos;extraction.</span>
+        <span className="badge badge--danger" role="alert">
+          Impossible de relancer l&apos;extraction.
+        </span>
       )}
     </div>
   );

@@ -24,7 +24,8 @@ function JobsTable({ jobs }: JobsTableProps) {
   }
 
   return (
-    <table>
+    <div className="table-wrap">
+    <table className="table">
       <thead>
         <tr>
           <th scope="col">Offre</th>
@@ -42,7 +43,11 @@ function JobsTable({ jobs }: JobsTableProps) {
             <td>
               <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
               {job.expiredAt && (
-                <span data-badge="expired" aria-label="Offre expirée">
+                <span
+                  className="badge badge--danger"
+                  data-badge="expired"
+                  aria-label="Offre expirée"
+                >
                   {' '}
                   Expirée
                 </span>
@@ -68,6 +73,7 @@ function JobsTable({ jobs }: JobsTableProps) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 

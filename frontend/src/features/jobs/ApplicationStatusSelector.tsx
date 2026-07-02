@@ -41,6 +41,7 @@ function ApplicationStatusSelector({
         {currentStatus ? 'Statut de candidature' : 'Suivre cette offre'}
       </label>
       <select
+        className="select"
         id={`app-status-${jobId}`}
         value={currentStatus ?? ''}
         disabled={isPending}

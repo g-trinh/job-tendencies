@@ -12,7 +12,7 @@ interface ViewToggleProps {
  */
 function ViewToggle({ view, onChange }: ViewToggleProps) {
   return (
-    <div role="group" aria-label="Mode d'affichage">
+    <div className="segmented" role="group" aria-label="Mode d'affichage">
       <button
         type="button"
         aria-pressed={view === 'card'}

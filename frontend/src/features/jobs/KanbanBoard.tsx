@@ -11,6 +11,15 @@ const KANBAN_COLUMNS: ApplicationStatus[] = [
   'rejected',
 ];
 
+/** Kanban stage dot colour token per column, per design_changes.md. */
+const STAGE_TOKEN: Record<ApplicationStatus, string> = {
+  saved: 'var(--color-stage-saved)',
+  applied: 'var(--color-stage-applied)',
+  interview: 'var(--color-stage-interview)',
+  offer: 'var(--color-stage-offer)',
+  rejected: 'var(--color-stage-rejected)',
+};
+
 /** Next status in the forward direction, or null at the end. */
 function nextStatus(current: ApplicationStatus): ApplicationStatus | null {
   const idx = KANBAN_COLUMNS.indexOf(current);
@@ -35,17 +44,20 @@ function KanbanCard({ job }: KanbanCardProps) {
   const next = nextStatus(current);
 
   return (
-    <article aria-label={job.title || 'Offre sans titre'}>
-      <h3>
+    <article className="kanban__card" aria-label={job.title || 'Offre sans titre'}>
+      <h3 className="text-sm">
         <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
       </h3>
       {(job.company || job.location) && (
-        <p>{[job.company, job.location].filter(Boolean).join(' — ')}</p>
+        <p className="muted text-xs">
+          {[job.company, job.location].filter(Boolean).join(' — ')}
+        </p>
       )}
       {job.fitScore != null && <p>Pertinence : {job.fitScore}/100</p>}
-      <div>
+      <div className="row">
         {prev && (
           <button
+            className="btn btn--ghost btn--sm"
             type="button"
             disabled={isPending}
             onClick={() => mutate(prev)}
@@ -56,6 +68,7 @@ function KanbanCard({ job }: KanbanCardProps) {
         )}
         {next && (
           <button
+            className="btn btn--ghost btn--sm"
             type="button"
             disabled={isPending}
             onClick={() => mutate(next)}
@@ -82,26 +95,36 @@ function KanbanBoard({ jobs }: KanbanBoardProps) {
   const tracked = jobs.filter((j) => j.applicationStatus !== null);
 
   return (
-    <div role="region" aria-label="Kanban candidatures">
+    <div className="kanban" role="region" aria-label="Kanban candidatures">
       {KANBAN_COLUMNS.map((status) => {
         const columnJobs = tracked.filter(
           (j) => j.applicationStatus === status,
         );
         return (
-          <section key={status} aria-label={t(`application.status.${status}`)}>
-            <h2>
-              {t(`application.status.${status}`)}
+          <section
+            className="kanban__col"
+            key={status}
+            aria-label={t(`application.status.${status}`)}
+          >
+            <div className="kanban__col-head">
+              <h2 className="kanban__col-title">
+                <span
+                  className="kanban__stage-dot"
+                  style={{ background: STAGE_TOKEN[status] }}
+                />
+                {t(`application.status.${status}`)}
+              </h2>
               {columnJobs.length > 0 && (
                 <span
+                  className="kanban__count"
                   aria-label={`${columnJobs.length} offre${columnJobs.length > 1 ? 's' : ''}`}
                 >
-                  {' '}
-                  ({columnJobs.length})
+                  {columnJobs.length}
                 </span>
               )}
-            </h2>
+            </div>
             {columnJobs.length === 0 ? (
-              <p>Aucune offre dans cette colonne.</p>
+              <p className="text-xs muted">Aucune offre dans cette colonne.</p>
             ) : (
               <ul aria-label={`Offres ${t(`application.status.${status}`)}`}>
                 {columnJobs.map((job) => (

@@ -1,0 +1,6 @@
+/* Cascade layer order is declared first, then each layer is filled by its file. */
+@layer reset, tokens, base, components, utilities;
+
+@import url("./tokens.css");
+@import url("./base.css");
+@import url("./components.css");
