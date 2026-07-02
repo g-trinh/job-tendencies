@@ -97,6 +97,19 @@ type RunTracker interface {
 // The RawListing capture port and the high-water-mark port are the scraping
 // aggregate's repositories and live in domain/scraping (ADR-005), consumed here.
 
+// JobExpirer marks jobs no longer present in a board's incremental re-scan window as
+// expired, and reactivates any job that reappears (P5-3, pipeline.md §5 "Expiry").
+// Implemented by infra/jobs.Repository; nil -> no-op via noOpExpirer, matching the
+// RunTracker pattern.
+type JobExpirer interface {
+	// MarkExpired sets expired_at=now for jobs sourced from boardID/profileID whose
+	// source_url is not in activeSourceURLs, and clears expired_at for any job whose
+	// source_url is. activeSourceURLs is the set of listing URLs actually re-scanned
+	// this run (bounded by the incremental cutoff), so listings outside the re-scan
+	// window are never mistakenly marked expired.
+	MarkExpired(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, activeSourceURLs []string, now time.Time) error
+}
+
 // Service runs the scrape pipeline stage in response to scrape.tick deliveries.
 type Service struct {
 	adapters  AdapterSource
@@ -107,11 +120,13 @@ type Service struct {
 	hwm       scraping.HighWaterMarkRepository
 	publisher messaging.Publisher
 	tracker   RunTracker
+	expirer   JobExpirer
 	logger    *slog.Logger
 }
 
 // New constructs a scraping Service with all pipeline dependencies wired.
-// Pass nil for tracker to disable run tracking (no-op is used instead).
+// Pass nil for tracker and/or expirer to disable run tracking / expiry marking
+// (no-ops are used instead).
 func New(
 	adapters AdapterSource,
 	targets TargetSource,
@@ -121,10 +136,14 @@ func New(
 	hwm scraping.HighWaterMarkRepository,
 	publisher messaging.Publisher,
 	tracker RunTracker,
+	expirer JobExpirer,
 	logger *slog.Logger,
 ) *Service {
 	if tracker == nil {
 		tracker = noOpRunTracker{}
+	}
+	if expirer == nil {
+		expirer = noOpExpirer{}
 	}
 	return &Service{
 		adapters:  adapters,
@@ -135,6 +154,7 @@ func New(
 		hwm:       hwm,
 		publisher: publisher,
 		tracker:   tracker,
+		expirer:   expirer,
 		logger:    logger,
 	}
 }
@@ -213,6 +233,9 @@ func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target S
 
 	var newest *time.Time
 	page := adapter.Spec.Search.Pagination.Start
+	// seenURLs collects every listing actually re-scanned this run (i.e. within the
+	// incremental cutoff), the baseline P5-3 expiry marking compares against.
+	seenURLs := make([]string, 0, 16)
 
 	for pagesScanned = 0; pagesScanned < adapter.Spec.Incremental.SafetyMaxPages; pagesScanned++ {
 		if err := ctx.Err(); err != nil {
@@ -234,6 +257,7 @@ func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target S
 				reachedCutoff = true
 				break
 			}
+			seenURLs = append(seenURLs, card.ListingURL)
 			captured, err := s.captureCard(ctx, adapter.BoardID, target.ProfileID, card)
 			if err != nil {
 				return pagesScanned, listingsCaptured, err
@@ -251,6 +275,14 @@ func (s *Service) crawlBoard(ctx context.Context, adapter BoardAdapter, target S
 	if newest != nil {
 		if err := s.hwm.Set(ctx, adapter.BoardID, target.ProfileID, *newest); err != nil {
 			return pagesScanned, listingsCaptured, fmt.Errorf("advancing high-water-mark: %w", err)
+		}
+	}
+
+	// P5-3: only mark expiry on incremental runs. A nil cutoff means this is the
+	// board's first-ever crawl (no prior baseline), so nothing has gone missing yet.
+	if cutoff != nil {
+		if err := s.expirer.MarkExpired(ctx, adapter.BoardID, target.ProfileID, seenURLs, time.Now().UTC()); err != nil {
+			return pagesScanned, listingsCaptured, fmt.Errorf("marking expired jobs for board %q: %w", adapter.BoardID, err)
 		}
 	}
 	return pagesScanned, listingsCaptured, nil
@@ -358,5 +390,12 @@ func (noOpRunTracker) FinishBoard(_ context.Context, _ kernel.ScrapeRunBoardID, 
 	return nil
 }
 func (noOpRunTracker) FinishRun(_ context.Context, _ kernel.ScrapeRunID, _ string) error {
+	return nil
+}
+
+// noOpExpirer is used when no job expirer is configured (nil passed to New).
+type noOpExpirer struct{}
+
+func (noOpExpirer) MarkExpired(context.Context, kernel.BoardID, kernel.ProfileID, []string, time.Time) error {
 	return nil
 }

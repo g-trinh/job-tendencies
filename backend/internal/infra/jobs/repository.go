@@ -385,6 +385,58 @@ func (r *Repository) MergeSource(ctx context.Context, jobID kernel.JobID, source
 	return nil
 }
 
+// MarkExpired implements app/scraping.JobExpirer (P5-3): it sets expired_at=now for jobs
+// sourced from boardID/profileID whose job_source.source_url is not in activeSourceURLs,
+// and clears expired_at for any job whose source_url is (a listing that disappeared and
+// later reappeared is active again, e.g. reposted). Scoping by profileID goes through
+// raw_listing (the profile that captured the source), matching the read-side scoping
+// used by ListByProfile/GetByProfile.
+//
+// An empty activeSourceURLs (board yielded zero re-scanned listings this run) expires
+// every job currently sourced from that board/profile rather than reactivating none,
+// which is the correct — if unlikely — behaviour when a board's search briefly returns
+// nothing.
+func (r *Repository) MarkExpired(ctx context.Context, boardID kernel.BoardID, profileID kernel.ProfileID, activeSourceURLs []string, now time.Time) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning expiry transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	const expireStale = `
+		UPDATE job j
+		SET expired_at = $4
+		FROM job_source js
+		JOIN raw_listing rl ON rl.id = js.raw_listing_id
+		WHERE js.job_id = j.id
+		  AND js.board_id = $1
+		  AND rl.profile_id = $2
+		  AND NOT (js.source_url = ANY($3))
+		  AND j.expired_at IS NULL`
+	if _, err := tx.Exec(ctx, expireStale, string(boardID), string(profileID), activeSourceURLs, now); err != nil {
+		return fmt.Errorf("marking stale jobs expired: %w", err)
+	}
+
+	const reactivateSeen = `
+		UPDATE job j
+		SET expired_at = NULL
+		FROM job_source js
+		JOIN raw_listing rl ON rl.id = js.raw_listing_id
+		WHERE js.job_id = j.id
+		  AND js.board_id = $1
+		  AND rl.profile_id = $2
+		  AND js.source_url = ANY($3)
+		  AND j.expired_at IS NOT NULL`
+	if _, err := tx.Exec(ctx, reactivateSeen, string(boardID), string(profileID), activeSourceURLs); err != nil {
+		return fmt.Errorf("reactivating reappeared jobs: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing expiry transaction: %w", err)
+	}
+	return nil
+}
+
 var (
 	_ jobs.Repository              = (*Repository)(nil)
 	_ appjobs.JobQuery             = (*Repository)(nil)

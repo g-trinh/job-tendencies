@@ -25,6 +25,7 @@ import (
 	"github.com/g-trinh/job-tendencies/internal/infra/blobstore"
 	infraboards "github.com/g-trinh/job-tendencies/internal/infra/boards"
 	"github.com/g-trinh/job-tendencies/internal/infra/db"
+	infrajobs "github.com/g-trinh/job-tendencies/internal/infra/jobs"
 	"github.com/g-trinh/job-tendencies/internal/infra/messaging"
 	infrapipeline "github.com/g-trinh/job-tendencies/internal/infra/pipeline"
 	infraprofiles "github.com/g-trinh/job-tendencies/internal/infra/profiles"
@@ -72,6 +73,10 @@ func main() {
 	profileSvc := appprofiles.New(infraprofiles.NewRepository(pool))
 	runTracker := infrapipeline.NewRepository(pool)
 
+	// P5-3: job expiry marking shares the jobs Postgres repository with the api/
+	// extract-worker binaries; it satisfies appscraping.JobExpirer structurally.
+	jobExpirer := infrajobs.NewRepository(pool)
+
 	scrapingSvc := appscraping.New(
 		adapterSource{boards: boardSvc, logger: logger},
 		targetSource{profiles: profileSvc},
@@ -81,6 +86,7 @@ func main() {
 		infrascraping.NewHighWaterMarkRepository(pool),
 		extractPublisher,
 		runTracker,
+		jobExpirer,
 		logger,
 	)
 
