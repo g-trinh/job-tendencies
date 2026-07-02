@@ -85,7 +85,8 @@ func ListContacts(svc ContactService) http.HandlerFunc {
 
 // ExportContacts handles GET /api/contacts/export.csv. Returns a CSV file with
 // all contact fields (id, name, company, email, linkedin_url, phone, notes, tags,
-// dedup_key). Tags are serialised as a comma-separated sub-list.
+// dedup_key). Tags are serialised as a pipe ("|")-separated sub-list, since a comma
+// separator would collide with the CSV column delimiter if a tag ever contained one.
 func ExportContacts(svc ContactService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		list, err := svc.ListContacts(r.Context(), "")

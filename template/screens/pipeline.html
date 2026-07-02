@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipeline — Job Tendencies</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="app__sidebar">
+      <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
+      <nav class="nav" aria-label="Navigation principale">
+        <span class="nav__section">Écrans</span>
+        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html">Offres</a>
+        <a class="nav__link" href="profiles.html">Profils</a>
+        <a class="nav__link" href="boards.html">Sources</a>
+        <a class="nav__link" href="contacts.html">Contacts</a>
+        <a class="nav__link" aria-current="page" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Référence</span>
+        <a class="nav__link" href="../index.html">Design system</a>
+      </nav>
+    </aside>
+
+    <div class="app__main">
+      <header class="topbar">
+        <h1 class="page__title" style="font-size:var(--font-size-lg)">Pipeline</h1>
+        <button class="btn btn--primary">Lancer un scraping maintenant</button>
+      </header>
+
+      <div class="page">
+        <header class="page__head"><p class="page__sub">Scraping → extraction LLM → scoring. Statut par source, mis à jour en direct.</p></header>
+
+        <div class="stack stack-5">
+          <!-- Current run: in progress -->
+          <section class="card" aria-labelledby="pl-run">
+            <div class="card__head"><h2 class="card__title" id="pl-run">Exécution en cours</h2><span class="badge badge--brand"><span class="badge__dot"></span>En cours · démarrée il y a 2 min</span></div>
+            <div class="stack stack-4">
+              <div class="stack stack-2">
+                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">Welcome to the Jungle</span><span class="badge badge--success">Terminé · 42 offres</span></div>
+                <div class="progress"><div class="progress__bar progress__bar--success" style="width:100%"></div></div>
+              </div>
+              <div class="stack stack-2">
+                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">Indeed</span><span class="badge badge--brand">Extraction… 68%</span></div>
+                <div class="progress"><div class="progress__bar" style="width:68%"></div></div>
+              </div>
+              <div class="stack stack-2">
+                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">LinkedIn</span><span class="badge badge--neutral">En attente</span></div>
+                <div class="progress"><div class="progress__bar" style="width:0%"></div></div>
+              </div>
+              <div class="stack stack-2">
+                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">Glassdoor</span><span class="badge badge--danger">Échec · limite de débit</span></div>
+                <div class="progress"><div class="progress__bar progress__bar--danger" style="width:35%"></div></div>
+              </div>
+            </div>
+            <div class="row" style="justify-content:flex-end;margin-block-start:var(--space-4)"><button class="btn btn--secondary btn--sm">Annuler l'exécution</button></div>
+          </section>
+
+          <!-- Run history -->
+          <section aria-labelledby="pl-hist">
+            <div class="card__head"><h2 class="card__title" id="pl-hist">Historique des exécutions</h2></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Démarrée</th><th>Déclencheur</th><th>Durée</th><th>Offres</th><th>Contacts</th><th>Statut</th></tr></thead>
+                <tbody>
+                  <tr><td>02/07 08:00</td><td><span class="badge badge--neutral">Planifié</span></td><td>4 min 12 s</td><td>118</td><td>9</td><td><span class="badge badge--success">Réussi</span></td></tr>
+                  <tr><td>01/07 20:00</td><td><span class="badge badge--brand">Manuel</span></td><td>3 min 48 s</td><td>96</td><td>7</td><td><span class="badge badge--warning">Partiel</span></td></tr>
+                  <tr><td>01/07 08:00</td><td><span class="badge badge--neutral">Planifié</span></td><td>—</td><td>0</td><td>0</td><td><span class="badge badge--danger">Échec</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- States -->
+          <section class="grid-2" aria-label="États">
+            <div class="card"><div class="state"><span class="state__icon">▶️</span><span class="state__title">Aucune exécution</span><span>Lancez un scraping pour récupérer des offres pour le profil actif.</span><button class="btn btn--primary">Lancer un scraping maintenant</button></div></div>
+            <div class="card"><div class="stack stack-3"><span class="muted text-sm">Interrogation du statut…</span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton" style="height:8px;border-radius:var(--radius-pill)"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div></div>
+          </section>
+          <div class="banner banner--danger"><span>⚠️</span><span>Impossible de récupérer le statut du pipeline. Nouvelle tentative automatique… <a href="#">Réessayer maintenant</a></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
