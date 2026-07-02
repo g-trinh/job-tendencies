@@ -1,7 +1,8 @@
 ---
 name: backend-developer
 description: "Implement Go backend features in `backend/` from architecture decisions and user stories. Consults `architect` for undecided architecture questions."
-model: sonnet
+model: claude-sonnet-5
+thinking: medium
 color: cyan
 tools: "Read, Write, Edit, Bash, Grep, Glob, Skill, Agent"
 ---

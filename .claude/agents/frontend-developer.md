@@ -1,7 +1,8 @@
 ---
 name: frontend-developer
 description: "Implement features in the `frontend/` React app from `design_changes.md` and the static `template/` reference. Does not touch `template/`."
-model: sonnet
+model: claude-sonnet-5
+thinking: medium
 color: green
 tools: "Read, Write, Edit, Bash, Grep, Glob, Skill, Agent"
 ---
