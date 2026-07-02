@@ -15,10 +15,19 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.region
+
+  # Identity Platform / Firebase APIs require a quota (billing) project header.
+  # Without this, requests are billed to the caller's default project and fail
+  # with SERVICE_DISABLED / "requires a quota project".
+  billing_project       = var.project_id
+  user_project_override = true
 }
 
 # Firebase resources (google_firebase_*) live only in the beta provider.
 provider "google-beta" {
   project = var.project_id
   region  = var.region
+
+  billing_project       = var.project_id
+  user_project_override = true
 }
