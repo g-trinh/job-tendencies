@@ -46,7 +46,9 @@ function JobCard({ job }: { job: JobSummary }) {
           {job.contractType && <li>{t(`job.contract.${job.contractType}`)}</li>}
           {job.remotePolicy && <li>{t(`job.remote.${job.remotePolicy}`)}</li>}
           {job.seniority && <li>{t(`job.seniority.${job.seniority}`)}</li>}
-          {job.workingDays && <li>{t(`job.working_days.${job.workingDays}`)}</li>}
+          {job.workingDays && (
+            <li>{t(`job.working_days.${job.workingDays}`)}</li>
+          )}
         </ul>
         <p>{formatSalary(job.salaryMin, job.salaryMax)}</p>
         {job.skills.length > 0 && (
@@ -59,7 +61,9 @@ function JobCard({ job }: { job: JobSummary }) {
         {job.fitScore != null && <p>Pertinence : {job.fitScore}/100</p>}
         <p>Compréhension : {job.understandingScore}/100</p>
         {job.applicationStatus && (
-          <p>Candidature : {t(`application.status.${job.applicationStatus}`)}</p>
+          <p>
+            Candidature : {t(`application.status.${job.applicationStatus}`)}
+          </p>
         )}
         {job.sources.length > 0 && (
           <p>Trouvé sur : {job.sources.map((s) => s.board_name).join(', ')}</p>

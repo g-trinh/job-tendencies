@@ -45,7 +45,7 @@ function renderGuard() {
   );
 }
 
-describe("RequireAuth — utilisateur non authentifié", () => {
+describe('RequireAuth — utilisateur non authentifié', () => {
   let mock: MockAdapter;
 
   beforeEach(() => {
@@ -66,8 +66,12 @@ describe("RequireAuth — utilisateur non authentifié", () => {
     // Wait for the auth check to complete and the login screen to appear
     await screen.findByRole('main', { name: 'Connexion' });
 
-    expect(screen.getByRole('heading', { name: 'Connexion' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Application' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Connexion' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Application' }),
+    ).not.toBeInTheDocument();
   });
 
   it("n'affiche rien pendant la vérification de session en cours", () => {
@@ -77,12 +81,16 @@ describe("RequireAuth — utilisateur non authentifié", () => {
     renderGuard();
 
     // Nothing should be rendered (no login, no app)
-    expect(screen.queryByRole('main', { name: 'Connexion' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Application' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('main', { name: 'Connexion' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Application' }),
+    ).not.toBeInTheDocument();
   });
 });
 
-describe("RequireAuth — utilisateur authentifié", () => {
+describe('RequireAuth — utilisateur authentifié', () => {
   let mock: MockAdapter;
 
   beforeEach(() => {
@@ -102,11 +110,13 @@ describe("RequireAuth — utilisateur authentifié", () => {
 
     await screen.findByRole('heading', { name: 'Application' });
 
-    expect(screen.queryByRole('main', { name: 'Connexion' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('main', { name: 'Connexion' }),
+    ).not.toBeInTheDocument();
   });
 });
 
-describe("RequireAuth — connexion réussie", () => {
+describe('RequireAuth — connexion réussie', () => {
   let mock: MockAdapter;
 
   beforeEach(() => {
@@ -144,11 +154,13 @@ describe("RequireAuth — connexion réussie", () => {
     // 3. App content replaces the login screen
     await screen.findByRole('heading', { name: 'Application' });
 
-    expect(screen.queryByRole('main', { name: 'Connexion' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('main', { name: 'Connexion' }),
+    ).not.toBeInTheDocument();
   });
 });
 
-describe("RequireAuth — appel API non autorisé (AC2)", () => {
+describe('RequireAuth — appel API non autorisé (AC2)', () => {
   let mock: MockAdapter;
 
   beforeEach(() => {
@@ -161,7 +173,7 @@ describe("RequireAuth — appel API non autorisé (AC2)", () => {
   });
 
   // AC: 401 from any /api call redirects to login
-  it("redirige vers la connexion quand un appel à une route protégée retourne 401", async () => {
+  it('redirige vers la connexion quand un appel à une route protégée retourne 401', async () => {
     // Start authenticated
     mock.onGet('/auth/me').reply(200, userFixture);
     // The guarded /api/jobs call will return 401 (session expired mid-use)
@@ -178,11 +190,13 @@ describe("RequireAuth — appel API non autorisé (AC2)", () => {
     // 3. Login screen replaces the app
     await screen.findByRole('main', { name: 'Connexion' });
 
-    expect(screen.queryByRole('heading', { name: 'Application' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Application' }),
+    ).not.toBeInTheDocument();
   });
 });
 
-describe("RequireAuth — déconnexion", () => {
+describe('RequireAuth — déconnexion', () => {
   let mock: MockAdapter;
 
   beforeEach(() => {

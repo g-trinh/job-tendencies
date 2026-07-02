@@ -59,10 +59,18 @@ describe('KanbanPage', () => {
     // Wait for the kanban region which appears only after jobs load
     await screen.findByRole('region', { name: 'Kanban candidatures' });
 
-    expect(screen.getByRole('region', { name: 'Sauvegardé' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Candidature envoyée' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Entretien' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Offre reçue' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Sauvegardé' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Candidature envoyée' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Entretien' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Offre reçue' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Refusé' })).toBeInTheDocument();
   });
 
@@ -104,8 +112,12 @@ describe('KanbanPage', () => {
     await screen.findByRole('region', { name: 'Kanban candidatures' });
 
     // 'applied' column has no jobs in the default fixture
-    const appliedSection = screen.getByRole('region', { name: 'Candidature envoyée' });
-    expect(appliedSection).toHaveTextContent('Aucune offre dans cette colonne.');
+    const appliedSection = screen.getByRole('region', {
+      name: 'Candidature envoyée',
+    });
+    expect(appliedSection).toHaveTextContent(
+      'Aucune offre dans cette colonne.',
+    );
   });
 
   // AC: status transitions persist per profile+job via PATCH
@@ -122,7 +134,9 @@ describe('KanbanPage', () => {
     renderKanban();
 
     await screen.findByRole('region', { name: 'Kanban candidatures' });
-    expect(screen.getByRole('article', { name: 'Lead Go Engineer' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('article', { name: 'Lead Go Engineer' }),
+    ).toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Avancer vers Entretien' }),

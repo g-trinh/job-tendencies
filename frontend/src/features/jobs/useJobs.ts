@@ -2,7 +2,12 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { apiClient } from '../../lib/apiClient';
 import { useActiveProfile } from '../../context/ActiveProfileContext';
 import { jobsFixture } from './fixtures';
-import { toJobSummary, type JobSummary, type JobSummaryDto, type JobFilters } from './types';
+import {
+  toJobSummary,
+  type JobSummary,
+  type JobSummaryDto,
+  type JobFilters,
+} from './types';
 
 /**
  * When `VITE_USE_FIXTURES` is set, the hook resolves from the local fixture
@@ -29,7 +34,8 @@ async function fetchJobs(filters?: JobFilters): Promise<JobSummary[]> {
     if (filters.location) params['location'] = filters.location;
     if (filters.board_id) params['board_id'] = filters.board_id;
     if (filters.since) params['since'] = filters.since;
-    if (filters.confidence_min != null) params['confidence_min'] = filters.confidence_min;
+    if (filters.confidence_min != null)
+      params['confidence_min'] = filters.confidence_min;
     if (filters.sort) params['sort'] = filters.sort;
     if (filters.sort_dir) params['sort_dir'] = filters.sort_dir;
   }

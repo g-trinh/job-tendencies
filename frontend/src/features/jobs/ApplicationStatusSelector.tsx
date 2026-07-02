@@ -22,7 +22,10 @@ interface ApplicationStatusSelectorProps {
  * call-to-action when no status has been set. Disabled while a mutation is
  * in flight to prevent double-submission.
  */
-function ApplicationStatusSelector({ jobId, currentStatus }: ApplicationStatusSelectorProps) {
+function ApplicationStatusSelector({
+  jobId,
+  currentStatus,
+}: ApplicationStatusSelectorProps) {
   const { mutate, isPending } = useApplicationMutation(jobId);
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -42,11 +45,11 @@ function ApplicationStatusSelector({ jobId, currentStatus }: ApplicationStatusSe
         value={currentStatus ?? ''}
         disabled={isPending}
         onChange={handleChange}
-        aria-label={currentStatus ? 'Statut de candidature' : 'Suivre cette offre'}
+        aria-label={
+          currentStatus ? 'Statut de candidature' : 'Suivre cette offre'
+        }
       >
-        {!currentStatus && (
-          <option value="">Sauvegarder cette offre</option>
-        )}
+        {!currentStatus && <option value="">Sauvegarder cette offre</option>}
         {ALL_STATUSES.map((status) => (
           <option key={status} value={status}>
             {t(`application.status.${status}`)}

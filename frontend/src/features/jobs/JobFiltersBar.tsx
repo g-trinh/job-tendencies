@@ -1,4 +1,10 @@
-import type { ContractType, JobFilters, RemotePolicy, SortDir, SortField } from './types';
+import type {
+  ContractType,
+  JobFilters,
+  RemotePolicy,
+  SortDir,
+  SortField,
+} from './types';
 
 interface JobFiltersBarProps {
   filters: JobFilters;
@@ -55,7 +61,10 @@ function JobFiltersBar({ filters, onChange }: JobFiltersBarProps) {
           id="filter-remote"
           value={filters.remote_policy ?? ''}
           onChange={(e) =>
-            set('remote_policy', (e.target.value as RemotePolicy | '') || undefined)
+            set(
+              'remote_policy',
+              (e.target.value as RemotePolicy | '') || undefined,
+            )
           }
         >
           <option value="">Tous</option>
@@ -71,7 +80,10 @@ function JobFiltersBar({ filters, onChange }: JobFiltersBarProps) {
           id="filter-contract"
           value={filters.contract_type ?? ''}
           onChange={(e) =>
-            set('contract_type', (e.target.value as ContractType | '') || undefined)
+            set(
+              'contract_type',
+              (e.target.value as ContractType | '') || undefined,
+            )
           }
         >
           <option value="">Tous</option>
@@ -90,7 +102,10 @@ function JobFiltersBar({ filters, onChange }: JobFiltersBarProps) {
           min={0}
           value={filters.salary_min ?? ''}
           onChange={(e) =>
-            set('salary_min', e.target.value ? parseInt(e.target.value, 10) : undefined)
+            set(
+              'salary_min',
+              e.target.value ? parseInt(e.target.value, 10) : undefined,
+            )
           }
         />
       </div>
@@ -103,7 +118,10 @@ function JobFiltersBar({ filters, onChange }: JobFiltersBarProps) {
           min={0}
           value={filters.salary_max ?? ''}
           onChange={(e) =>
-            set('salary_max', e.target.value ? parseInt(e.target.value, 10) : undefined)
+            set(
+              'salary_max',
+              e.target.value ? parseInt(e.target.value, 10) : undefined,
+            )
           }
         />
       </div>
@@ -153,7 +171,10 @@ function JobFiltersBar({ filters, onChange }: JobFiltersBarProps) {
           max={100}
           value={filters.confidence_min ?? ''}
           onChange={(e) =>
-            set('confidence_min', e.target.value ? parseInt(e.target.value, 10) : undefined)
+            set(
+              'confidence_min',
+              e.target.value ? parseInt(e.target.value, 10) : undefined,
+            )
           }
         />
       </div>

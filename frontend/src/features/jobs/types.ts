@@ -17,7 +17,8 @@ export type Seniority = 'entry' | 'mid' | 'senior' | 'lead' | 'exec';
 export type WorkingDays = 'full_time' | 'part_time' | 'four_day';
 
 /** Application kanban status — mirrors backend `kernel.ApplicationStatus`. */
-export type ApplicationStatus = 'saved' | 'applied' | 'interview' | 'offer' | 'rejected';
+export type ApplicationStatus =
+  'saved' | 'applied' | 'interview' | 'offer' | 'rejected';
 
 /** Sort field for the jobs list. */
 export type SortField = 'date' | 'fit' | 'salary';

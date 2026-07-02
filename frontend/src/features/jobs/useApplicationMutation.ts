@@ -22,7 +22,9 @@ export function useApplicationMutation(jobId: string) {
   const { activeProfileId } = useActiveProfile();
 
   return useMutation({
-    mutationFn: async (status: ApplicationStatus): Promise<ApplicationResponseDto> => {
+    mutationFn: async (
+      status: ApplicationStatus,
+    ): Promise<ApplicationResponseDto> => {
       const { data } = await apiClient.patch<ApplicationResponseDto>(
         `/jobs/${jobId}/application`,
         { status },
@@ -31,8 +33,12 @@ export function useApplicationMutation(jobId: string) {
     },
     onSuccess: () => {
       // Invalidate scoped caches so the list + detail both re-fetch fresh status.
-      void queryClient.invalidateQueries({ queryKey: ['jobs', activeProfileId] });
-      void queryClient.invalidateQueries({ queryKey: ['job', jobId, activeProfileId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['jobs', activeProfileId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['job', jobId, activeProfileId],
+      });
     },
   });
 }

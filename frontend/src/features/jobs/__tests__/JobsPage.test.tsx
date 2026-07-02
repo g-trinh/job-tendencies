@@ -51,10 +51,9 @@ describe('JobsPage', () => {
     expect(
       await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' }),
     ).toHaveAttribute('href', '/jobs/11111111-1111-1111-1111-111111111111');
-    expect(screen.getByRole('link', { name: 'Développeur Full-Stack' })).toHaveAttribute(
-      'href',
-      '/jobs/22222222-2222-2222-2222-222222222222',
-    );
+    expect(
+      screen.getByRole('link', { name: 'Développeur Full-Stack' }),
+    ).toHaveAttribute('href', '/jobs/22222222-2222-2222-2222-222222222222');
   });
 
   // AC: structured enums shown in French
@@ -90,7 +89,9 @@ describe('JobsPage', () => {
   it('scopes the request to the active profile via the X-Active-Profile header', async () => {
     let sentProfile: string | undefined;
     mock.onGet('/jobs').reply((config) => {
-      sentProfile = (config.headers as Record<string, string>)['X-Active-Profile'];
+      sentProfile = (config.headers as Record<string, string>)[
+        'X-Active-Profile'
+      ];
       return [200, jobsFixture];
     });
 
@@ -110,11 +111,14 @@ describe('JobsPage', () => {
 
     expect(await screen.findByText('Lien indisponible')).toBeInTheDocument();
     // Title still links to detail page (not the original posting)
-    expect(
-      screen.getByRole('link', { name: job.title }),
-    ).toHaveAttribute('href', `/jobs/${job.id}`);
+    expect(screen.getByRole('link', { name: job.title })).toHaveAttribute(
+      'href',
+      `/jobs/${job.id}`,
+    );
     // No "Offre originale" external link
-    expect(screen.queryByRole('link', { name: 'Offre originale' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Offre originale' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows an empty-state message when no jobs match the profile', async () => {
@@ -122,7 +126,9 @@ describe('JobsPage', () => {
 
     renderJobsPage();
 
-    expect(await screen.findByText('Aucune offre pour ce profil.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Aucune offre pour ce profil.'),
+    ).toBeInTheDocument();
   });
 
   it('shows an error message when the jobs request fails', async () => {
@@ -153,7 +159,9 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
-    expect(screen.getAllByText('Trouvé sur : Welcome to the Jungle')).toHaveLength(2);
+    expect(
+      screen.getAllByText('Trouvé sur : Welcome to the Jungle'),
+    ).toHaveLength(2);
   });
 
   // AC: fit score shown when present
@@ -185,7 +193,9 @@ describe('JobsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tableau' }));
 
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Offres' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('list', { name: 'Offres' }),
+    ).not.toBeInTheDocument();
   });
 
   it('switches back to card view when the Cartes button is pressed', async () => {
@@ -216,7 +226,9 @@ describe('JobsPage', () => {
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
 
-    fireEvent.change(screen.getByLabelText('Télétravail'), { target: { value: 'hybrid' } });
+    fireEvent.change(screen.getByLabelText('Télétravail'), {
+      target: { value: 'hybrid' },
+    });
 
     // Wait for the refetched request
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
