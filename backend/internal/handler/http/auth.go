@@ -13,7 +13,11 @@ import (
 
 // sessionCookieName is the name of the httpOnly session cookie set by the auth endpoints.
 // The cookie carries an AES-256-GCM-encrypted payload containing the IdP refresh token.
-const sessionCookieName = "session"
+//
+// MUST be "__session": Firebase Hosting strips every cookie except one named
+// __session before forwarding a request to the Cloud Run backend (and on the way
+// back), so any other name silently disappears behind the /api rewrite.
+const sessionCookieName = "__session"
 
 // authUserKey is the context key used by RequireAuth to store the authenticated user.
 const authUserKey contextKey = "auth_user"

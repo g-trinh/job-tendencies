@@ -76,7 +76,7 @@ func TestRequireAuth(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "/api/boards", nil)
 			if tc.hasCookie {
-				req.AddCookie(&http.Cookie{Name: "session", Value: "some-cookie-value"})
+				req.AddCookie(&http.Cookie{Name: "__session", Value: "some-cookie-value"})
 			}
 			rec := httptest.NewRecorder()
 
@@ -106,7 +106,7 @@ func TestRequireAuth_TransparentRefreshSetsCookie(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/boards", nil)
-	req.AddCookie(&http.Cookie{Name: "session", Value: "old-cookie-value"})
+	req.AddCookie(&http.Cookie{Name: "__session", Value: "old-cookie-value"})
 	rec := httptest.NewRecorder()
 
 	r.ServeHTTP(rec, req)
@@ -116,7 +116,7 @@ func TestRequireAuth_TransparentRefreshSetsCookie(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	var sessionCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "session" {
+		if c.Name == "__session" {
 			sessionCookie = c
 			break
 		}

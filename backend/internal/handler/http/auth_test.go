@@ -109,7 +109,7 @@ func TestPostLogin(t *testing.T) {
 				cookies := rec.Result().Cookies()
 				var sessionCookie *http.Cookie
 				for _, c := range cookies {
-					if c.Name == "session" {
+					if c.Name == "__session" {
 						sessionCookie = c
 						break
 					}
@@ -162,7 +162,7 @@ func TestPostLogout(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	var sessionCookie *http.Cookie
 	for _, c := range cookies {
-		if c.Name == "session" {
+		if c.Name == "__session" {
 			sessionCookie = c
 			break
 		}
