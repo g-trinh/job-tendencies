@@ -35,6 +35,13 @@ function JobCard({ job }: { job: JobSummary }) {
         <h2>
           <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
         </h2>
+        {job.expiredAt && (
+          <p>
+            <span data-badge="expired" aria-label="Offre expirée">
+              Expirée
+            </span>
+          </p>
+        )}
         {job.url && (
           <a href={job.url} target="_blank" rel="noreferrer">
             Offre originale
@@ -77,25 +84,36 @@ function JobCard({ job }: { job: JobSummary }) {
 function JobsPage() {
   const [filters, setFilters] = useState<JobFilters>({});
   const [view, setView] = useState<View>('card');
+  // Hidden by default per job-browser/feature.md ("Job removed from board →
+  // marked expired, data retained"). Client-side only — see JobFiltersBar.
+  const [showExpired, setShowExpired] = useState(false);
 
   const { data: jobs, isPending, isError } = useJobs(filters);
+  const visibleJobs = jobs?.filter(
+    (job) => showExpired || job.expiredAt === null,
+  );
 
   return (
     <main>
       <h1>Offres</h1>
-      <JobFiltersBar filters={filters} onChange={setFilters} />
+      <JobFiltersBar
+        filters={filters}
+        onChange={setFilters}
+        showExpired={showExpired}
+        onShowExpiredChange={setShowExpired}
+      />
       <ViewToggle view={view} onChange={setView} />
       {isPending && <p>Chargement des offres…</p>}
       {isError && <p role="alert">Impossible de charger les offres.</p>}
-      {jobs !== undefined && (
+      {visibleJobs !== undefined && (
         <>
-          {jobs.length === 0 ? (
+          {visibleJobs.length === 0 ? (
             <p>Aucune offre pour ce profil.</p>
           ) : view === 'table' ? (
-            <JobsTable jobs={jobs} />
+            <JobsTable jobs={visibleJobs} />
           ) : (
             <ul aria-label="Offres">
-              {jobs.map((job) => (
+              {visibleJobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
             </ul>

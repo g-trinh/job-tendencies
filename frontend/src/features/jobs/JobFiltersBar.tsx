@@ -9,6 +9,15 @@ import type {
 interface JobFiltersBarProps {
   filters: JobFilters;
   onChange: (filters: JobFilters) => void;
+  /**
+   * Whether expired jobs (job.expired_at set) are included in the list.
+   * This is a client-side display toggle, not a `GET /api/jobs` query param —
+   * the backend does not filter by expiry, so all jobs are fetched and this
+   * flag decides what `JobsPage` renders. Defaults to hidden per
+   * job-browser/feature.md ("Job removed from board → marked expired").
+   */
+  showExpired: boolean;
+  onShowExpiredChange: (showExpired: boolean) => void;
 }
 
 // Known boards seeded by P3-BO-1. Replace with a dynamic /api/boards fetch
@@ -25,7 +34,12 @@ const KNOWN_BOARDS = [
  * parent (`JobsPage`); this component emits a new `JobFilters` object on every
  * change. Skills are entered as a comma-separated string and split on blur.
  */
-function JobFiltersBar({ filters, onChange }: JobFiltersBarProps) {
+function JobFiltersBar({
+  filters,
+  onChange,
+  showExpired,
+  onShowExpiredChange,
+}: JobFiltersBarProps) {
   function set<K extends keyof JobFilters>(key: K, value: JobFilters[K]) {
     onChange({ ...filters, [key]: value });
   }
@@ -203,6 +217,18 @@ function JobFiltersBar({ filters, onChange }: JobFiltersBarProps) {
           <option value="desc">Décroissant</option>
           <option value="asc">Croissant</option>
         </select>
+      </div>
+
+      <div>
+        <label htmlFor="filter-show-expired">
+          <input
+            id="filter-show-expired"
+            type="checkbox"
+            checked={showExpired}
+            onChange={(e) => onShowExpiredChange(e.target.checked)}
+          />
+          Afficher les offres expirées
+        </label>
       </div>
     </section>
   );

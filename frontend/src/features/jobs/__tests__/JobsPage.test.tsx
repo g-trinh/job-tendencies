@@ -6,7 +6,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { apiClient, setActiveProfileId } from '../../../lib/apiClient';
 import { ActiveProfileProvider } from '../../../context/ActiveProfileContext';
 import { JobsPage } from '../JobsPage';
-import { jobsFixture } from '../fixtures';
+import { jobsFixture, jobsWithExpiredFixture } from '../fixtures';
 
 const ACTIVE_PROFILE_ID = 'profile-123';
 
@@ -233,5 +233,36 @@ describe('JobsPage', () => {
     // Wait for the refetched request
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
     expect(sentParams['remote_policy']).toBe('hybrid');
+  });
+
+  // AC: expired jobs are hidden by default (job-browser/feature.md edge case)
+  it('hides expired jobs by default', async () => {
+    mock.onGet('/jobs').reply(200, jobsWithExpiredFixture);
+
+    renderJobsPage();
+
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    expect(
+      screen.queryByRole('link', { name: 'Lead Engineer (Go) — Expiré' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // AC: a toggle reveals expired jobs, marked with an "Expirée" badge
+  it('shows expired jobs with an "Expirée" badge once the toggle is checked', async () => {
+    mock.onGet('/jobs').reply(200, jobsWithExpiredFixture);
+
+    renderJobsPage();
+
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Afficher les offres expirées' }),
+    );
+
+    const expiredLink = await screen.findByRole('link', {
+      name: 'Lead Engineer (Go) — Expiré',
+    });
+    expect(expiredLink).toBeInTheDocument();
+    expect(screen.getByLabelText('Offre expirée')).toBeInTheDocument();
   });
 });

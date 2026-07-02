@@ -3,6 +3,7 @@ import { t } from '../../i18n/fr';
 import { useJobDetail } from './useJobDetail';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { ApplicationStatusSelector } from './ApplicationStatusSelector';
+import { ReextractButton } from './ReextractButton';
 
 /** Formats a full salary range for the detail view. */
 function formatSalary(min: number | null, max: number | null): string {
@@ -166,6 +167,12 @@ function JobDetailPage() {
               jobId={job.id}
               currentStatus={job.applicationStatus}
             />
+          </section>
+
+          {/* Actions */}
+          <section aria-label="Actions">
+            <h2>Actions</h2>
+            <ReextractButton jobId={job.id} />
           </section>
         </article>
       )}

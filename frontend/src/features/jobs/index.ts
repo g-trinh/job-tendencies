@@ -4,6 +4,7 @@ export { KanbanPage } from './KanbanPage';
 export { useJobs } from './useJobs';
 export { useJobDetail } from './useJobDetail';
 export { useApplicationMutation } from './useApplicationMutation';
+export { useReextractMutation } from './useReextractMutation';
 export type {
   JobSummary,
   JobSummaryDto,
