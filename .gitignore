@@ -2,4 +2,6 @@
 .code-review-graph/
 
 frontend/node_modules/*
+frontend/dist
+frontend/.firebase
 backend/bin/*
