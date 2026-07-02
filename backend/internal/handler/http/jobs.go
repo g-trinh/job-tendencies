@@ -27,6 +27,12 @@ type JobApplicationUpdater interface {
 	SetApplicationStatus(ctx context.Context, profileID kernel.ProfileID, jobID kernel.JobID, status kernel.ApplicationStatus) (appjobs.ApplicationResult, error)
 }
 
+// JobReextractor re-publishes listing.extract for a job's retained raw listings.
+// Implemented by app/jobs.Service (P5-4).
+type JobReextractor interface {
+	ReextractJob(ctx context.Context, profileID kernel.ProfileID, jobID kernel.JobID) error
+}
+
 // jobSourceResponse is the JSON shape of a job's source linkage per the FE contract:
 // {board_id, source_url, board_name}.
 type jobSourceResponse struct {
@@ -147,6 +153,23 @@ func PatchJobApplication(updater JobApplicationUpdater) http.HandlerFunc {
 			"status":     string(result.Status),
 			"updated_at": result.UpdatedAt.UTC().Format(time.RFC3339),
 		})
+	}
+}
+
+// PostJobReextract handles POST /api/jobs/{id}/reextract. It re-publishes
+// listing.extract for the job's retained raw listing(s) so extract-worker reprocesses
+// them (e.g. after an extractor improvement). Returns 202 Accepted since the actual
+// re-extraction happens asynchronously in extract-worker.
+func PostJobReextract(reextractor JobReextractor) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		profileID, _ := ActiveProfileID(r)
+		id := kernel.JobID(chi.URLParam(r, "id"))
+
+		if err := reextractor.ReextractJob(r.Context(), profileID, id); err != nil {
+			RespondError(w, r, err)
+			return
+		}
+		respond(w, http.StatusAccepted, map[string]string{"status": "re-extraction queued"})
 	}
 }
 

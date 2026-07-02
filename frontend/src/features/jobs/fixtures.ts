@@ -33,6 +33,7 @@ export const jobsFixture: JobSummaryDto[] = [
       },
     ],
     first_seen: '2026-06-20T10:00:00Z',
+    expired_at: null,
   },
   {
     id: '22222222-2222-2222-2222-222222222222',
@@ -59,6 +60,21 @@ export const jobsFixture: JobSummaryDto[] = [
       },
     ],
     first_seen: '2026-06-22T14:30:00Z',
+    expired_at: null,
+  },
+];
+
+/**
+ * List fixture including one expired job — used to test the "Expirée" badge and
+ * the show/hide-expired toggle on `JobsPage`/`JobsTable`.
+ */
+export const jobsWithExpiredFixture: JobSummaryDto[] = [
+  ...jobsFixture,
+  {
+    ...jobsFixture[0],
+    id: '33333333-3333-3333-3333-333333333333',
+    title: 'Lead Engineer (Go) — Expiré',
+    expired_at: '2026-06-25T00:00:00Z',
   },
 ];
 

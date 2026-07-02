@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { jobsFixture } from '../fixtures';
+import { jobsFixture, jobsWithExpiredFixture } from '../fixtures';
 import { toJobSummary } from '../types';
 import { JobsTable } from '../JobsTable';
 
@@ -83,5 +83,11 @@ describe('JobsTable', () => {
     renderTable();
     // Second job has contract_type: '' — must not render "job.contract."
     expect(screen.queryByText(/job\.contract\./)).not.toBeInTheDocument();
+  });
+
+  // AC: expired jobs are marked with an "Expirée" badge
+  it('shows an "Expirée" badge for expired jobs', () => {
+    renderTable(jobsWithExpiredFixture.map(toJobSummary));
+    expect(screen.getByLabelText('Offre expirée')).toBeInTheDocument();
   });
 });

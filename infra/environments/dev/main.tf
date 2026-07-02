@@ -88,8 +88,9 @@ module "api" {
   # control (P4). No push invoker: the API is not a push target.
   allow_public_invoker = true
   env_vars = merge(local.svc_db_env, {
-    PUBSUB_SCRAPE_TOPIC_ID = local.scrape_topic
-    ALLOWED_ORIGINS        = local.allowed_origins
+    PUBSUB_SCRAPE_TOPIC_ID  = local.scrape_topic
+    PUBSUB_EXTRACT_TOPIC_ID = local.extract_topic # P5-4: reextract re-publishes listing.extract
+    ALLOWED_ORIGINS         = local.allowed_origins
   })
   # Backend-proxied auth (P4). The API signs in against Identity Platform with
   # IDP_API_KEY and encrypts the session cookie with SESSION_COOKIE_KEY. Both
@@ -242,10 +243,18 @@ module "listing_extract" {
   depends_on = [google_project_service.apis]
 }
 
-# api publishes scrape.tick on demand; scrape-worker publishes listing.extract.
+# api publishes scrape.tick on demand, and listing.extract for reextract (P5-4);
+# scrape-worker also publishes listing.extract.
 resource "google_pubsub_topic_iam_member" "api_publishes_scrape_tick" {
   project = var.project_id
   topic   = module.scrape_tick.topic_name
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:${module.api.sa_email}"
+}
+
+resource "google_pubsub_topic_iam_member" "api_publishes_listing_extract" {
+  project = var.project_id
+  topic   = module.listing_extract.topic_name
   role    = "roles/pubsub.publisher"
   member  = "serviceAccount:${module.api.sa_email}"
 }

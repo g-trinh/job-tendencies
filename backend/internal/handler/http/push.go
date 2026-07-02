@@ -30,7 +30,13 @@ type ExtractionDispatcher interface {
 //  3. Dispatches to the scraping application service.
 //  4. Returns 204 on success so Pub/Sub considers the message acknowledged.
 //
-// Any non-2xx response causes Pub/Sub to redeliver with exponential backoff.
+// Any non-2xx response causes Pub/Sub to nack the message, which is redelivered with
+// the subscription's exponential backoff (infrastructure.md §5 retry_policy). After
+// dead_letter_policy.max_delivery_attempts is exceeded, Pub/Sub itself moves the message
+// to scrape-tick's dead-letter topic (P5-2) — no application code is involved in that
+// step; the handler's only job is to return an honest status code for every outcome.
+// A 4xx here signals a malformed transport envelope (never worth retrying); a 5xx signals
+// a transient handler failure (worth retrying).
 func PushScrapeTick(dispatcher ScrapingDispatcher, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
@@ -70,7 +76,8 @@ func PushScrapeTick(dispatcher ScrapingDispatcher, logger *slog.Logger) http.Han
 }
 
 // PushListingExtract handles POST /push/listing-extract. Operates identically to
-// PushScrapeTick but delegates to the extraction application service.
+// PushScrapeTick (including the retry/DLQ contract, P5-2) but delegates to the
+// extraction application service.
 func PushListingExtract(dispatcher ExtractionDispatcher, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)

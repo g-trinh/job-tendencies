@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,10 @@ import (
 	"github.com/g-trinh/job-tendencies/internal/domain/messaging"
 	handler "github.com/g-trinh/job-tendencies/internal/handler/http"
 )
+
+// errBoom is a stand-in handler failure used to assert the push handlers translate any
+// application-service error into a 5xx response (P5-2: retryable by Pub/Sub).
+var errBoom = errors.New("boom")
 
 // fakeScrapingDispatcher records the last message it received.
 type fakeScrapingDispatcher struct {
@@ -87,6 +92,16 @@ func TestPushScrapeTick(t *testing.T) {
 			dispatcher: &fakeScrapingDispatcher{},
 			wantStatus: http.StatusBadRequest,
 		},
+		{
+			// P5-2: a handler error must surface as 5xx so Pub/Sub nacks and redelivers
+			// with backoff (infrastructure.md §5 retry_policy); after max_delivery_attempts
+			// the message lands in scrape-tick.dlq. 4xx (bad request) is reserved for
+			// malformed transport envelopes, which are never retried productively.
+			name:       "handler error returns 500 so pubsub retries",
+			body:       buildPushBody(t, []byte(`{"run_id":"run-1"}`)),
+			dispatcher: &fakeScrapingDispatcher{errOut: errBoom},
+			wantStatus: http.StatusInternalServerError,
+		},
 	}
 
 	for _, tc := range cases {
@@ -141,6 +156,13 @@ func TestPushListingExtract(t *testing.T) {
 			body:       []byte(`not json`),
 			dispatcher: &fakeExtractionDispatcher{},
 			wantStatus: http.StatusBadRequest,
+		},
+		{
+			// P5-2: same retry/backoff contract as scrape-tick, for the listing-extract.dlq.
+			name:       "handler error returns 500 so pubsub retries",
+			body:       buildPushBody(t, []byte(`{"raw_listing_id":"rl-1"}`)),
+			dispatcher: &fakeExtractionDispatcher{errOut: errBoom},
+			wantStatus: http.StatusInternalServerError,
 		},
 	}
 

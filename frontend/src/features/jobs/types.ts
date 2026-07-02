@@ -92,6 +92,8 @@ export interface JobSummary {
   sources: JobSource[];
   /** ISO-8601 date when this job was first scraped. */
   firstSeen: string | null;
+  /** ISO-8601 date when this job was marked expired; null if still active. */
+  expiredAt: string | null;
 }
 
 /** Raw `GET /api/jobs` payload as returned by the backend (snake_case). */
@@ -113,6 +115,7 @@ export interface JobSummaryDto {
   fit_score: number | null;
   sources: JobSource[];
   first_seen: string | null;
+  expired_at: string | null;
 }
 
 /** Full job detail returned by `GET /api/jobs/{id}`. */
@@ -125,8 +128,6 @@ export interface JobDetail extends JobSummary {
   contactId: string | null;
   /** ISO-8601 date when this job was last seen on its source board. */
   lastSeen: string;
-  /** ISO-8601 date when this job was marked expired; null if still active. */
-  expiredAt: string | null;
 }
 
 /** Raw `GET /api/jobs/{id}` payload (snake_case). */
@@ -135,7 +136,6 @@ export interface JobDetailDto extends JobSummaryDto {
   field_confidence: FieldConfidence;
   contact_id: string | null;
   last_seen: string;
-  expired_at: string | null;
 }
 
 /** Maps a wire summary DTO to the camelCase domain shape used by the UI. */
@@ -158,6 +158,7 @@ export function toJobSummary(dto: JobSummaryDto): JobSummary {
     fitScore: dto.fit_score,
     sources: dto.sources,
     firstSeen: dto.first_seen,
+    expiredAt: dto.expired_at,
   };
 }
 
@@ -169,6 +170,5 @@ export function toJobDetail(dto: JobDetailDto): JobDetail {
     fieldConfidence: dto.field_confidence,
     contactId: dto.contact_id,
     lastSeen: dto.last_seen,
-    expiredAt: dto.expired_at,
   };
 }

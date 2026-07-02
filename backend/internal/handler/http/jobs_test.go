@@ -20,9 +20,11 @@ import (
 // fakeJobService is an in-memory fake of handler.JobReader and
 // handler.JobApplicationUpdater.
 type fakeJobService struct {
-	jobs map[kernel.JobID]appjobs.JobView
-	err  error
-	apps map[kernel.JobID]kernel.ApplicationStatus
+	jobs           map[kernel.JobID]appjobs.JobView
+	err            error
+	apps           map[kernel.JobID]kernel.ApplicationStatus
+	reextractCalls []kernel.JobID
+	reextractErr   error
 }
 
 func newFakeJobService() *fakeJobService {
@@ -65,6 +67,14 @@ func (f *fakeJobService) SetApplicationStatus(_ context.Context, _ kernel.Profil
 	return appjobs.ApplicationResult{Status: status, UpdatedAt: time.Now()}, nil
 }
 
+func (f *fakeJobService) ReextractJob(_ context.Context, _ kernel.ProfileID, id kernel.JobID) error {
+	if f.reextractErr != nil {
+		return f.reextractErr
+	}
+	f.reextractCalls = append(f.reextractCalls, id)
+	return nil
+}
+
 func newJobRouter(svc *fakeJobService) *chi.Mux {
 	r := handler.NewRouter(slog.Default())
 	// Middleware injects a fake profile id so scoped routes work without HTTP middleware.
@@ -78,7 +88,48 @@ func newJobRouter(svc *fakeJobService) *chi.Mux {
 	r.Get("/api/jobs/{id}", handler.GetJob(svc))
 	r.Get("/api/jobs/{id}/original", handler.GetJobOriginal(svc))
 	r.Patch("/api/jobs/{id}/application", handler.PatchJobApplication(svc))
+	r.Post("/api/jobs/{id}/reextract", handler.PostJobReextract(svc))
 	return r
+}
+
+// TestPostJobReextract_PublishesAndReturns202 verifies P5-4: a successful reextract
+// request delegates to the service with the job id and returns 202 Accepted (the
+// actual re-extraction happens asynchronously in extract-worker).
+func TestPostJobReextract_PublishesAndReturns202(t *testing.T) {
+	t.Parallel()
+
+	svc := newFakeJobService()
+	seedJob(svc)
+	r := newJobRouter(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/jobs/j-1/reextract", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d; want 202 (body: %s)", rec.Code, rec.Body.String())
+	}
+	if len(svc.reextractCalls) != 1 || svc.reextractCalls[0] != "j-1" {
+		t.Fatalf("reextractCalls = %v, want [j-1]", svc.reextractCalls)
+	}
+}
+
+// TestPostJobReextract_NotFoundPropagates verifies a service-level not-found error
+// (job has no sources visible to this profile) surfaces as 404, not a 202.
+func TestPostJobReextract_NotFoundPropagates(t *testing.T) {
+	t.Parallel()
+
+	svc := newFakeJobService()
+	svc.reextractErr = &kernel.NotFoundError{Kind: "job", ID: "missing"}
+	r := newJobRouter(svc)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/jobs/missing/reextract", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d; want 404 (body: %s)", rec.Code, rec.Body.String())
+	}
 }
 
 func seedJob(svc *fakeJobService) appjobs.JobView {

@@ -69,7 +69,7 @@ func TestLoad(t *testing.T) {
 			// Isolate: clear all vars this loader reads, then apply test values.
 			for _, k := range []string{
 				"DATABASE_URL", "PORT", "LOG_LEVEL",
-				"ANTHROPIC_API_KEY", "LLM_MODEL_ID", "GCP_PROJECT_ID",
+				"ANTHROPIC_API_KEY", "LLM_MODEL_ID", "LLM_BATCH_ENABLED", "GCP_PROJECT_ID",
 				"GCS_RAW_BUCKET", "PUBSUB_SCRAPE_TOPIC_ID", "PUBSUB_EXTRACT_TOPIC_ID",
 				"CLOUD_SQL_INSTANCE", "DB_IAM_USER", "DB_NAME",
 				"WORKER_SERVICE_URL", "PUBSUB_PUSH_SA",
@@ -101,6 +101,35 @@ func TestLoad(t *testing.T) {
 			}
 			if tc.wantLevel != "" && got.LogLevel != tc.wantLevel {
 				t.Errorf("LogLevel = %q; want %q", got.LogLevel, tc.wantLevel)
+			}
+		})
+	}
+}
+
+// TestLoad_LLMBatchEnabled verifies P5-5: the Batch API cost lever defaults to false and
+// is only enabled by an explicit, valid LLM_BATCH_ENABLED=true.
+func TestLoad_LLMBatchEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+		want bool
+	}{
+		{name: "unset defaults to false", env: "", want: false},
+		{name: "true enables it", env: "true", want: true},
+		{name: "invalid value falls back to false", env: "not-a-bool", want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", "postgres://localhost/testdb")
+			t.Setenv("LLM_BATCH_ENABLED", tc.env)
+
+			got, err := Load()
+			if err != nil {
+				t.Fatalf("Load() unexpected error: %v", err)
+			}
+			if got.LLMBatchEnabled != tc.want {
+				t.Errorf("LLMBatchEnabled = %v; want %v", got.LLMBatchEnabled, tc.want)
 			}
 		})
 	}

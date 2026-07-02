@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import MockAdapter from 'axios-mock-adapter';
@@ -195,5 +195,28 @@ describe('JobDetailPage', () => {
     });
     // Job has application_status: 'saved' → selector shows "Statut de candidature"
     expect(screen.getByLabelText('Statut de candidature')).toBeInTheDocument();
+  });
+
+  // AC: a re-extract action is available on the job detail view (P5-4)
+  it('renders a re-extract button that queues re-extraction', async () => {
+    mock.onGet(`/jobs/${JOB_ID}`).reply(200, jobDetailFixture);
+    mock
+      .onPost(`/jobs/${JOB_ID}/reextract`)
+      .reply(202, { status: 're-extraction queued' });
+
+    renderDetailPage();
+
+    await screen.findByRole('heading', {
+      name: 'Senior Backend Engineer (Go)',
+      level: 1,
+    });
+
+    const button = screen.getByRole('button', {
+      name: "Relancer l'extraction",
+    });
+    fireEvent.click(button);
+
+    expect(await screen.findByText('Ré-extraction demandée avec succès.')).toBeInTheDocument();
+    expect(mock.history.post).toHaveLength(1);
   });
 });

@@ -347,6 +347,110 @@ func TestHandleListingExtract_ScoringFailureIsNonFatal(t *testing.T) {
 	}
 }
 
+// statefulJobRepo simulates the real Postgres repository's fingerprint semantics: the
+// first Create makes the fingerprint discoverable by subsequent FindByFingerprint calls,
+// and MergeSource is idempotent on duplicate (job_id, raw_listing_id) — it just records
+// the call rather than erroring, matching the "ON CONFLICT DO NOTHING" SQL.
+//
+// Used by TestHandleListingExtract_RedeliveryIsIdempotent (P5-1) to prove that redelivering
+// the same listing.extract message twice produces exactly one job, not a duplicate.
+type statefulJobRepo struct {
+	byFingerprint map[string]kernel.JobID
+	created       int
+	merged        int
+	nextID        kernel.JobID
+}
+
+func (r *statefulJobRepo) Create(_ context.Context, job jobs.Job) (kernel.JobID, error) {
+	r.created++
+	id := r.nextID
+	if job.Fingerprint != nil {
+		r.byFingerprint[*job.Fingerprint] = id
+	}
+	return id, nil
+}
+
+func (r *statefulJobRepo) FindByFingerprint(_ context.Context, fingerprint string) (kernel.JobID, bool, error) {
+	id, ok := r.byFingerprint[fingerprint]
+	return id, ok, nil
+}
+
+func (r *statefulJobRepo) MergeSource(_ context.Context, _ kernel.JobID, _ jobs.JobSource, _ time.Time, _ *kernel.ContactID) error {
+	r.merged++
+	return nil
+}
+
+// TestHandleListingExtract_RedeliveryIsIdempotent proves the extraction stage is safe
+// under Pub/Sub at-least-once redelivery (P5-1, pipeline.md §5, ADR-003): replaying the
+// same listing.extract message twice must not create a second job. The fingerprint
+// (deterministic over title+company+location) makes the second delivery a dedup-merge
+// against the job created by the first, exactly as it would for a genuine second source.
+func TestHandleListingExtract_RedeliveryIsIdempotent(t *testing.T) {
+	t.Parallel()
+
+	rawSrc := &fakeRawListingSource{listing: defaultRawListing()}
+	blob := &fakeBlobLoader{payload: []byte(`{"raw":"payload"}`)}
+	extractor := &fakeExtractor{listing: defaultExtracted()}
+	repo := &statefulJobRepo{byFingerprint: map[string]kernel.JobID{}, nextID: "job-redelivery-1"}
+	scorer := &fakeJobScorer{}
+
+	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithScorer(scorer)
+
+	// First delivery: no fingerprint match yet -> creates the job.
+	if err := svc.HandleListingExtract(context.Background(), msg("raw-1")); err != nil {
+		t.Fatalf("first delivery error = %v", err)
+	}
+	// Redelivery of the identical Pub/Sub message (same raw listing, same message id at
+	// the transport level): the fingerprint now matches -> merge, not a second Create.
+	if err := svc.HandleListingExtract(context.Background(), msg("raw-1")); err != nil {
+		t.Fatalf("redelivery error = %v", err)
+	}
+
+	if repo.created != 1 {
+		t.Fatalf("created = %d, want 1 (redelivery must not create a duplicate job)", repo.created)
+	}
+	if repo.merged != 1 {
+		t.Fatalf("merged = %d, want 1 (redelivery collapses into the existing job)", repo.merged)
+	}
+	if len(rawSrc.marked) != 2 {
+		t.Fatalf("marked extracted = %d, want 2 (MarkExtracted itself is idempotent per-call)", len(rawSrc.marked))
+	}
+}
+
+// scheduledMsg builds a listing.extract message carrying the "scheduled" trigger, as
+// scrape-worker propagates it (P5-5).
+func scheduledMsg(rawListingID string) messaging.Message {
+	return messaging.Message{
+		Attributes: map[string]string{
+			appscraping.ExtractRawListingIDAttr: rawListingID,
+			appscraping.TriggerAttr:             appscraping.TriggerScheduled,
+		},
+	}
+}
+
+// TestHandleListingExtract_BatchEnabledScheduledStillExtractsSynchronously verifies P5-5:
+// enabling the (currently unimplemented) Batch API flag for a scheduled-trigger message
+// does not change extraction behaviour — the job is still created synchronously. The
+// flag only makes the extension point observable (a warning log), per the architect's
+// decision to defer the real async batch path behind open question #1.
+func TestHandleListingExtract_BatchEnabledScheduledStillExtractsSynchronously(t *testing.T) {
+	t.Parallel()
+
+	rawSrc := &fakeRawListingSource{listing: defaultRawListing()}
+	blob := &fakeBlobLoader{payload: []byte(`{"raw":"payload"}`)}
+	extractor := &fakeExtractor{listing: defaultExtracted()}
+	repo := &fakeJobRepo{createID: "job-batch-1"}
+
+	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithBatchEnabled(true)
+	err := svc.HandleListingExtract(context.Background(), scheduledMsg("raw-1"))
+	if err != nil {
+		t.Fatalf("HandleListingExtract returned error: %v", err)
+	}
+	if len(rawSrc.marked) != 1 {
+		t.Fatalf("expected the listing to still be extracted synchronously, got %v", rawSrc.marked)
+	}
+}
+
 // TestHandleListingExtract_MissingRawListingID verifies that a message with no id
 // is rejected early.
 func TestHandleListingExtract_MissingRawListingID(t *testing.T) {

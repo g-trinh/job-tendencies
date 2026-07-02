@@ -41,6 +41,12 @@ function JobsTable({ jobs }: JobsTableProps) {
           <tr key={job.id}>
             <td>
               <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
+              {job.expiredAt && (
+                <span data-badge="expired" aria-label="Offre expirée">
+                  {' '}
+                  Expirée
+                </span>
+              )}
             </td>
             <td>
               {[job.company, job.location].filter(Boolean).join(' — ') || '—'}

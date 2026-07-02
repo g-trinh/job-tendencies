@@ -20,6 +20,10 @@ const (
 	ScrapeTickProfileAttr = "profile_id"
 	// ScrapeTickRunAttr is the scrape.tick attribute carrying the run id.
 	ScrapeTickRunAttr = "run_id"
+	// ScrapeTickTriggerAttr is the scrape.tick attribute carrying the run trigger
+	// ("scheduled" | "on_demand"). scrape-worker propagates it onto every listing.extract
+	// message it publishes so extract-worker can gate Batch API routing (P5-5).
+	ScrapeTickTriggerAttr = "trigger"
 )
 
 // Service triggers on-demand pipeline runs and exposes run history for polling.
@@ -45,6 +49,7 @@ func (s *Service) CreateRun(ctx context.Context, profileID kernel.ProfileID) (ke
 		Attributes: map[string]string{
 			ScrapeTickProfileAttr: string(profileID),
 			ScrapeTickRunAttr:     string(runID),
+			ScrapeTickTriggerAttr: TriggerOnDemand,
 		},
 	}
 	if err := s.publisher.Publish(ctx, msg); err != nil {

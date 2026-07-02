@@ -60,6 +60,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// P5-4: the api binary also publishes listing.extract directly, to re-publish a
+	// job's retained raw listings on POST /api/jobs/{id}/reextract.
+	extractPublisher, err := messaging.NewPubSubPublisher(ctx, cfg.GCPProjectID, cfg.PubSubExtractTopicID)
+	if err != nil {
+		slog.Error("creating extract publisher", "err", err)
+		os.Exit(1)
+	}
+
 	// Auth service: Identity Platform client + encrypted session cookie.
 	// Initialised before defers so that os.Exit below runs without pending defers.
 	cookieKey, err := cfg.SessionCookieKeyBytes()
@@ -83,6 +91,7 @@ func main() {
 	defer stop()
 	defer closePool()
 	defer scrapePublisher.Stop()
+	defer extractPublisher.Stop()
 
 	// LLM client shared across services that need adapter generation or extraction.
 	llmClient := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
@@ -91,7 +100,7 @@ func main() {
 	boardSvc := appboards.New(infraboards.NewRepository(pool), llmClient)
 	profileSvc := appprofiles.NewWithExtractor(infraprofiles.NewRepository(pool), llmClient)
 	jobRepo := infrajobs.NewRepository(pool)
-	jobSvc := appjobs.NewWithWriter(jobRepo, jobRepo)
+	jobSvc := appjobs.NewWithWriter(jobRepo, jobRepo).WithReextraction(jobRepo, extractPublisher)
 	contactSvc := appcontacts.New(infracontacts.NewRepository(pool))
 	pipelineSvc := apppipeline.New(infrapipeline.NewRepository(pool), scrapePublisher)
 	dashboardSvc := appdashboard.New(infradashboard.NewRepository(pool))
@@ -164,6 +173,7 @@ func main() {
 				scoped.Get("/jobs/{id}", handler.GetJob(jobSvc))
 				scoped.Get("/jobs/{id}/original", handler.GetJobOriginal(jobSvc))
 				scoped.Patch("/jobs/{id}/application", handler.PatchJobApplication(jobSvc))
+				scoped.Post("/jobs/{id}/reextract", handler.PostJobReextract(jobSvc))
 
 				// Dashboard.
 				scoped.Get("/dashboard/skills/frequency", handler.GetDashboardSkillFrequency(dashboardSvc))
