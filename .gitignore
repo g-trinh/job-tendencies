@@ -1,7 +1,7 @@
 # Added by code-review-graph
 .code-review-graph/
 
-frontend/node_modules/*
+**/node_modules/*
 frontend/dist
 frontend/.firebase
 backend/bin/*
