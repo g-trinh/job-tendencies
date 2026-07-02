@@ -147,7 +147,7 @@ func Load() (*Config, error) {
 		WorkerServiceURL:     os.Getenv("WORKER_SERVICE_URL"),
 		PubSubPushSA:         os.Getenv("PUBSUB_PUSH_SA"),
 		AllowedOrigins:       parseOrigins(os.Getenv("ALLOWED_ORIGINS")),
-		IDPAPIKey:            os.Getenv("IDP_API_KEY"),
+		IDPAPIKey:            strings.TrimSpace(os.Getenv("IDP_API_KEY")),
 		SessionCookieKey:     os.Getenv("SESSION_COOKIE_KEY"),
 		CookieSecure:         parseBoolDefault("COOKIE_SECURE", true),
 	}
@@ -180,7 +180,8 @@ func (c *Config) SessionCookieKeyBytes() ([]byte, error) {
 	if c.SessionCookieKey == "" {
 		return nil, fmt.Errorf("SESSION_COOKIE_KEY is required for the api binary")
 	}
-	key, err := hex.DecodeString(c.SessionCookieKey)
+	// Trim whitespace: secret managers commonly store a trailing newline.
+	key, err := hex.DecodeString(strings.TrimSpace(c.SessionCookieKey))
 	if err != nil {
 		return nil, fmt.Errorf("SESSION_COOKIE_KEY: invalid hex encoding: %w", err)
 	}
