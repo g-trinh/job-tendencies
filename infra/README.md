@@ -16,14 +16,20 @@ scale-to-zero cost for a single user.
 GCS, **separate state per environment** — never shared, never workspaces for prod-vs-dev.
 
 **dev**: GCS bucket `job-tendencies-dev-tfstate`, prefix `dev`.
-**prod**: separate bucket/prefix (wired when the prod environment lands — see below).
+**prod**: GCS bucket `job-tendencies-prod-tfstate`, prefix `prod` — separate project + bucket, never shared with dev.
 
-> The state bucket must exist **before** `tofu init`. Create it once, out of band:
+> Each state bucket must exist **before** `tofu init`. Create it once, out of band:
 > ```sh
+> # dev
 > gcloud storage buckets create gs://job-tendencies-dev-tfstate \
 >   --project=job-tendencies-dev --location=europe-west9 \
 >   --uniform-bucket-level-access --public-access-prevention
 > gcloud storage buckets update gs://job-tendencies-dev-tfstate --versioning
+> # prod
+> gcloud storage buckets create gs://job-tendencies-prod-tfstate \
+>   --project=job-tendencies-prod --location=europe-west9 \
+>   --uniform-bucket-level-access --public-access-prevention
+> gcloud storage buckets update gs://job-tendencies-prod-tfstate --versioning
 > ```
 
 ## Security Tier
@@ -51,7 +57,7 @@ authenticated Cloud Run (no `allUsers` invoker) + OIDC Pub/Sub push, Cloud SQL b
 | Environment | Purpose | Notes |
 |---|---|---|
 | dev | Development / testing (pure-cloud dev model) | `db-g1-small`, scale-to-zero, `force_destroy` on the raw bucket, no deletion protection. **Stood up now (Phase 1).** |
-| prod | Production | **Not yet wired.** Phase 1 scope is dev only (per tech-breakdown-phase-1 + infrastructure.md "prod is a later pass"). Prod re-uses the same `modules/` with prod tfvars (REGIONAL Cloud SQL, deletion protection, no force_destroy) — add `environments/prod/` in a later phase. Tracked here so it is a known gap, not a silent omission. |
+| prod | Production | **Wired (Phase 7).** `environments/prod/` re-uses the same `modules/` with prod tfvars: REGIONAL Cloud SQL (`db-custom-1-3840`, dedicated-core — shared-core can't do REGIONAL HA), `deletion_protection = true`, `force_destroy = false` on the raw bucket, extract-worker `max_instances = 5`, and the Cloud Scheduler cron **live** (not paused) at `0 3 * * *` Europe/Paris. IAM is identical to dev (composition-root least-privilege): per-binary SAs, no admin/editor, no `allUsers` invoker except the api (session-cookie guard is the real control), workers invokable only by the push-auth SA. |
 
 ## Modules
 
@@ -123,3 +129,21 @@ local (`"claude"` or `"deepseek"`) to switch providers on both `api` and
    #    Console -> Identity Platform -> Users -> Add user (email + password), OR the
    #    Admin SDK / REST signUp endpoint with the API key above.
    ```
+
+### Prod (Phase 7)
+
+Same steps as dev, against `--project=job-tendencies-prod` with `-prod` secret
+suffixes (`claude-api-key-prod`, `deepseek-api-key-prod` when `llm_provider =
+"deepseek"`, `idp-api-key-prod`, `session-cookie-key-prod`). Additionally:
+
+1. Create the `job-tendencies-prod-tfstate` bucket (above) before `tofu init`.
+2. `cd infra/environments/prod && tofu init && tofu plan` — review, then apply on
+   explicit confirmation.
+3. **SPA deploy (P7-IN-5):** `cd frontend && npm run deploy:prod` (targets the
+   `prod` alias in `.firebaserc` -> `job-tendencies-prod.web.app`). The
+   `/api/**` rewrite points at the `api` Cloud Run service in `europe-west9`, so
+   the prod SPA reaches the prod API same-origin over HTTPS.
+
+> **CI deploy is not yet wired** — no GitHub Actions / Cloud Build exists in the
+> repo. `deploy:prod` is a manual command today. Add a workflow (build + WIF
+> auth + `firebase deploy` + `tofu`) when CI is introduced.
