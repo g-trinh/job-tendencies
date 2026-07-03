@@ -27,6 +27,12 @@ import (
 // defaultFetchTimeout bounds each board HTTP request.
 const defaultFetchTimeout = 20 * time.Second
 
+// defaultUserAgent identifies this scraper to board servers on every outgoing request.
+// Some boards (e.g. RemoteOK) return 403 to requests with no User-Agent header at all;
+// a descriptive, identifying UA is the correct default regardless. Boards running their
+// own bot-detection at the edge may still block this UA — that is outside our control.
+const defaultUserAgent = "job-tendencies-scraper/1.0 (+https://github.com/g-trinh/job-tendencies)"
+
 // Fetcher fetches and parses search pages from a board's JSON API or HTML pages by
 // evaluating an AdapterSpec. It satisfies app/scraping.SearchFetcher.
 //
@@ -158,6 +164,7 @@ func (f *Fetcher) fetch(ctx context.Context, rawURL, accept string, lim *rate.Li
 		return nil, fmt.Errorf("building request: %w", err)
 	}
 	req.Header.Set("Accept", accept)
+	req.Header.Set("User-Agent", defaultUserAgent)
 
 	resp, err := f.client.Do(req)
 	if err != nil {

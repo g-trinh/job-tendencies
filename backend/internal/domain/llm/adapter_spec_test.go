@@ -154,6 +154,30 @@ const arbeitnowSeedSpecJSON = `{
   "incremental": {"cursor_field": "posted_at", "overlap_buffer": "36h", "safety_max_pages": 5}
 }`
 
+// remoteokSeedSpecJSON is byte-identical to the adapter.spec JSONB payload seeded by
+// migration 00018_remoteok_board_seed.sql.
+const remoteokSeedSpecJSON = `{
+  "board": "remoteok",
+  "fetch_mode": "json_api",
+  "search": {
+    "url_template": "https://remoteok.com/api",
+    "method": "GET",
+    "param_map": {},
+    "pagination": {"kind": "query_param", "param": "page", "start": 1},
+    "result_node_path": "$.#(id!=)#",
+    "result_fields": {
+      "listing_url": "$.url",
+      "title": "$.position",
+      "company": "$.company",
+      "location": "$.location",
+      "posted_at": "$.date",
+      "external_id": "$.id"
+    }
+  },
+  "listing": {"fetch": "use_search_payload", "raw_capture": "$"},
+  "incremental": {"cursor_field": "posted_at", "overlap_buffer": "36h", "safety_max_pages": 1}
+}`
+
 func TestSeededPublicBoardAdapterSpecs_Validate(t *testing.T) {
 	t.Parallel()
 
@@ -163,6 +187,7 @@ func TestSeededPublicBoardAdapterSpecs_Validate(t *testing.T) {
 	}{
 		{name: "remotive seed spec (migration 00017)", json: remotiveSeedSpecJSON},
 		{name: "arbeitnow seed spec (migration 00017)", json: arbeitnowSeedSpecJSON},
+		{name: "remoteok seed spec (migration 00018)", json: remoteokSeedSpecJSON},
 	}
 
 	for _, tc := range cases {
