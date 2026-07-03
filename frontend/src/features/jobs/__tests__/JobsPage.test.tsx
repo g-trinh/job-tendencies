@@ -235,6 +235,40 @@ describe('JobsPage', () => {
     expect(sentParams['remote_policy']).toBe('hybrid');
   });
 
+  // AC: the confidence threshold filter narrows the list, excluding
+  // below-threshold jobs (overview.md §9, job-browser/feature.md)
+  it('sends confidence_min as a query param and narrows the list to jobs meeting the threshold', async () => {
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      const minConfidence = sentParams['confidence_min'] as number | undefined;
+      const filtered =
+        minConfidence != null
+          ? jobsFixture.filter((job) => job.understanding_score >= minConfidence)
+          : jobsFixture;
+      return [200, filtered];
+    });
+
+    renderJobsPage();
+
+    // Both jobs present before any threshold is applied (92 and 74).
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    expect(
+      screen.getByRole('link', { name: 'Développeur Full-Stack' }),
+    ).toBeInTheDocument();
+
+    // Raise the threshold above the second job's understanding_score (74).
+    fireEvent.change(screen.getByLabelText('Confiance min (%)'), {
+      target: { value: '80' },
+    });
+
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    expect(sentParams['confidence_min']).toBe(80);
+    expect(
+      screen.queryByRole('link', { name: 'Développeur Full-Stack' }),
+    ).not.toBeInTheDocument();
+  });
+
   // AC: expired jobs are hidden by default (job-browser/feature.md edge case)
   it('hides expired jobs by default', async () => {
     mock.onGet('/jobs').reply(200, jobsWithExpiredFixture);

@@ -3,6 +3,7 @@ package extraction
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"testing"
@@ -353,12 +354,15 @@ func TestHandleListingExtract_ScoringFailureIsNonFatal(t *testing.T) {
 // the call rather than erroring, matching the "ON CONFLICT DO NOTHING" SQL.
 //
 // Used by TestHandleListingExtract_RedeliveryIsIdempotent (P5-1) to prove that redelivering
-// the same listing.extract message twice produces exactly one job, not a duplicate.
+// the same listing.extract message twice produces exactly one job, not a duplicate, and by
+// TestHandleListingExtract_CrossBoardDedup (P8-2) to prove the same collapse happens for a
+// genuine second source (a different board), not just literal message redelivery.
 type statefulJobRepo struct {
 	byFingerprint map[string]kernel.JobID
 	created       int
 	merged        int
 	nextID        kernel.JobID
+	mergedSources []jobs.JobSource
 }
 
 func (r *statefulJobRepo) Create(_ context.Context, job jobs.Job) (kernel.JobID, error) {
@@ -375,9 +379,95 @@ func (r *statefulJobRepo) FindByFingerprint(_ context.Context, fingerprint strin
 	return id, ok, nil
 }
 
-func (r *statefulJobRepo) MergeSource(_ context.Context, _ kernel.JobID, _ jobs.JobSource, _ time.Time, _ *kernel.ContactID) error {
+func (r *statefulJobRepo) MergeSource(_ context.Context, _ kernel.JobID, source jobs.JobSource, _ time.Time, _ *kernel.ContactID) error {
 	r.merged++
+	r.mergedSources = append(r.mergedSources, source)
 	return nil
+}
+
+// multiRawListingSource is a fakeRawListingSource variant that serves a different
+// RawListing per id, needed to simulate two distinct boards' listings for the same role
+// (fakeRawListingSource only ever serves one fixed listing regardless of id).
+type multiRawListingSource struct {
+	byID   map[kernel.RawListingID]domainscraping.RawListing
+	marked []kernel.RawListingID
+}
+
+func (m *multiRawListingSource) Get(_ context.Context, id kernel.RawListingID) (domainscraping.RawListing, error) {
+	l, ok := m.byID[id]
+	if !ok {
+		return domainscraping.RawListing{}, fmt.Errorf("no raw listing %q", id)
+	}
+	return l, nil
+}
+
+func (m *multiRawListingSource) MarkExtracted(_ context.Context, id kernel.RawListingID) error {
+	m.marked = append(m.marked, id)
+	return nil
+}
+
+// TestHandleListingExtract_CrossBoardDedup verifies P8-2's acceptance criterion: the same
+// role posted on two different boards (WTTJ and Indeed) collapses into one job with two
+// job_source rows — "found on: WTTJ, Indeed" — rather than two separate jobs. The two raw
+// listings share identical identity fields (title/company/location) but different
+// BoardID/RawListingID/SourceURL, so only the fingerprint (not the raw listing id) drives
+// the merge.
+//
+// AC P8-2: a cross-board duplicate shows one job, with sources from both boards.
+func TestHandleListingExtract_CrossBoardDedup(t *testing.T) {
+	t.Parallel()
+
+	const (
+		wttjBoard   = kernel.BoardID("board-wttj")
+		indeedBoard = kernel.BoardID("board-indeed")
+	)
+
+	rawSrc := &multiRawListingSource{byID: map[kernel.RawListingID]domainscraping.RawListing{
+		"raw-wttj": {
+			ID: "raw-wttj", BoardID: wttjBoard, ProfileID: "profile-1",
+			Title: "Go Engineer", Company: "Acme Corp", Location: "Paris, France",
+			SourceURL: "https://wttj.co/jobs/go-engineer", RawRef: "gs://bucket/raw-wttj.json",
+		},
+		"raw-indeed": {
+			ID: "raw-indeed", BoardID: indeedBoard, ProfileID: "profile-1",
+			Title: "Go Engineer", Company: "Acme Corp", Location: "Paris, France",
+			SourceURL: "https://indeed.com/jobs/go-engineer", RawRef: "gs://bucket/raw-indeed.json",
+		},
+	}}
+	blob := &fakeBlobLoader{payload: []byte(`{"raw":"payload"}`)}
+	extractor := &fakeExtractor{listing: defaultExtracted()}
+	repo := &statefulJobRepo{byFingerprint: map[string]kernel.JobID{}, nextID: "job-cross-board-1"}
+	scorer := &fakeJobScorer{}
+
+	svc := New(rawSrc, blob, extractor, repo, nopLogger()).WithScorer(scorer)
+
+	// WTTJ listing arrives first: no fingerprint match yet -> creates the job.
+	if err := svc.HandleListingExtract(context.Background(), msg("raw-wttj")); err != nil {
+		t.Fatalf("wttj delivery error = %v", err)
+	}
+	// Indeed listing arrives second, same role: fingerprint matches -> merge, not a
+	// second job.
+	if err := svc.HandleListingExtract(context.Background(), msg("raw-indeed")); err != nil {
+		t.Fatalf("indeed delivery error = %v", err)
+	}
+
+	if repo.created != 1 {
+		t.Fatalf("created = %d, want 1 (cross-board duplicate must collapse into one job)", repo.created)
+	}
+	if repo.merged != 1 {
+		t.Fatalf("merged = %d, want 1 (one job_source row appended for the second board)", repo.merged)
+	}
+	if len(repo.mergedSources) != 1 || repo.mergedSources[0].BoardID != indeedBoard {
+		t.Fatalf("expected the merged source to come from board %q, got %+v", indeedBoard, repo.mergedSources)
+	}
+	// Both boards must both be traceable for this job: the first source is on the
+	// created job (asserted via the fingerprint hit above), the second via MergeSource.
+	if repo.mergedSources[0].SourceURL != "https://indeed.com/jobs/go-engineer" {
+		t.Fatalf("unexpected merged source url: %+v", repo.mergedSources[0])
+	}
+	if len(scorer.calls) != 2 || scorer.calls[1].jobID != "job-cross-board-1" {
+		t.Fatalf("expected scoring to run for the collapsed job on both deliveries: %+v", scorer.calls)
+	}
 }
 
 // TestHandleListingExtract_RedeliveryIsIdempotent proves the extraction stage is safe
