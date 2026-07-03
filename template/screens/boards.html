@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sources — Job Tendencies</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="app__sidebar">
+      <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
+      <nav class="nav" aria-label="Navigation principale">
+        <span class="nav__section">Écrans</span>
+        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html">Offres</a>
+        <a class="nav__link" href="profiles.html">Profils</a>
+        <a class="nav__link" aria-current="page" href="boards.html">Sources</a>
+        <a class="nav__link" href="contacts.html">Contacts</a>
+        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Référence</span>
+        <a class="nav__link" href="../index.html">Design system</a>
+      </nav>
+    </aside>
+
+    <div class="app__main">
+      <header class="topbar">
+        <h1 class="page__title" style="font-size:var(--font-size-lg)">Sources d'offres</h1>
+        <button class="btn btn--primary">+ Ajouter une source</button>
+      </header>
+
+      <div class="page">
+        <header class="page__head"><p class="page__sub">Gérez les sites scrapés, la planification globale et les adaptateurs générés par IA.</p></header>
+
+        <div class="stack stack-5">
+          <!-- Warning: all disabled -->
+          <div class="banner banner--warning"><span>⚠️</span><span>Toutes les sources sont désactivées — aucun scraping ne sera effectué. Activez-en au moins une.</span></div>
+
+          <!-- Global schedule -->
+          <section class="card row-between wrap" aria-labelledby="b-sched">
+            <div><h2 class="card__title" id="b-sched">Planification globale</h2><p class="muted text-sm">Une seule planification pour toutes les sources.</p></div>
+            <div class="row wrap">
+              <label class="sr-only" for="freq">Fréquence</label>
+              <select class="select" id="freq" style="width:auto"><option>Toutes les 6 h</option><option>Toutes les 12 h</option><option>Une fois par jour</option><option>Manuel uniquement</option></select>
+              <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="text-sm">Planification active</span></label>
+            </div>
+          </section>
+
+          <!-- Boards table (CRUD + enabled toggle) -->
+          <section aria-labelledby="b-list">
+            <div class="card__head"><h2 class="card__title" id="b-list">Sources</h2></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Nom</th><th>URL de base</th><th>Adaptateur</th><th>Limite débit</th><th>Activée</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>Welcome to the Jungle</td><td class="mono text-xs">welcometothejungle.com</td><td><span class="badge badge--success">Prêt</span></td><td class="text-sm">1 req / 3s</td><td><label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="sr-only">Activer WTTJ</span></label></td><td class="row"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
+                  <tr><td>Indeed</td><td class="mono text-xs">indeed.fr</td><td><span class="badge badge--success">Prêt</span></td><td class="text-sm">1 req / 5s</td><td><label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="sr-only">Activer Indeed</span></label></td><td class="row"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
+                  <tr><td>LinkedIn</td><td class="mono text-xs">linkedin.com/jobs</td><td><span class="badge badge--warning">Brouillon à valider</span></td><td class="text-sm">1 req / 8s</td><td><label class="toggle"><input type="checkbox" /><span class="toggle__track"></span><span class="sr-only">Activer LinkedIn</span></label></td><td class="row"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
+                  <tr><td>Glassdoor</td><td class="mono text-xs">glassdoor.fr</td><td><span class="badge badge--neutral">Aucun</span></td><td class="text-sm">—</td><td><label class="toggle"><input type="checkbox" /><span class="toggle__track"></span><span class="sr-only">Activer Glassdoor</span></label></td><td class="row"><button class="btn btn--secondary btn--sm">Générer l'adaptateur</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Adapter generation flow: generate → review draft → approve -->
+          <section class="card" aria-labelledby="b-adapter">
+            <div class="card__head"><h2 class="card__title" id="b-adapter">Adaptateur (généré par IA)</h2><span class="badge badge--info">Étape 2 / 3 — Relecture</span></div>
+            <ol class="row wrap text-sm" style="gap:var(--space-4);margin-block-end:var(--space-4);list-style:none">
+              <li class="badge badge--success">1. Fournir l'URL + page exemple ✓</li>
+              <li class="badge badge--brand">2. Relire le brouillon</li>
+              <li class="badge badge--neutral">3. Approuver</li>
+            </ol>
+            <div class="grid-2">
+              <div class="stack stack-3">
+                <div class="field"><label class="field__label" for="a-url">URL du site</label><input class="input" id="a-url" value="https://glassdoor.fr/emploi" /></div>
+                <div class="field"><label class="field__label" for="a-page">Page de recherche / listing exemple</label><input class="input" id="a-page" value="https://glassdoor.fr/Emploi/paris-go.htm" /></div>
+                <button class="btn btn--secondary">Régénérer le brouillon</button>
+              </div>
+              <div class="field">
+                <span class="field__label">Brouillon d'adaptateur (lecture seule) — l'utilisateur n'écrit jamais de code</span>
+                <pre class="input mono text-xs" style="min-height:150px;overflow:auto;white-space:pre;line-height:1.5">selectors:
+  card:    ".job-card"
+  title:   ".job-title"
+  company: ".employer-name"
+  salary:  ".salary-estimate"
+  url:     "a.job-link@href"
+pagination: "button.next"</pre>
+              </div>
+            </div>
+            <div class="row" style="justify-content:flex-end;margin-block-start:var(--space-4)">
+              <button class="btn btn--ghost">Rejeter</button>
+              <button class="btn btn--primary">Approuver &amp; mettre en ligne</button>
+            </div>
+          </section>
+
+          <!-- States -->
+          <section class="grid-2" aria-label="États">
+            <div class="card"><div class="state"><span class="state__icon">🗂️</span><span class="state__title">Aucune source</span><span>Ajoutez un site pour commencer à scraper.</span><button class="btn btn--primary">+ Ajouter une source</button></div></div>
+            <div class="card"><div class="stack stack-3"><span class="muted text-sm">Génération de l'adaptateur par l'IA…</span><span class="skeleton" style="height:120px"></span></div></div>
+          </section>
+          <div class="banner banner--danger"><span>⚠️</span><span>La génération de l'adaptateur a échoué. Vérifiez l'URL exemple et <a href="#">réessayez</a>.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

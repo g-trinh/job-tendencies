@@ -73,6 +73,20 @@ step. The two are not in one transaction.
 Re-importing a LinkedIn PDF currently assumes **overwrite** of identity. Merge-vs-overwrite
 is deferred (per v0). Decide at build time before exposing re-import.
 
+## DeepSeek identity import loses PDF fidelity (text-only provider)
+When `LLM_PROVIDER=deepseek`, LinkedIn PDFs are converted to text by a pure-Go extractor
+(`github.com/ledongthuc/pdf`) before the LLM sees them — DeepSeek's chat API is
+OpenAI-compatible and text-only, with no native PDF input like Claude's document block
+(ADR-006).
+- **Why it matters**: LinkedIn's multi-column PDF layout extracts with jumbled reading
+  order, degrading skills/experience/seniority extraction versus Claude's native path.
+  The extraction/identity **schema and parsers are shared** across providers, so only the
+  input fidelity differs — output shape is identical.
+- **Watch for**: low identity-import quality complaints specifically under DeepSeek. If it
+  matters, add a layout-aware extractor, or force Claude for identity only — the latter
+  breaks the "one provider serves every task" rule (ADR-006) and needs a decision, not a
+  silent code change.
+
 ## Deferred Tier-1 security controls
 Current posture is Tier 0 (single user, pre-launch). Deferred until MAU/paying users:
 Cloud Armor/WAF, private-IP Cloud SQL + VPC connector, automated backups with tested

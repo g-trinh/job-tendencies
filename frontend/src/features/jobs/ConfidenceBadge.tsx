@@ -28,11 +28,17 @@ function ConfidenceBadge({ label, score }: ConfidenceBadgeProps) {
   const tier = confidenceTier(score);
   const tierLabel = TIER_LABELS[tier];
 
+  const tokenTier = tier === 'medium' ? 'mid' : tier;
+  const badgeVariant =
+    tier === 'high' ? 'success' : tier === 'medium' ? 'warning' : 'danger';
+
   return (
     <span
+      className={`badge conf conf--${tokenTier} badge--${badgeVariant}`}
       data-tier={tier}
       aria-label={`${label} — confiance ${tierLabel} (${score}%)`}
     >
+      <span className="badge__dot" />
       {label} — {score}%
     </span>
   );

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offres — Job Tendencies</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="app__sidebar">
+      <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
+      <nav class="nav" aria-label="Navigation principale">
+        <span class="nav__section">Écrans</span>
+        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
+        <a class="nav__link" aria-current="page" href="job-browser.html">Offres</a>
+        <a class="nav__link" href="profiles.html">Profils</a>
+        <a class="nav__link" href="boards.html">Sources</a>
+        <a class="nav__link" href="contacts.html">Contacts</a>
+        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Référence</span>
+        <a class="nav__link" href="../index.html">Design system</a>
+      </nav>
+    </aside>
+
+    <div class="app__main">
+      <header class="topbar">
+        <select class="select" style="width:auto" aria-label="Profil actif"><option>Go Backend Paris — CDI 65k+</option></select>
+        <div class="row">
+          <div class="segmented" role="group" aria-label="Mode d'affichage">
+            <button aria-pressed="true">Tableau</button>
+            <button aria-pressed="false">Cartes</button>
+            <button aria-pressed="false">Kanban</button>
+          </div>
+          <label class="sr-only" for="sort">Trier par</label>
+          <select class="select" id="sort" style="width:auto"><option>Trier : Date</option><option>Trier : Score de fit</option><option>Trier : Salaire</option></select>
+        </div>
+      </header>
+
+      <div class="page" style="max-width:none">
+        <header class="page__head row-between">
+          <div><h1 class="page__title">Offres</h1><p class="page__sub">248 offres pour le profil actif.</p></div>
+        </header>
+
+        <!-- Single global confidence slider (design decision: one slider, not per-field) -->
+        <div class="card card--pad-sm row-between" style="margin-block-end:var(--space-5)">
+          <label class="row" for="conf" style="gap:var(--space-4);flex:1">
+            <span class="text-sm" style="font-weight:var(--font-weight-medium)">Seuil de confiance minimum</span>
+            <input class="slider" id="conf" type="range" min="0" max="100" value="60" style="max-width:280px" />
+            <span class="slider-row__val">60%</span>
+          </label>
+          <span class="muted text-sm">Masque les offres sous ce seuil</span>
+        </div>
+
+        <div class="layout-with-panel">
+          <!-- Filter panel (filters only, no free-text search) -->
+          <aside class="card" aria-labelledby="f-title">
+            <h2 class="card__title" id="f-title" style="margin-block-end:var(--space-2)">Filtres</h2>
+            <div class="filter-group"><div class="filter-group__title">Politique remote</div>
+              <label class="check"><input type="checkbox" checked /> Full remote</label>
+              <label class="check"><input type="checkbox" /> Hybride</label>
+              <label class="check"><input type="checkbox" /> Sur site</label>
+            </div>
+            <div class="filter-group"><div class="filter-group__title">Type de contrat</div>
+              <label class="check"><input type="checkbox" checked /> CDI</label>
+              <label class="check"><input type="checkbox" /> Freelance</label>
+              <label class="check"><input type="checkbox" /> CDD</label>
+              <label class="check"><input type="checkbox" /> Intérim</label>
+            </div>
+            <div class="filter-group"><div class="filter-group__title">Salaire (k€)</div>
+              <div class="row"><input class="input" type="number" placeholder="min" /><span class="muted">–</span><input class="input" type="number" placeholder="max" /></div>
+            </div>
+            <div class="filter-group"><div class="filter-group__title">Source</div>
+              <label class="check"><input type="checkbox" checked /> Welcome to the Jungle</label>
+              <label class="check"><input type="checkbox" checked /> Indeed</label>
+              <label class="check"><input type="checkbox" /> LinkedIn</label>
+              <label class="check"><input type="checkbox" /> Glassdoor</label>
+            </div>
+            <div class="filter-group" style="border:0"><button class="btn btn--ghost btn--sm">Réinitialiser</button></div>
+          </aside>
+
+          <!-- Results: table mode shown -->
+          <div class="stack stack-5">
+            <section aria-label="Résultats — tableau">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead><tr>
+                    <th><button class="th-sort" aria-sort="none">Poste</button></th>
+                    <th>Entreprise</th><th>Contrat</th><th>Remote</th>
+                    <th><button class="th-sort" aria-sort="none">Salaire</button></th>
+                    <th><button class="th-sort" aria-sort="descending">Fit</button></th>
+                    <th>Confiance</th><th>Trouvée sur</th><th>Statut</th><th></th>
+                  </tr></thead>
+                  <tbody>
+                    <tr>
+                      <td>Senior Go Engineer</td><td>Datadog</td>
+                      <td><span class="badge badge--neutral">CDI</span></td><td><span class="badge badge--brand">Remote</span></td>
+                      <td>70k€</td><td><strong>94</strong></td>
+                      <td><span class="badge conf conf--high badge--success"><span class="badge__dot"></span>92%</span></td>
+                      <td class="text-xs muted">WTTJ, Indeed</td>
+                      <td><select class="select" style="min-height:30px;padding-block:2px" aria-label="Statut"><option>Sauvegardée</option><option>Postulé</option><option>Entretien</option><option>Offre</option><option>Rejetée</option></select></td>
+                      <td><a class="btn btn--ghost btn--sm" href="#" rel="noreferrer">Lien ↗</a></td>
+                    </tr>
+                    <tr class="jobcard--expired">
+                      <td>Backend Engineer (Go) <span class="badge badge--danger">Expirée</span></td><td>Globex</td>
+                      <td><span class="badge badge--neutral">Freelance</span></td><td><span class="badge badge--neutral">Hybride</span></td>
+                      <td>—</td><td><strong>72</strong></td>
+                      <td><span class="badge conf conf--mid badge--warning"><span class="badge__dot"></span>58%</span></td>
+                      <td class="text-xs muted">LinkedIn</td>
+                      <td><select class="select" style="min-height:30px;padding-block:2px" aria-label="Statut"><option selected>Postulé</option><option>Entretien</option></select></td>
+                      <td><a class="btn btn--ghost btn--sm" href="#" rel="noreferrer">Lien ↗</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- Card mode preview -->
+            <section aria-labelledby="cards-h">
+              <div class="card__head"><h2 class="card__title" id="cards-h">Mode cartes</h2></div>
+              <div class="grid-cards">
+                <article class="card jobcard">
+                  <div class="row-between"><div><div class="jobcard__title">Senior Go Engineer</div><div class="jobcard__company">Datadog · Paris</div></div><span class="fit-score">94</span></div>
+                  <div class="jobcard__meta"><span class="badge badge--neutral">CDI</span><span class="badge badge--brand">Remote</span><span class="badge badge--neutral">70k€</span></div>
+                  <div class="jobcard__meta"><span class="badge conf conf--high badge--success"><span class="badge__dot"></span>Confiance 92%</span><span class="badge badge--neutral">Compréhension 88%</span></div>
+                  <div class="row-between"><span class="text-xs muted">Trouvée sur : WTTJ, Indeed</span><a class="text-sm" href="#" rel="noreferrer">Offre d'origine ↗</a></div>
+                </article>
+                <article class="card jobcard jobcard--expired">
+                  <div class="row-between"><div><div class="jobcard__title">Backend Engineer <span class="badge badge--danger">Expirée</span></div><div class="jobcard__company">Globex · Lyon</div></div><span class="fit-score">72</span></div>
+                  <div class="jobcard__meta"><span class="badge badge--neutral">Freelance</span><span class="badge badge--neutral">Hybride</span></div>
+                  <div class="jobcard__meta"><span class="badge conf conf--mid badge--warning"><span class="badge__dot"></span>Confiance 58%</span></div>
+                  <div class="row-between"><span class="text-xs muted">Trouvée sur : LinkedIn</span><a class="text-sm" href="#" rel="noreferrer">Offre d'origine ↗</a></div>
+                </article>
+              </div>
+            </section>
+
+            <!-- Kanban mode -->
+            <section aria-labelledby="kb-h">
+              <div class="card__head"><h2 class="card__title" id="kb-h">Suivi des candidatures</h2></div>
+              <div class="kanban">
+                <div class="kanban__col">
+                  <div class="kanban__col-head"><span class="kanban__col-title"><span class="kanban__stage-dot" style="background:var(--color-stage-saved)"></span>Sauvegardée</span><span class="kanban__count">12</span></div>
+                  <article class="kanban__card"><strong class="text-sm">Senior Go Engineer</strong><span class="muted text-xs">Datadog</span></article>
+                  <article class="kanban__card"><strong class="text-sm">Platform Engineer</strong><span class="muted text-xs">Alan</span></article>
+                </div>
+                <div class="kanban__col">
+                  <div class="kanban__col-head"><span class="kanban__col-title"><span class="kanban__stage-dot" style="background:var(--color-stage-applied)"></span>Postulé</span><span class="kanban__count">4</span></div>
+                  <article class="kanban__card"><strong class="text-sm">Backend Engineer</strong><span class="muted text-xs">Globex</span></article>
+                </div>
+                <div class="kanban__col">
+                  <div class="kanban__col-head"><span class="kanban__col-title"><span class="kanban__stage-dot" style="background:var(--color-stage-interview)"></span>Entretien</span><span class="kanban__count">1</span></div>
+                  <article class="kanban__card"><strong class="text-sm">Staff Engineer</strong><span class="muted text-xs">Doctolib</span></article>
+                </div>
+                <div class="kanban__col">
+                  <div class="kanban__col-head"><span class="kanban__col-title"><span class="kanban__stage-dot" style="background:var(--color-stage-offer)"></span>Offre</span><span class="kanban__count">0</span></div>
+                  <div class="state" style="padding:var(--space-4)"><span class="text-xs">Aucune</span></div>
+                </div>
+                <div class="kanban__col">
+                  <div class="kanban__col-head"><span class="kanban__col-title"><span class="kanban__stage-dot" style="background:var(--color-stage-rejected)"></span>Rejetée</span><span class="kanban__count">2</span></div>
+                  <article class="kanban__card"><strong class="text-sm">Go Developer</strong><span class="muted text-xs">Qonto</span></article>
+                </div>
+              </div>
+            </section>
+
+            <!-- States -->
+            <section class="grid-2" aria-label="États">
+              <div class="card"><div class="state"><span class="state__icon">🔍</span><span class="state__title">Aucune offre</span><span>Aucune offre ne correspond à ces filtres. Élargissez les critères.</span><button class="btn btn--secondary">Réinitialiser les filtres</button></div></div>
+              <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-60"></span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-40"></span></div></div>
+            </section>
+            <div class="banner banner--danger"><span>⚠️</span><span>Impossible de charger les offres. <a href="#">Réessayer</a></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -62,6 +62,41 @@ func TestLoad(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "LLM_PROVIDER defaults to claude when not set",
+			env: map[string]string{
+				"DATABASE_URL": "postgres://localhost/testdb",
+			},
+			wantErr: false,
+		},
+		{
+			name: "deepseek provider without api key and model id fails fast",
+			env: map[string]string{
+				"DATABASE_URL": "postgres://localhost/testdb",
+				"LLM_PROVIDER": "deepseek",
+			},
+			wantErr:     true,
+			errContains: "DEEPSEEK_API_KEY",
+		},
+		{
+			name: "deepseek provider with api key and model id loads",
+			env: map[string]string{
+				"DATABASE_URL":      "postgres://localhost/testdb",
+				"LLM_PROVIDER":      "deepseek",
+				"DEEPSEEK_API_KEY":  "sk-test",
+				"DEEPSEEK_MODEL_ID": "deepseek-chat",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid LLM_PROVIDER fails fast",
+			env: map[string]string{
+				"DATABASE_URL": "postgres://localhost/testdb",
+				"LLM_PROVIDER": "gpt5",
+			},
+			wantErr:     true,
+			errContains: "LLM_PROVIDER",
+		},
 	}
 
 	for _, tc := range tests {
@@ -69,7 +104,9 @@ func TestLoad(t *testing.T) {
 			// Isolate: clear all vars this loader reads, then apply test values.
 			for _, k := range []string{
 				"DATABASE_URL", "PORT", "LOG_LEVEL",
-				"ANTHROPIC_API_KEY", "LLM_MODEL_ID", "LLM_BATCH_ENABLED", "GCP_PROJECT_ID",
+				"LLM_PROVIDER", "ANTHROPIC_API_KEY", "LLM_MODEL_ID",
+				"DEEPSEEK_API_KEY", "DEEPSEEK_MODEL_ID", "DEEPSEEK_BASE_URL",
+				"LLM_BATCH_ENABLED", "GCP_PROJECT_ID",
 				"GCS_RAW_BUCKET", "PUBSUB_SCRAPE_TOPIC_ID", "PUBSUB_EXTRACT_TOPIC_ID",
 				"CLOUD_SQL_INSTANCE", "DB_IAM_USER", "DB_NAME",
 				"WORKER_SERVICE_URL", "PUBSUB_PUSH_SA",

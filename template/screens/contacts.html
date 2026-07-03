@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contacts — Job Tendencies</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="app__sidebar">
+      <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
+      <nav class="nav" aria-label="Navigation principale">
+        <span class="nav__section">Écrans</span>
+        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html">Offres</a>
+        <a class="nav__link" href="profiles.html">Profils</a>
+        <a class="nav__link" href="boards.html">Sources</a>
+        <a class="nav__link" aria-current="page" href="contacts.html">Contacts</a>
+        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Référence</span>
+        <a class="nav__link" href="../index.html">Design system</a>
+      </nav>
+    </aside>
+
+    <div class="app__main">
+      <header class="topbar">
+        <h1 class="page__title" style="font-size:var(--font-size-lg)">Contacts</h1>
+        <div class="row">
+          <button class="btn btn--secondary">Exporter en CSV</button>
+          <button class="btn btn--primary">+ Ajouter un contact</button>
+        </div>
+      </header>
+
+      <div class="page">
+        <header class="page__head"><p class="page__sub">Recruteurs auto-remplis depuis l'extraction. Dédupliqués par e-mail ou LinkedIn.</p></header>
+
+        <div class="stack stack-5">
+          <section aria-labelledby="c-list">
+            <div class="card__head"><h2 class="card__title" id="c-list">128 contacts</h2>
+              <div class="row"><label class="sr-only" for="c-tag">Filtrer par tag</label><select class="select" id="c-tag" style="width:auto"><option>Tous les tags</option><option>in-house</option><option>agency</option><option>responsive</option><option>ghosted</option><option>not-contacted</option></select></div>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Nom</th><th>Entreprise</th><th>Contact</th><th>Offres postées</th><th>Tags</th><th>Notes</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Camille Dubois</td><td>Datadog</td>
+                    <td class="text-xs"><a href="mailto:c.dubois@datadog.com">c.dubois@datadog.com</a><br /><a href="#" rel="noreferrer">LinkedIn ↗</a></td>
+                    <td>3</td>
+                    <td><span class="tag">in-house</span> <span class="tag">responsive</span></td>
+                    <td class="muted text-xs">Réactive, entretien prévu</td>
+                    <td><button class="btn btn--ghost btn--sm">Modifier</button></td>
+                  </tr>
+                  <tr>
+                    <td>Marc Lefèvre</td><td>TechRecruit (agence)</td>
+                    <td class="text-xs"><a href="mailto:marc@techrecruit.fr">marc@techrecruit.fr</a><br /><span class="muted">+33 6 12 34 56 78</span></td>
+                    <td>7</td>
+                    <td><span class="tag">agency</span> <span class="tag">ghosted</span></td>
+                    <td class="muted text-xs">Sans réponse depuis 2 semaines</td>
+                    <td><button class="btn btn--ghost btn--sm">Modifier</button></td>
+                  </tr>
+                  <tr>
+                    <td>Inconnu <span class="badge badge--warning">Incomplet</span></td><td>Alan</td>
+                    <td class="text-xs muted">Easy Apply — e-mail masqué</td>
+                    <td>1</td>
+                    <td><span class="tag">not-contacted</span></td>
+                    <td class="muted text-xs">—</td>
+                    <td><button class="btn btn--ghost btn--sm">Modifier</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Add / edit drawer (static open state) -->
+          <section aria-labelledby="c-edit">
+            <div class="card__head"><h2 class="card__title" id="c-edit">Panneau d'édition (aperçu)</h2></div>
+            <div class="card" style="max-width:480px">
+              <div class="drawer__head" style="padding:0 0 var(--space-4)"><strong>Modifier le contact</strong><button class="icon-btn" aria-label="Fermer">×</button></div>
+              <div class="stack stack-3">
+                <div class="field"><label class="field__label" for="e-name">Nom</label><input class="input" id="e-name" value="Camille Dubois" /></div>
+                <div class="grid-2">
+                  <div class="field"><label class="field__label" for="e-co">Entreprise</label><input class="input" id="e-co" value="Datadog" /></div>
+                  <div class="field"><label class="field__label" for="e-ph">Téléphone</label><input class="input" id="e-ph" type="tel" placeholder="Si trouvé" /></div>
+                </div>
+                <div class="field"><label class="field__label" for="e-mail">E-mail</label><input class="input" id="e-mail" type="email" value="c.dubois@datadog.com" /></div>
+                <div class="field"><label class="field__label" for="e-li">URL LinkedIn</label><input class="input" id="e-li" value="linkedin.com/in/cdubois" /></div>
+                <div class="stack stack-2"><span class="field__label">Tags</span><div class="tag-input"><span class="tag">in-house <button aria-label="Retirer">×</button></span><span class="tag">responsive <button aria-label="Retirer">×</button></span><input type="text" placeholder="Ajouter un tag…" aria-label="Ajouter un tag" /></div></div>
+                <div class="field"><label class="field__label" for="e-notes">Notes</label><textarea class="textarea" id="e-notes">Réactive, entretien prévu</textarea></div>
+              </div>
+              <div class="drawer__foot" style="padding:var(--space-4) 0 0"><button class="btn btn--ghost">Annuler</button><button class="btn btn--primary">Enregistrer</button></div>
+            </div>
+          </section>
+
+          <!-- States -->
+          <section class="grid-2" aria-label="États">
+            <div class="card"><div class="state"><span class="state__icon">👥</span><span class="state__title">Aucun contact</span><span>Les recruteurs apparaîtront ici après le premier scraping.</span><button class="btn btn--primary">+ Ajouter un contact</button></div></div>
+            <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-60"></span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-40"></span></div></div>
+          </section>
+          <div class="banner banner--danger"><span>⚠️</span><span>Échec du chargement des contacts. <a href="#">Réessayer</a></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

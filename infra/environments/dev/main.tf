@@ -15,6 +15,13 @@ locals {
   scrape_topic       = "scrape-tick-${local.env}"
   extract_topic      = "listing-extract-${local.env}"
 
+  # LLM provider switch (ADR-006): one provider serves every LLM task (adapter
+  # generation, listing extraction, identity import). Flip this to "deepseek" to
+  # switch providers everywhere; requires the deepseek-api-key-dev secret version
+  # to exist before apply (see infra/README.md).
+  llm_provider      = "deepseek"
+  deepseek_model_id = "deepseek-v4-flash"
+
   # Frontend origin allowed to call the API cross-origin (CORS ALLOWED_ORIGINS).
   # Prod is same-origin via the Firebase Hosting /api rewrite, so CORS only
   # matters for local dev hitting the deployed API and direct-to-Cloud-Run calls.
@@ -91,15 +98,25 @@ module "api" {
     PUBSUB_SCRAPE_TOPIC_ID  = local.scrape_topic
     PUBSUB_EXTRACT_TOPIC_ID = local.extract_topic # P5-4: reextract re-publishes listing.extract
     ALLOWED_ORIGINS         = local.allowed_origins
+    LLM_PROVIDER            = local.llm_provider # ADR-006
+    DEEPSEEK_MODEL_ID       = local.deepseek_model_id
   })
   # Backend-proxied auth (P4). The API signs in against Identity Platform with
   # IDP_API_KEY and encrypts the session cookie with SESSION_COOKIE_KEY. Both
   # secret VERSIONS must exist before apply (see auth.tf / infra/README.md),
   # else the revision fails to start.
-  secret_env = {
-    IDP_API_KEY        = { secret = "idp-api-key-${local.env}" }
-    SESSION_COOKIE_KEY = { secret = "session-cookie-key-${local.env}" }
-  }
+  #
+  # DEEPSEEK_API_KEY secret VERSION is only required before apply when
+  # local.llm_provider = "deepseek" (ADR-006); the api binary calls DeepSeek for
+  # adapter generation on that path. Only wired into secret_env in that case, so
+  # switching back to "claude" does not require the deepseek secret to exist.
+  secret_env = merge(
+    {
+      IDP_API_KEY        = { secret = "idp-api-key-${local.env}" }
+      SESSION_COOKIE_KEY = { secret = "session-cookie-key-${local.env}" }
+    },
+    local.llm_provider == "deepseek" ? { DEEPSEEK_API_KEY = { secret = "deepseek-api-key-${local.env}" } } : {}
+  )
 
   depends_on = [google_project_service.apis]
 }
@@ -136,15 +153,18 @@ module "extract_worker" {
   allow_push_invoker = true
   push_auth_sa_email = google_service_account.push_auth.email
   env_vars = merge(local.svc_db_env, {
-    GCS_RAW_BUCKET = local.raw_bucket
-    PUBSUB_PUSH_SA = google_service_account.push_auth.email
+    GCS_RAW_BUCKET    = local.raw_bucket
+    PUBSUB_PUSH_SA    = google_service_account.push_auth.email
+    LLM_PROVIDER      = local.llm_provider # ADR-006
+    DEEPSEEK_MODEL_ID = local.deepseek_model_id
   })
-  # Claude key from Secret Manager. Requires a secret VERSION to exist before
-  # apply (gcloud secrets versions add claude-api-key-dev ...), else the revision
-  # fails to start.
-  secret_env = {
-    ANTHROPIC_API_KEY = { secret = "claude-api-key-${local.env}" }
-  }
+  # LLM provider key from Secret Manager. Requires the matching secret VERSION to
+  # exist before apply (claude-api-key-dev always; deepseek-api-key-dev only when
+  # local.llm_provider = "deepseek" — ADR-006), else the revision fails to start.
+  secret_env = merge(
+    { ANTHROPIC_API_KEY = { secret = "claude-api-key-${local.env}" } },
+    local.llm_provider == "deepseek" ? { DEEPSEEK_API_KEY = { secret = "deepseek-api-key-${local.env}" } } : {}
+  )
 
   depends_on = [google_project_service.apis]
 }
@@ -183,6 +203,22 @@ module "claude_secret" {
   env        = local.env
   project_id = var.project_id
   secret_id  = "claude-api-key"
+  accessor_members = [
+    "serviceAccount:${module.api.sa_email}",            # adapter generation
+    "serviceAccount:${module.extract_worker.sa_email}", # extraction
+  ]
+
+  depends_on = [google_project_service.apis]
+}
+
+# ADR-006: second LLM provider. Secret container always provisioned; a secret
+# VERSION is only required before apply when local.llm_provider = "deepseek"
+# (see infra/README.md).
+module "deepseek_secret" {
+  source     = "../../modules/secrets"
+  env        = local.env
+  project_id = var.project_id
+  secret_id  = "deepseek-api-key"
   accessor_members = [
     "serviceAccount:${module.api.sa_email}",            # adapter generation
     "serviceAccount:${module.extract_worker.sa_email}", # extraction

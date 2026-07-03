@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Tendencies — Design system & écrans de référence</title>
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="app__sidebar">
+      <a class="app__brand" href="index.html">
+        <span class="app__brand-mark">JT</span> Job Tendencies
+      </a>
+      <nav class="nav" aria-label="Navigation principale">
+        <span class="nav__section">Référence</span>
+        <a class="nav__link" aria-current="page" href="index.html">Design system</a>
+        <span class="nav__section">Écrans</span>
+        <a class="nav__link" href="screens/dashboard.html">Tableau de bord</a>
+        <a class="nav__link" href="screens/job-browser.html">Offres</a>
+        <a class="nav__link" href="screens/profiles.html">Profils</a>
+        <a class="nav__link" href="screens/boards.html">Sources</a>
+        <a class="nav__link" href="screens/contacts.html">Contacts</a>
+        <a class="nav__link" href="screens/pipeline.html">Pipeline</a>
+      </nav>
+    </aside>
+
+    <div class="app__main">
+      <div class="page">
+        <header class="page__head">
+          <h1 class="page__title">Design system</h1>
+          <p class="page__sub">Tokens et inventaire des composants de base — source de vérité pour l'équipe frontend.</p>
+        </header>
+
+        <div class="stack stack-5">
+
+          <!-- Colors -->
+          <section class="card" aria-labelledby="ds-colors">
+            <div class="card__head"><h2 class="card__title" id="ds-colors">Couleurs</h2></div>
+            <div class="demo-grid">
+              <div><div class="swatch" style="background:var(--color-brand)"></div><div class="swatch-label">brand</div></div>
+              <div><div class="swatch" style="background:var(--color-brand-soft)"></div><div class="swatch-label">brand-soft</div></div>
+              <div><div class="swatch" style="background:var(--color-success)"></div><div class="swatch-label">success</div></div>
+              <div><div class="swatch" style="background:var(--color-warning)"></div><div class="swatch-label">warning</div></div>
+              <div><div class="swatch" style="background:var(--color-danger)"></div><div class="swatch-label">danger</div></div>
+              <div><div class="swatch" style="background:var(--color-info)"></div><div class="swatch-label">info</div></div>
+              <div><div class="swatch" style="background:var(--color-text)"></div><div class="swatch-label">text</div></div>
+              <div><div class="swatch" style="background:var(--color-text-muted)"></div><div class="swatch-label">text-muted</div></div>
+              <div><div class="swatch" style="background:var(--color-border)"></div><div class="swatch-label">border</div></div>
+              <div><div class="swatch" style="background:var(--color-bg)"></div><div class="swatch-label">bg</div></div>
+            </div>
+          </section>
+
+          <!-- Typography -->
+          <section class="card" aria-labelledby="ds-type">
+            <div class="card__head"><h2 class="card__title" id="ds-type">Typographie</h2></div>
+            <div class="stack stack-2">
+              <span style="font-size:var(--font-size-2xl);font-weight:700">2xl — Titre principal</span>
+              <span style="font-size:var(--font-size-xl);font-weight:600">xl — Titre de page</span>
+              <span style="font-size:var(--font-size-lg);font-weight:600">lg — Titre de section</span>
+              <span style="font-size:var(--font-size-md)">md — Corps de texte principal</span>
+              <span style="font-size:var(--font-size-base)">base — Corps de texte</span>
+              <span style="font-size:var(--font-size-sm)" class="muted">sm — Texte secondaire</span>
+              <span style="font-size:var(--font-size-xs)" class="subtle">xs — Étiquettes</span>
+            </div>
+          </section>
+
+          <!-- Buttons -->
+          <section class="card" aria-labelledby="ds-btn">
+            <div class="card__head"><h2 class="card__title" id="ds-btn">Boutons</h2></div>
+            <div class="demo-row">
+              <button class="btn btn--primary">Principal</button>
+              <button class="btn btn--secondary">Secondaire</button>
+              <button class="btn btn--ghost">Discret</button>
+              <button class="btn btn--danger">Supprimer</button>
+              <button class="btn btn--primary" disabled>Désactivé</button>
+              <button class="btn btn--primary btn--loading">Chargement</button>
+              <button class="btn btn--secondary btn--sm">Petit</button>
+            </div>
+          </section>
+
+          <!-- Inputs -->
+          <section class="card" aria-labelledby="ds-input">
+            <div class="card__head"><h2 class="card__title" id="ds-input">Champs de formulaire</h2></div>
+            <div class="grid-2">
+              <div class="field">
+                <label class="field__label" for="d-in">Mots-clés</label>
+                <input class="input" id="d-in" placeholder="ex. backend golang" />
+                <span class="field__hint">Texte libre.</span>
+              </div>
+              <div class="field">
+                <label class="field__label" for="d-sel">Type de contrat</label>
+                <select class="select" id="d-sel"><option>CDI</option><option>Freelance</option><option>CDD</option><option>Intérim</option></select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="d-err">Salaire minimum</label>
+                <input class="input" id="d-err" aria-invalid="true" value="abc" />
+                <span class="field__error">Veuillez saisir un nombre.</span>
+              </div>
+              <div class="field">
+                <label class="field__label" for="d-ta">Notes</label>
+                <textarea class="textarea" id="d-ta" placeholder="Ajouter une note…"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <!-- Badges & tags -->
+          <section class="card" aria-labelledby="ds-badge">
+            <div class="card__head"><h2 class="card__title" id="ds-badge">Badges, tags & confiance</h2></div>
+            <div class="demo-row">
+              <span class="badge badge--neutral">CDI</span>
+              <span class="badge badge--brand">Remote</span>
+              <span class="badge badge--success">Nouveau</span>
+              <span class="badge badge--warning">Expire bientôt</span>
+              <span class="badge badge--danger">Expirée</span>
+              <span class="badge badge--info">Full-time</span>
+            </div>
+            <div class="demo-row" style="margin-block-start:var(--space-3)">
+              <span class="badge conf conf--high badge--success"><span class="badge__dot"></span>Confiance 92%</span>
+              <span class="badge conf conf--mid badge--warning"><span class="badge__dot"></span>Confiance 64%</span>
+              <span class="badge conf conf--low badge--danger"><span class="badge__dot"></span>Confiance 31%</span>
+              <span class="badge badge--neutral">Compréhension 88%</span>
+            </div>
+            <div class="demo-row" style="margin-block-start:var(--space-3)">
+              <span class="tag">in-house <button aria-label="Retirer">×</button></span>
+              <span class="tag">responsive <button aria-label="Retirer">×</button></span>
+              <span class="tag">agency <button aria-label="Retirer">×</button></span>
+            </div>
+          </section>
+
+          <!-- Tabs / segmented / toggle -->
+          <section class="card" aria-labelledby="ds-nav">
+            <div class="card__head"><h2 class="card__title" id="ds-nav">Onglets, segments & interrupteur</h2></div>
+            <div role="tablist" class="tabs" aria-label="Exemple d'onglets">
+              <button role="tab" aria-selected="true" class="tab">Identité</button>
+              <button role="tab" aria-selected="false" class="tab">Recherche</button>
+              <button role="tab" aria-selected="false" class="tab">Conditions</button>
+            </div>
+            <div class="demo-row" style="margin-block-start:var(--space-4)">
+              <div class="segmented" role="group" aria-label="Mode d'affichage">
+                <button aria-pressed="true">Tableau</button>
+                <button aria-pressed="false">Cartes</button>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" checked />
+                <span class="toggle__track"></span>
+                <span class="text-sm">Activée</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- Sliders -->
+          <section class="card" aria-labelledby="ds-slider">
+            <div class="card__head"><h2 class="card__title" id="ds-slider">Curseurs & somme des poids</h2></div>
+            <div class="slider-row">
+              <label for="d-sl1">Compétences préférées</label>
+              <span class="slider-row__val">40%</span>
+              <input class="slider" id="d-sl1" type="range" min="0" max="100" value="40" style="grid-column:1 / -1" />
+            </div>
+            <div class="weights-sum weights-sum--ok" style="margin-block-start:var(--space-3)">
+              <span>Somme des poids</span><span>100% ✓</span>
+            </div>
+            <div class="weights-sum weights-sum--off" style="margin-block-start:var(--space-2)">
+              <span>Somme des poids</span><span>85% — ajustez pour atteindre 100%</span>
+            </div>
+          </section>
+
+          <!-- Table -->
+          <section aria-labelledby="ds-table">
+            <div class="card__head"><h2 class="card__title" id="ds-table">Tableau</h2></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Poste</th><th>Entreprise</th><th>Contrat</th><th>Fit</th></tr></thead>
+                <tbody>
+                  <tr><td>Go Backend Engineer</td><td>Acme</td><td><span class="badge badge--neutral">CDI</span></td><td>87</td></tr>
+                  <tr><td>Platform Engineer</td><td>Globex</td><td><span class="badge badge--neutral">Freelance</span></td><td>72</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Kanban column + states -->
+          <section class="grid-2" aria-label="Colonne kanban et états">
+            <div>
+              <div class="card__head"><h2 class="card__title">Colonne kanban</h2></div>
+              <div class="kanban__col" style="max-width:280px">
+                <div class="kanban__col-head">
+                  <span class="kanban__col-title"><span class="kanban__stage-dot" style="background:var(--color-stage-applied)"></span>Postulé</span>
+                  <span class="kanban__count">2</span>
+                </div>
+                <article class="kanban__card">
+                  <strong class="text-sm">Go Backend Engineer</strong>
+                  <span class="muted text-xs">Acme · Paris</span>
+                  <div class="row"><span class="badge conf conf--high badge--success"><span class="badge__dot"></span>92%</span></div>
+                </article>
+              </div>
+            </div>
+            <div>
+              <div class="card__head"><h2 class="card__title">États (vide / chargement / erreur)</h2></div>
+              <div class="card" style="margin-block-end:var(--space-3)">
+                <div class="state"><span class="state__icon">📭</span><span class="state__title">Aucune donnée</span><span>Lancez le pipeline pour récupérer des offres.</span></div>
+              </div>
+              <div class="card" style="margin-block-end:var(--space-3)">
+                <div class="stack stack-2"><span class="skeleton skeleton--text skeleton--line-60"></span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-40"></span></div>
+              </div>
+              <div class="banner banner--danger"><span>⚠️</span><span>Impossible de charger les données. <a href="#">Réessayer</a></span></div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

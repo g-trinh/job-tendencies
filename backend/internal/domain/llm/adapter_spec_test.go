@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -100,6 +101,131 @@ func TestAdapterSpec_Validate(t *testing.T) {
 			}
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("Validate() = %v, want errors.Is %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+// remotiveSeedSpecJSON and arbeitnowSeedSpecJSON are byte-identical to the adapter.spec
+// JSONB payloads seeded by migration 00017_public_board_seed.sql. Keeping them here and
+// validating them guards against a malformed seed failing at scrape time instead of CI
+// (mirrors the "verified against schema before going live" rule in ADR-004).
+const remotiveSeedSpecJSON = `{
+  "board": "remotive",
+  "fetch_mode": "json_api",
+  "search": {
+    "url_template": "https://remotive.com/api/remote-jobs?search=go",
+    "method": "GET",
+    "param_map": {},
+    "pagination": {"kind": "query_param", "param": "page", "start": 1},
+    "result_node_path": "$.jobs",
+    "result_fields": {
+      "listing_url": "$.url",
+      "title": "$.title",
+      "company": "$.company_name",
+      "location": "$.candidate_required_location",
+      "posted_at": "$.publication_date",
+      "external_id": "$.id"
+    }
+  },
+  "listing": {"fetch": "use_search_payload", "raw_capture": "$"},
+  "incremental": {"cursor_field": "posted_at", "overlap_buffer": "36h", "safety_max_pages": 1}
+}`
+
+const arbeitnowSeedSpecJSON = `{
+  "board": "arbeitnow",
+  "fetch_mode": "json_api",
+  "search": {
+    "url_template": "https://www.arbeitnow.com/api/job-board-api?page={page}",
+    "method": "GET",
+    "param_map": {},
+    "pagination": {"kind": "query_param", "param": "page", "start": 1},
+    "result_node_path": "$.data",
+    "result_fields": {
+      "listing_url": "$.url",
+      "title": "$.title",
+      "company": "$.company_name",
+      "location": "$.location",
+      "posted_at": "$.created_at",
+      "external_id": "$.slug"
+    }
+  },
+  "listing": {"fetch": "use_search_payload", "raw_capture": "$"},
+  "incremental": {"cursor_field": "posted_at", "overlap_buffer": "36h", "safety_max_pages": 5}
+}`
+
+// remoteokSeedSpecJSON is byte-identical to the adapter.spec JSONB payload seeded by
+// migration 00018_remoteok_board_seed.sql.
+const remoteokSeedSpecJSON = `{
+  "board": "remoteok",
+  "fetch_mode": "json_api",
+  "search": {
+    "url_template": "https://remoteok.com/api",
+    "method": "GET",
+    "param_map": {},
+    "pagination": {"kind": "query_param", "param": "page", "start": 1},
+    "result_node_path": "$.#(id!=)#",
+    "result_fields": {
+      "listing_url": "$.url",
+      "title": "$.position",
+      "company": "$.company",
+      "location": "$.location",
+      "posted_at": "$.date",
+      "external_id": "$.id"
+    }
+  },
+  "listing": {"fetch": "use_search_payload", "raw_capture": "$"},
+  "incremental": {"cursor_field": "posted_at", "overlap_buffer": "36h", "safety_max_pages": 1}
+}`
+
+// workingNomadsSeedSpecJSON is byte-identical to the adapter.spec JSONB payload seeded by
+// migration 00019_workingnomads_board_seed.sql.
+const workingNomadsSeedSpecJSON = `{
+  "board": "workingnomads",
+  "fetch_mode": "json_api",
+  "search": {
+    "url_template": "https://www.workingnomads.com/api/exposed_jobs/",
+    "method": "GET",
+    "param_map": {},
+    "pagination": {"kind": "query_param", "param": "page", "start": 1},
+    "result_node_path": "$.@this",
+    "result_fields": {
+      "listing_url": "$.url",
+      "title": "$.title",
+      "company": "$.company_name",
+      "location": "$.location",
+      "posted_at": "$.pub_date",
+      "external_id": "$.url"
+    }
+  },
+  "listing": {"fetch": "use_search_payload", "raw_capture": "$"},
+  "incremental": {"cursor_field": "posted_at", "overlap_buffer": "36h", "safety_max_pages": 1}
+}`
+
+func TestSeededPublicBoardAdapterSpecs_Validate(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		json string
+	}{
+		{name: "remotive seed spec (migration 00017)", json: remotiveSeedSpecJSON},
+		{name: "arbeitnow seed spec (migration 00017)", json: arbeitnowSeedSpecJSON},
+		{name: "remoteok seed spec (migration 00018)", json: remoteokSeedSpecJSON},
+		{name: "workingnomads seed spec (migration 00019)", json: workingNomadsSeedSpecJSON},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var spec AdapterSpec
+			if err := json.Unmarshal([]byte(tc.json), &spec); err != nil {
+				t.Fatalf("unmarshalling seed spec: %v", err)
+			}
+
+			if err := spec.Validate(); err != nil {
+				t.Fatalf("Validate() = %v, want nil", err)
 			}
 		})
 	}

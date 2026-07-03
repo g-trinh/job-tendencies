@@ -20,8 +20,8 @@ export type WorkingDays = 'full_time' | 'part_time' | 'four_day';
 export type ApplicationStatus =
   'saved' | 'applied' | 'interview' | 'offer' | 'rejected';
 
-/** Sort field for the jobs list. */
-export type SortField = 'date' | 'fit' | 'salary';
+/** Sort field for the jobs list — API contract: GET /api/jobs only accepts date|salary. */
+export type SortField = 'date' | 'salary';
 
 /** Sort direction for the jobs list. */
 export type SortDir = 'asc' | 'desc';

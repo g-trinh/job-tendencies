@@ -80,12 +80,31 @@ email/password provider) and declares two out-of-band secrets read by the `api` 
 The SPA never calls Identity Platform — the `api` service (BFF) proxies all identity calls and
 holds the session in an httpOnly cookie. Values live only in Secret Manager, never in tf/state.
 
+## LLM Provider (ADR-006)
+
+One provider serves every LLM task (adapter generation, listing extraction, identity
+import) — no per-task routing, no fallback. Selected at startup by the `LLM_PROVIDER`
+env var, wired from `local.llm_provider` in `environments/dev/main.tf`. Flip that one
+local (`"claude"` or `"deepseek"`) to switch providers on both `api` and
+`extract-worker`.
+
+| Secret | Env var | Purpose |
+|---|---|---|
+| `claude-api-key-dev` | `ANTHROPIC_API_KEY` | Anthropic API key. Version required before apply regardless of provider. |
+| `deepseek-api-key-dev` | `DEEPSEEK_API_KEY` | DeepSeek API key. Secret container always provisioned; a **version** is only required before apply when `local.llm_provider = "deepseek"` — the env var is only wired into `secret_env` in that case. |
+
+`DEEPSEEK_MODEL_ID` is a plain env var (`local.deepseek_model_id`), not a secret.
+
 ## Prerequisites for `tofu apply`
 
 1. State bucket created (above).
 2. Claude API key added to the secret after first apply creates the container:
    ```sh
    gcloud secrets versions add claude-api-key-dev --project=job-tendencies-dev --data-file=- <<<"$ANTHROPIC_API_KEY"
+   ```
+   If `local.llm_provider = "deepseek"`, also add the DeepSeek key:
+   ```sh
+   gcloud secrets versions add deepseek-api-key-dev --project=job-tendencies-dev --data-file=- <<<"$DEEPSEEK_API_KEY"
    ```
 3. **Identity Platform (P4)** — after the first apply creates the secret containers and
    enables Identity Platform, do the following out of band (the `api` revision will not boot

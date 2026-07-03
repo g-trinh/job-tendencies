@@ -56,11 +56,14 @@ function JobFiltersBar({
   }
 
   return (
-    <section aria-label="Filtres et tri">
-      <div>
+    <section className="card filter-panel" aria-label="Filtres et tri">
+      <div className="field filter-group">
         {/* Skills — comma-separated text input */}
-        <label htmlFor="filter-skills">Compétences</label>
+        <label className="field__label" htmlFor="filter-skills">
+          Compétences
+        </label>
         <input
+          className="input"
           id="filter-skills"
           type="text"
           placeholder="Go, React, …"
@@ -69,9 +72,12 @@ function JobFiltersBar({
         />
       </div>
 
-      <div>
-        <label htmlFor="filter-remote">Télétravail</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-remote">
+          Télétravail
+        </label>
         <select
+          className="select"
           id="filter-remote"
           value={filters.remote_policy ?? ''}
           onChange={(e) =>
@@ -88,9 +94,12 @@ function JobFiltersBar({
         </select>
       </div>
 
-      <div>
-        <label htmlFor="filter-contract">Contrat</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-contract">
+          Contrat
+        </label>
         <select
+          className="select"
           id="filter-contract"
           value={filters.contract_type ?? ''}
           onChange={(e) =>
@@ -108,9 +117,12 @@ function JobFiltersBar({
         </select>
       </div>
 
-      <div>
-        <label htmlFor="filter-salary-min">Salaire min (€)</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-salary-min">
+          Salaire min (€)
+        </label>
         <input
+          className="input"
           id="filter-salary-min"
           type="number"
           min={0}
@@ -124,9 +136,12 @@ function JobFiltersBar({
         />
       </div>
 
-      <div>
-        <label htmlFor="filter-salary-max">Salaire max (€)</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-salary-max">
+          Salaire max (€)
+        </label>
         <input
+          className="input"
           id="filter-salary-max"
           type="number"
           min={0}
@@ -140,9 +155,12 @@ function JobFiltersBar({
         />
       </div>
 
-      <div>
-        <label htmlFor="filter-location">Localisation</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-location">
+          Localisation
+        </label>
         <input
+          className="input"
           id="filter-location"
           type="text"
           value={filters.location ?? ''}
@@ -150,9 +168,12 @@ function JobFiltersBar({
         />
       </div>
 
-      <div>
-        <label htmlFor="filter-board">Source</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-board">
+          Source
+        </label>
         <select
+          className="select"
           id="filter-board"
           value={filters.board_id ?? ''}
           onChange={(e) => set('board_id', e.target.value || undefined)}
@@ -166,9 +187,12 @@ function JobFiltersBar({
         </select>
       </div>
 
-      <div>
-        <label htmlFor="filter-since">Depuis</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-since">
+          Depuis
+        </label>
         <input
+          className="input"
           id="filter-since"
           type="date"
           value={filters.since ?? ''}
@@ -176,9 +200,12 @@ function JobFiltersBar({
         />
       </div>
 
-      <div>
-        <label htmlFor="filter-confidence">Confiance min (%)</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="filter-confidence">
+          Confiance min (%)
+        </label>
         <input
+          className="input"
           id="filter-confidence"
           type="number"
           min={0}
@@ -194,22 +221,28 @@ function JobFiltersBar({
       </div>
 
       {/* Sort controls */}
-      <div>
-        <label htmlFor="sort-field">Trier par</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="sort-field">
+          Trier par
+        </label>
         <select
+          className="select"
           id="sort-field"
           value={filters.sort ?? 'date'}
           onChange={(e) => set('sort', e.target.value as SortField)}
         >
+          {/* API contract: GET /api/jobs `sort` only accepts date|salary server-side. */}
           <option value="date">Date</option>
-          <option value="fit">Pertinence</option>
           <option value="salary">Salaire</option>
         </select>
       </div>
 
-      <div>
-        <label htmlFor="sort-dir">Ordre</label>
+      <div className="field filter-group">
+        <label className="field__label" htmlFor="sort-dir">
+          Ordre
+        </label>
         <select
+          className="select"
           id="sort-dir"
           value={filters.sort_dir ?? 'desc'}
           onChange={(e) => set('sort_dir', e.target.value as SortDir)}
@@ -219,8 +252,8 @@ function JobFiltersBar({
         </select>
       </div>
 
-      <div>
-        <label htmlFor="filter-show-expired">
+      <div className="filter-group" style={{ border: 0 }}>
+        <label className="check" htmlFor="filter-show-expired">
           <input
             id="filter-show-expired"
             type="checkbox"

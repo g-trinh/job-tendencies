@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tableau de bord — Job Tendencies</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="app__sidebar">
+      <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
+      <nav class="nav" aria-label="Navigation principale">
+        <span class="nav__section">Écrans</span>
+        <a class="nav__link" aria-current="page" href="dashboard.html">Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html">Offres</a>
+        <a class="nav__link" href="profiles.html">Profils</a>
+        <a class="nav__link" href="boards.html">Sources</a>
+        <a class="nav__link" href="contacts.html">Contacts</a>
+        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Référence</span>
+        <a class="nav__link" href="../index.html">Design system</a>
+      </nav>
+    </aside>
+
+    <div class="app__main">
+      <header class="topbar">
+        <div class="row">
+          <label class="sr-only" for="profile-switch">Profil actif</label>
+          <select class="select" id="profile-switch" style="width:auto">
+            <option>Go Backend Paris — CDI 65k+</option>
+            <option>Go Backend Remote Europe — Freelance 500€/j</option>
+          </select>
+        </div>
+        <button class="btn btn--primary">Lancer le pipeline</button>
+      </header>
+
+      <div class="page">
+        <header class="page__head">
+          <h1 class="page__title">Tableau de bord</h1>
+          <p class="page__sub">Vue d'ensemble pour le profil actif.</p>
+        </header>
+
+        <div class="stack stack-5">
+          <!-- Stats cards -->
+          <section class="grid-stats" aria-label="Statistiques">
+            <div class="stat"><div class="stat__label">Total récupérées</div><div class="stat__value">1 284</div><div class="stat__delta stat__delta--up">+42 cette semaine</div></div>
+            <div class="stat"><div class="stat__label">Nouvelles aujourd'hui</div><div class="stat__value">18</div><div class="stat__delta stat__delta--up">+6 vs hier</div></div>
+            <div class="stat"><div class="stat__label">% Remote</div><div class="stat__value">57%</div><div class="stat__delta muted">stable</div></div>
+            <div class="stat"><div class="stat__label">Salaire moyen</div><div class="stat__value">62k€</div><div class="stat__delta stat__delta--down">−1k vs mois dernier</div></div>
+            <div class="stat"><div class="stat__label">Contrat fréquent</div><div class="stat__value" style="font-size:var(--font-size-lg)">CDI</div><div class="stat__delta muted">64% des offres</div></div>
+          </section>
+
+          <div class="grid-2">
+            <!-- Skills frequency bar chart -->
+            <section class="card" aria-labelledby="d-freq">
+              <div class="card__head"><h2 class="card__title" id="d-freq">Compétences les plus demandées</h2></div>
+              <div class="barchart">
+                <div class="barchart__row"><span>Go</span><span class="barchart__track"><span class="barchart__fill" style="width:92%"></span></span><span class="barchart__val">412</span></div>
+                <div class="barchart__row"><span>Kubernetes</span><span class="barchart__track"><span class="barchart__fill" style="width:74%"></span></span><span class="barchart__val">331</span></div>
+                <div class="barchart__row"><span>PostgreSQL</span><span class="barchart__track"><span class="barchart__fill" style="width:61%"></span></span><span class="barchart__val">273</span></div>
+                <div class="barchart__row"><span>AWS</span><span class="barchart__track"><span class="barchart__fill" style="width:55%"></span></span><span class="barchart__val">245</span></div>
+                <div class="barchart__row"><span>gRPC</span><span class="barchart__track"><span class="barchart__fill" style="width:38%"></span></span><span class="barchart__val">170</span></div>
+                <div class="barchart__row"><span>Terraform</span><span class="barchart__track"><span class="barchart__fill" style="width:29%"></span></span><span class="barchart__val">129</span></div>
+              </div>
+            </section>
+
+            <!-- Skills trend line chart -->
+            <section class="card" aria-labelledby="d-trend">
+              <div class="card__head"><h2 class="card__title" id="d-trend">Tendance des compétences</h2><span class="badge badge--neutral">6 semaines</span></div>
+              <svg class="linechart" viewBox="0 0 320 160" role="img" aria-label="Courbe de tendance de la compétence Go sur 6 semaines">
+                <line class="grid" x1="0" y1="40" x2="320" y2="40" /><line class="grid" x1="0" y1="80" x2="320" y2="80" /><line class="grid" x1="0" y1="120" x2="320" y2="120" />
+                <polygon class="area" points="0,120 64,96 128,104 192,64 256,52 320,30 320,160 0,160" />
+                <polyline class="line" points="0,120 64,96 128,104 192,64 256,52 320,30" />
+                <circle class="dot" cx="320" cy="30" r="4" />
+                <text class="axis" x="0" y="152">S1</text><text class="axis" x="150" y="152">S3</text><text class="axis" x="300" y="152">S6</text>
+              </svg>
+            </section>
+          </div>
+
+          <!-- Match alerts -->
+          <section class="card" aria-labelledby="d-alerts">
+            <div class="card__head"><h2 class="card__title" id="d-alerts">Alertes de correspondance</h2><a href="job-browser.html" class="text-sm">Voir toutes</a></div>
+            <div class="stack stack-3">
+              <div class="row-between card card--pad-sm" style="box-shadow:none">
+                <div class="row"><span class="fit-score">94</span><div class="stack"><strong class="text-sm">Senior Go Engineer</strong><span class="muted text-xs">Datadog · Paris · CDI · 70k€</span></div></div>
+                <div class="row"><span class="badge conf conf--high badge--success"><span class="badge__dot"></span>92%</span><a class="btn btn--secondary btn--sm" href="#">Voir</a></div>
+              </div>
+              <div class="row-between card card--pad-sm" style="box-shadow:none">
+                <div class="row"><span class="fit-score">88</span><div class="stack"><strong class="text-sm">Backend Engineer (Go)</strong><span class="muted text-xs">Alan · Remote · CDI · 62k€</span></div></div>
+                <div class="row"><span class="badge conf conf--mid badge--warning"><span class="badge__dot"></span>66%</span><a class="btn btn--secondary btn--sm" href="#">Voir</a></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- States row -->
+          <section class="grid-2" aria-label="États">
+            <div class="card"><div class="state"><span class="state__icon">📊</span><span class="state__title">Pas encore de données</span><span>Aucune offre pour ce profil. Lancez le pipeline pour commencer.</span><button class="btn btn--primary">Lancer le pipeline</button></div></div>
+            <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-40"></span><span class="skeleton" style="height:120px"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div></div>
+          </section>
+          <div class="banner banner--danger"><span>⚠️</span><span>Échec du chargement du tableau de bord. <a href="#">Réessayer</a></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

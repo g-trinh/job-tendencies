@@ -144,6 +144,111 @@ func TestParseCards_JSONApi(t *testing.T) {
 	}
 }
 
+// remoteokSpec returns a json_api spec matching the seeded RemoteOK adapter (migration
+// 00018), whose result_node_path filters out the legal-notice element (no "id" field) at
+// index 0 of the response array.
+func remoteokSpec() llm.AdapterSpec {
+	return llm.AdapterSpec{
+		Board:     "remoteok",
+		FetchMode: llm.FetchModeJSONAPI,
+		Search: llm.SearchConfig{
+			URLTemplate:    "https://remoteok.com/api",
+			ResultNodePath: "$.#(id!=)#",
+			ResultFields: map[string]string{
+				"listing_url": "$.url",
+				"title":       "$.position",
+				"company":     "$.company",
+				"location":    "$.location",
+				"posted_at":   "$.date",
+				"external_id": "$.id",
+			},
+		},
+	}
+}
+
+// TestParseCards_RemoteOK verifies that the RemoteOK adapter's result_node_path filter
+// excludes the top-level legal/disclaimer element (which has no "id" field) and parses
+// only the real job entries.
+func TestParseCards_RemoteOK(t *testing.T) {
+	t.Parallel()
+
+	body := `[
+		{"legal": "https://remoteok.com/legal"},
+		{"id": "123", "position": "Go Engineer", "company": "Acme",
+		 "location": "Remote", "url": "https://remoteok.com/remote-jobs/123",
+		 "date": "2026-06-20T10:00:00"}
+	]`
+
+	cards, err := parseCards([]byte(body), remoteokSpec())
+	if err != nil {
+		t.Fatalf("parseCards() error = %v", err)
+	}
+	if len(cards) != 1 {
+		t.Fatalf("parseCards() len = %d, want 1 (legal element must be excluded)", len(cards))
+	}
+	got := cards[0]
+	if got.ExternalID != "123" || got.Title != "Go Engineer" || got.Company != "Acme" ||
+		got.Location != "Remote" || got.ListingURL != "https://remoteok.com/remote-jobs/123" {
+		t.Fatalf("parseCards() first = %+v, want the real job entry", got)
+	}
+}
+
+func workingNomadsSpec() llm.AdapterSpec {
+	return llm.AdapterSpec{
+		Board:     "workingnomads",
+		FetchMode: llm.FetchModeJSONAPI,
+		Search: llm.SearchConfig{
+			URLTemplate:    "https://www.workingnomads.com/api/exposed_jobs/",
+			ResultNodePath: "$.@this",
+			ResultFields: map[string]string{
+				"listing_url": "$.url",
+				"title":       "$.title",
+				"company":     "$.company_name",
+				"location":    "$.location",
+				"posted_at":   "$.pub_date",
+				"external_id": "$.url",
+			},
+		},
+	}
+}
+
+// TestParseCards_WorkingNomads verifies that the Working Nomads adapter's root-array
+// result_node_path ("$.@this") selects every element of the top-level array as a job
+// (unlike RemoteOK, the feed carries no legal/disclaimer element to exclude), and that
+// the job's own url is used as the external_id since the feed has no id field.
+func TestParseCards_WorkingNomads(t *testing.T) {
+	t.Parallel()
+
+	body := `[
+		{"url": "https://www.workingnomads.com/jobs/1", "title": "Go Engineer",
+		 "company_name": "Acme", "category_name": "Development", "tags": "go,backend",
+		 "location": "Worldwide", "description": "desc",
+		 "pub_date": "2026-06-20T10:00:00+00:00"},
+		{"url": "https://www.workingnomads.com/jobs/2", "title": "Frontend Dev",
+		 "company_name": "Beta", "category_name": "Development", "tags": "react",
+		 "location": "Europe", "description": "desc2",
+		 "pub_date": "2026-06-21T10:00:00+00:00"}
+	]`
+
+	cards, err := parseCards([]byte(body), workingNomadsSpec())
+	if err != nil {
+		t.Fatalf("parseCards() error = %v", err)
+	}
+	if len(cards) != 2 {
+		t.Fatalf("parseCards() len = %d, want 2", len(cards))
+	}
+
+	got := cards[0]
+	if got.ExternalID != "https://www.workingnomads.com/jobs/1" ||
+		got.Title != "Go Engineer" || got.Company != "Acme" ||
+		got.Location != "Worldwide" || got.ListingURL != "https://www.workingnomads.com/jobs/1" {
+		t.Fatalf("parseCards() first = %+v, want the first job entry", got)
+	}
+	if cards[1].Title != "Frontend Dev" || cards[1].Company != "Beta" {
+		t.Fatalf("parseCards() second = %+v, want the second job entry", cards[1])
+	}
+}
+
 // --- P3-SCR-1: HTML card parsing ---
 
 // sampleHTML is a minimal HTML page that matches htmlBoardSpec's selectors.
@@ -345,6 +450,44 @@ func TestFetchPage_RateLimiter(t *testing.T) {
 	}
 	if _, ok := fetcher.limiters.Load("rate-test-board-2"); ok {
 		t.Error("did not expect limiter for board with RatePerSecond=0")
+	}
+}
+
+// TestFetchPage_SetsUserAgent verifies that every outgoing request carries a non-empty,
+// descriptive User-Agent header. Some boards (e.g. RemoteOK) return 403 to requests with
+// no User-Agent at all, so the fetcher must always set one.
+func TestFetchPage_SetsUserAgent(t *testing.T) {
+	t.Parallel()
+
+	var gotUserAgent string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserAgent = r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jobs":[]}`))
+	}))
+	defer srv.Close()
+
+	spec := llm.AdapterSpec{
+		Board:     "ua-test-board",
+		FetchMode: llm.FetchModeJSONAPI,
+		Search: llm.SearchConfig{
+			URLTemplate:    srv.URL + "/search?page={page}",
+			ResultNodePath: "$.jobs[*]",
+			ResultFields:   map[string]string{"listing_url": "$.url"},
+		},
+		Listing:     llm.ListingConfig{Fetch: llm.ListingFetchUseSearchPayload},
+		Incremental: llm.IncrementalConfig{OverlapBuffer: "1h", SafetyMaxPages: 1},
+	}
+
+	fetcher := NewFetcher(noLogger())
+	if _, err := fetcher.FetchPage(context.Background(), spec, appscraping.ScrapeTarget{}, 1); err != nil {
+		t.Fatalf("FetchPage() error = %v", err)
+	}
+	if gotUserAgent == "" {
+		t.Fatal("request had no User-Agent header, want a descriptive default")
+	}
+	if gotUserAgent != defaultUserAgent {
+		t.Errorf("User-Agent = %q, want %q", gotUserAgent, defaultUserAgent)
 	}
 }
 
