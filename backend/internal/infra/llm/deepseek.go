@@ -72,24 +72,17 @@ type openAITool struct {
 	Function openAIFunction `json:"function"`
 }
 
-// openAIToolChoice forces the model to call a specific named function.
-type openAIToolChoice struct {
-	Type     string                   `json:"type"`
-	Function openAIToolChoiceFunction `json:"function"`
-}
-
-// openAIToolChoiceFunction names the function an openAIToolChoice forces.
-type openAIToolChoiceFunction struct {
-	Name string `json:"name"`
-}
-
 // chatCompletionRequest is the OpenAI-compatible chat/completions request body.
+// ToolChoice is "auto" (not a forced named function): DeepSeek's thinking-mode
+// models reject a forced tool_choice ("Thinking mode does not support this
+// tool_choice"). With a single declared tool and an instructing system prompt the
+// model reliably calls it; if it ever does not, doChatCompletion errors cleanly.
 type chatCompletionRequest struct {
-	Model      string           `json:"model"`
-	Messages   []openAIMessage  `json:"messages"`
-	Tools      []openAITool     `json:"tools"`
-	ToolChoice openAIToolChoice `json:"tool_choice"`
-	MaxTokens  int              `json:"max_tokens,omitempty"`
+	Model      string          `json:"model"`
+	Messages   []openAIMessage `json:"messages"`
+	Tools      []openAITool    `json:"tools"`
+	ToolChoice string          `json:"tool_choice"`
+	MaxTokens  int             `json:"max_tokens,omitempty"`
 }
 
 // chatCompletionResponse is the OpenAI-compatible chat/completions response body.
@@ -106,9 +99,9 @@ type chatCompletionResponse struct {
 	} `json:"choices"`
 }
 
-// doChatCompletion POSTs a forced-tool-call chat completion request to the DeepSeek
-// API and returns the arguments of the first tool call in the response. toolName
-// names the single tool the model is forced to call; schema is its JSON Schema
+// doChatCompletion POSTs a single-tool chat completion request (tool_choice "auto")
+// to the DeepSeek API and returns the arguments of the first tool call in the
+// response. toolName names the one declared tool; schema is its JSON Schema
 // "properties"/"required" pair, wrapped as a type:"object" parameters document.
 func (c *deepSeekClient) doChatCompletion(ctx context.Context, systemPrompt, userMsg, toolName string, properties map[string]interface{}, required []string) (json.RawMessage, error) {
 	reqBody := chatCompletionRequest{
@@ -130,10 +123,7 @@ func (c *deepSeekClient) doChatCompletion(ctx context.Context, systemPrompt, use
 				},
 			},
 		},
-		ToolChoice: openAIToolChoice{
-			Type:     "function",
-			Function: openAIToolChoiceFunction{Name: toolName},
-		},
+		ToolChoice: "auto",
 	}
 
 	body, err := json.Marshal(reqBody)

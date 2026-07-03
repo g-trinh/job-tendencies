@@ -19,8 +19,8 @@ locals {
   # generation, listing extraction, identity import). Flip this to "deepseek" to
   # switch providers everywhere; requires the deepseek-api-key-dev secret version
   # to exist before apply (see infra/README.md).
-  llm_provider      = "claude"
-  deepseek_model_id = "deepseek-chat"
+  llm_provider      = "deepseek"
+  deepseek_model_id = "deepseek-v4-flash"
 
   # Frontend origin allowed to call the API cross-origin (CORS ALLOWED_ORIGINS).
   # Prod is same-origin via the Firebase Hosting /api rewrite, so CORS only
