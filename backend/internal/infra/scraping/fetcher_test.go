@@ -193,6 +193,62 @@ func TestParseCards_RemoteOK(t *testing.T) {
 	}
 }
 
+func workingNomadsSpec() llm.AdapterSpec {
+	return llm.AdapterSpec{
+		Board:     "workingnomads",
+		FetchMode: llm.FetchModeJSONAPI,
+		Search: llm.SearchConfig{
+			URLTemplate:    "https://www.workingnomads.com/api/exposed_jobs/",
+			ResultNodePath: "$.@this",
+			ResultFields: map[string]string{
+				"listing_url": "$.url",
+				"title":       "$.title",
+				"company":     "$.company_name",
+				"location":    "$.location",
+				"posted_at":   "$.pub_date",
+				"external_id": "$.url",
+			},
+		},
+	}
+}
+
+// TestParseCards_WorkingNomads verifies that the Working Nomads adapter's root-array
+// result_node_path ("$.@this") selects every element of the top-level array as a job
+// (unlike RemoteOK, the feed carries no legal/disclaimer element to exclude), and that
+// the job's own url is used as the external_id since the feed has no id field.
+func TestParseCards_WorkingNomads(t *testing.T) {
+	t.Parallel()
+
+	body := `[
+		{"url": "https://www.workingnomads.com/jobs/1", "title": "Go Engineer",
+		 "company_name": "Acme", "category_name": "Development", "tags": "go,backend",
+		 "location": "Worldwide", "description": "desc",
+		 "pub_date": "2026-06-20T10:00:00+00:00"},
+		{"url": "https://www.workingnomads.com/jobs/2", "title": "Frontend Dev",
+		 "company_name": "Beta", "category_name": "Development", "tags": "react",
+		 "location": "Europe", "description": "desc2",
+		 "pub_date": "2026-06-21T10:00:00+00:00"}
+	]`
+
+	cards, err := parseCards([]byte(body), workingNomadsSpec())
+	if err != nil {
+		t.Fatalf("parseCards() error = %v", err)
+	}
+	if len(cards) != 2 {
+		t.Fatalf("parseCards() len = %d, want 2", len(cards))
+	}
+
+	got := cards[0]
+	if got.ExternalID != "https://www.workingnomads.com/jobs/1" ||
+		got.Title != "Go Engineer" || got.Company != "Acme" ||
+		got.Location != "Worldwide" || got.ListingURL != "https://www.workingnomads.com/jobs/1" {
+		t.Fatalf("parseCards() first = %+v, want the first job entry", got)
+	}
+	if cards[1].Title != "Frontend Dev" || cards[1].Company != "Beta" {
+		t.Fatalf("parseCards() second = %+v, want the second job entry", cards[1])
+	}
+}
+
 // --- P3-SCR-1: HTML card parsing ---
 
 // sampleHTML is a minimal HTML page that matches htmlBoardSpec's selectors.
