@@ -12,8 +12,14 @@
 // Optional variables with defaults:
 //   - PORT              — TCP port the HTTP server listens on (default: 8080). Cloud Run sets this.
 //   - LOG_LEVEL         — slog verbosity: debug, info, warn, error (default: info).
-//   - ANTHROPIC_API_KEY — Anthropic API key; required for LLM port.
+//   - LLM_PROVIDER      — LLM provider selection: "claude" or "deepseek" (default: claude).
+//     One provider serves every LLM task (adapter generation, listing extraction,
+//     identity import) — ADR-006. Load fails fast on any other value.
+//   - ANTHROPIC_API_KEY — Anthropic API key; required for LLM port when LLM_PROVIDER=claude.
 //   - LLM_MODEL_ID      — Claude model id (default: claude-opus-4-8).
+//   - DEEPSEEK_API_KEY  — DeepSeek API key; required when LLM_PROVIDER=deepseek.
+//   - DEEPSEEK_MODEL_ID — DeepSeek model id; required when LLM_PROVIDER=deepseek (no default).
+//   - DEEPSEEK_BASE_URL — DeepSeek API base URL (default: https://api.deepseek.com).
 //   - LLM_BATCH_ENABLED — Route scheduled bulk extraction through the Anthropic Batch
 //     API cost lever (ADR-004, pipeline.md §3). Default: false. P5-5: the extension
 //     point is wired (extract-worker reads this flag and the propagated run trigger),
@@ -54,6 +60,13 @@ import (
 // DefaultLLMModelID is the default Claude model used when LLM_MODEL_ID is not set.
 const DefaultLLMModelID = "claude-opus-4-8"
 
+// DefaultLLMProvider is the default LLM provider used when LLM_PROVIDER is not set.
+const DefaultLLMProvider = "claude"
+
+// DefaultDeepSeekBaseURL is the default DeepSeek API base URL used when
+// DEEPSEEK_BASE_URL is not set.
+const DefaultDeepSeekBaseURL = "https://api.deepseek.com"
+
 // DefaultDBName is the default Postgres database name.
 const DefaultDBName = "job_tendencies"
 
@@ -71,6 +84,11 @@ type Config struct {
 	// Defaults to "info". Unrecognised values are silently treated as "info".
 	LogLevel string
 
+	// LLMProvider selects which LLM provider serves every LLM task (adapter
+	// generation, listing extraction, identity import) — ADR-006. One of
+	// "claude" or "deepseek". Defaults to DefaultLLMProvider when not set.
+	LLMProvider string
+
 	// AnthropicAPIKey is the Anthropic API key used by infra/llm.
 	// Optional at load time; infra/llm validates it on construction.
 	AnthropicAPIKey string
@@ -78,6 +96,18 @@ type Config struct {
 	// LLMModelID is the Claude model id passed to the Anthropic API.
 	// Defaults to DefaultLLMModelID when not set.
 	LLMModelID string
+
+	// DeepSeekAPIKey is the DeepSeek API key used by infra/llm when
+	// LLMProvider is "deepseek". Required in that case.
+	DeepSeekAPIKey string
+
+	// DeepSeekModelID is the DeepSeek model id passed to the DeepSeek API.
+	// Required when LLMProvider is "deepseek"; there is no default.
+	DeepSeekModelID string
+
+	// DeepSeekBaseURL is the DeepSeek API base URL. Defaults to
+	// DefaultDeepSeekBaseURL when not set.
+	DeepSeekBaseURL string
 
 	// LLMBatchEnabled gates routing scheduled bulk extraction through the Anthropic
 	// Batch API (P5-5). Defaults to false. See the LLM_BATCH_ENABLED doc above.
@@ -145,8 +175,12 @@ func Load() (*Config, error) {
 		Port:                 envOrDefault("PORT", "8080"),
 		DatabaseURL:          os.Getenv("DATABASE_URL"),
 		LogLevel:             envOrDefault("LOG_LEVEL", "info"),
+		LLMProvider:          envOrDefault("LLM_PROVIDER", DefaultLLMProvider),
 		AnthropicAPIKey:      os.Getenv("ANTHROPIC_API_KEY"),
 		LLMModelID:           envOrDefault("LLM_MODEL_ID", DefaultLLMModelID),
+		DeepSeekAPIKey:       os.Getenv("DEEPSEEK_API_KEY"),
+		DeepSeekModelID:      os.Getenv("DEEPSEEK_MODEL_ID"),
+		DeepSeekBaseURL:      envOrDefault("DEEPSEEK_BASE_URL", DefaultDeepSeekBaseURL),
 		LLMBatchEnabled:      parseBoolDefault("LLM_BATCH_ENABLED", false),
 		GCPProjectID:         os.Getenv("GCP_PROJECT_ID"),
 		GCSRawBucket:         os.Getenv("GCS_RAW_BUCKET"),
@@ -166,6 +200,21 @@ func Load() (*Config, error) {
 	var missing []string
 	if cfg.DatabaseURL == "" {
 		missing = append(missing, "DATABASE_URL")
+	}
+
+	switch cfg.LLMProvider {
+	case "claude":
+		// No additional required vars beyond the existing optional ANTHROPIC_API_KEY,
+		// validated at infra/llm construction time (unchanged behaviour).
+	case "deepseek":
+		if cfg.DeepSeekAPIKey == "" {
+			missing = append(missing, "DEEPSEEK_API_KEY")
+		}
+		if cfg.DeepSeekModelID == "" {
+			missing = append(missing, "DEEPSEEK_MODEL_ID")
+		}
+	default:
+		return nil, fmt.Errorf("config: invalid LLM_PROVIDER %q: must be \"claude\" or \"deepseek\"", cfg.LLMProvider)
 	}
 
 	if len(missing) > 0 {

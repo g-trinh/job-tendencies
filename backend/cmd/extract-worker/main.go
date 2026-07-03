@@ -57,12 +57,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	// LLM provider (ADR-006: one provider serves every LLM task).
+	extractor, err := infrallm.NewProvider(cfg, logger)
+	if err != nil {
+		slog.Error("creating llm provider", "err", err)
+		os.Exit(1)
+	}
+
 	// Register cleanup only after all fatal startup steps succeed so the os.Exit
 	// branches above run with no pending defers.
 	defer stop()
 	defer closePool()
-
-	extractor := infrallm.New(cfg.AnthropicAPIKey, cfg.LLMModelID, logger)
 
 	jobRepo := infrajobs.NewRepository(pool)
 
