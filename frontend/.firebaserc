@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "job-tendencies-dev"
+    "default": "job-tendencies-dev",
+    "dev": "job-tendencies-dev",
+    "prod": "job-tendencies-prod"
   }
 }
