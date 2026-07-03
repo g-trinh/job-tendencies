@@ -158,7 +158,17 @@ func (c *deepSeekClient) doChatCompletion(ctx context.Context, systemPrompt, use
 		return nil, fmt.Errorf("deepseek response contains no tool_call")
 	}
 
-	return completion.Choices[0].Message.ToolCalls[0].Function.Arguments, nil
+	// OpenAI-compatible APIs (DeepSeek included) encode function.arguments as a
+	// JSON *string* (e.g. "{\"skills\":[...]}"), not a nested object. Unwrap it to
+	// the inner JSON so the shared parsers — which expect a raw object, as Claude's
+	// tool input is — can decode it. Fall back to the raw bytes if a server returns
+	// the object directly.
+	raw := completion.Choices[0].Message.ToolCalls[0].Function.Arguments
+	var argStr string
+	if err := json.Unmarshal(raw, &argStr); err == nil {
+		return json.RawMessage(argStr), nil
+	}
+	return raw, nil
 }
 
 // GenerateAdapter calls DeepSeek to produce a declarative AdapterSpec from a board URL

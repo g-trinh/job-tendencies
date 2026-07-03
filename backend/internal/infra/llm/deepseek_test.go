@@ -32,8 +32,10 @@ func toolCallResponse(t *testing.T, toolName string, arguments any) string {
 					"tool_calls": []map[string]any{
 						{
 							"function": map[string]any{
-								"name":      toolName,
-								"arguments": json.RawMessage(args),
+								"name": toolName,
+								// OpenAI-compatible APIs encode arguments as a JSON string,
+								// not an object — mirror that so the unwrap path is tested.
+								"arguments": string(args),
 							},
 						},
 					},
