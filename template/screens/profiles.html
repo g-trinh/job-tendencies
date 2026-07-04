@@ -11,32 +11,43 @@
     <aside class="app__sidebar">
       <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
       <nav class="nav" aria-label="Navigation principale">
-        <span class="nav__section">Écrans</span>
-        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
-        <a class="nav__link" href="job-browser.html">Offres</a>
-        <a class="nav__link" aria-current="page" href="profiles.html">Profils</a>
-        <a class="nav__link" href="boards.html">Sources</a>
-        <a class="nav__link" href="contacts.html">Contacts</a>
-        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Pilotage</span>
+        <a class="nav__link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>Offres</a>
+        <a class="nav__link" href="pipeline.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 8-6-16-3 8H2"/></svg>Pipeline</a>
+        <span class="nav__section">Configuration</span>
+        <a class="nav__link" aria-current="page" href="profiles.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>Profils</a>
+        <a class="nav__link" href="boards.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Sources</a>
+        <span class="nav__section">Réseau</span>
+        <a class="nav__link" href="contacts.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4.2-6"/></svg>Contacts</a>
         <span class="nav__section">Référence</span>
-        <a class="nav__link" href="../index.html">Design system</a>
+        <a class="nav__link" href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2.5H6.5A2.5 2.5 0 0 0 4 5v14.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg>Design system</a>
       </nav>
+      <div class="app__sidebar-foot">
+        <span class="app__avatar" aria-hidden="true">GT</span>
+        <span>Guillaume<small>Profil : Go Backend Paris</small></span>
+      </div>
     </aside>
 
     <div class="app__main">
       <header class="topbar">
         <div class="row">
-          <label class="sr-only" for="ps">Profil actif</label>
-          <select class="select" id="ps" style="width:auto"><option>Go Backend Paris — CDI 65k+</option><option>Go Backend Remote Europe — Freelance 500€/j</option></select>
+          <label class="sr-only" for="profile-switch">Profil actif</label>
+          <select class="select w-auto" id="profile-switch"><option>Go Backend Paris — CDI 65k+</option><option>Go Backend Remote Europe — Freelance 500€/j</option></select>
           <span class="badge badge--success">Actif</span>
         </div>
-        <button class="btn btn--secondary">+ Nouveau profil</button>
+        <button class="btn btn--primary">+ Nouveau profil</button>
       </header>
 
-      <div class="page">
-        <header class="page__head"><h1 class="page__title">Profils</h1><p class="page__sub">Identité + recherche + conditions de correspondance.</p></header>
+      <main class="page">
+        <header class="page__head">
+          <div>
+            <h1 class="page__title">Profils</h1>
+            <p class="page__sub">Identité + recherche + conditions de correspondance.</p>
+          </div>
+        </header>
 
-        <div role="tablist" class="tabs" aria-label="Sections du profil" style="margin-block-end:var(--space-5)">
+        <div role="tablist" class="tabs mbe-5" aria-label="Sections du profil">
           <button role="tab" aria-selected="true" class="tab">Identité</button>
           <button role="tab" aria-selected="false" class="tab">Recherche</button>
           <button role="tab" aria-selected="false" class="tab">Conditions</button>
@@ -47,25 +58,25 @@
           <!-- Identity: PDF import + skills editor -->
           <section class="card" aria-labelledby="p-id">
             <div class="card__head"><h2 class="card__title" id="p-id">Identité — import LinkedIn</h2></div>
-            <div class="banner banner--info" style="margin-block-end:var(--space-4)"><span>ℹ️</span><span>Importez votre export PDF LinkedIn pour extraire automatiquement compétences, expérience et séniorité.</span></div>
-            <div class="row wrap" style="gap:var(--space-3)">
+            <div class="banner banner--info mbe-4"><span aria-hidden="true">ℹ️</span><span>Importez votre export PDF LinkedIn pour extraire automatiquement compétences, expérience et séniorité.</span></div>
+            <div class="row wrap">
               <label class="btn btn--secondary" for="pdf">Importer un PDF<input id="pdf" type="file" accept="application/pdf" class="sr-only" /></label>
               <span class="muted text-sm">Dernier import : cv-linkedin.pdf · il y a 3 jours</span>
             </div>
 
-            <div class="stack stack-2" style="margin-block-start:var(--space-5)">
+            <div class="stack stack-2 mbs-5">
               <span class="field__label">Compétences (modifiables)</span>
               <div class="tag-input">
                 <span class="tag">Go <button aria-label="Retirer Go">×</button></span>
-                <span class="tag">Kubernetes <button aria-label="Retirer">×</button></span>
-                <span class="tag">PostgreSQL <button aria-label="Retirer">×</button></span>
-                <span class="tag">gRPC <button aria-label="Retirer">×</button></span>
-                <span class="tag">AWS <button aria-label="Retirer">×</button></span>
+                <span class="tag">Kubernetes <button aria-label="Retirer Kubernetes">×</button></span>
+                <span class="tag">PostgreSQL <button aria-label="Retirer PostgreSQL">×</button></span>
+                <span class="tag">gRPC <button aria-label="Retirer gRPC">×</button></span>
+                <span class="tag">AWS <button aria-label="Retirer AWS">×</button></span>
                 <input type="text" placeholder="Ajouter une compétence…" aria-label="Ajouter une compétence" />
               </div>
               <span class="field__hint">Pas d'auto-évaluation — liste plate.</span>
             </div>
-            <div class="grid-2" style="margin-block-start:var(--space-4)">
+            <div class="grid-2 mbs-4">
               <div class="field"><label class="field__label" for="seniority">Séniorité</label><select class="select" id="seniority"><option>Senior</option><option>Confirmé</option><option>Junior</option><option>Lead / Staff</option></select></div>
               <div class="field"><label class="field__label" for="exp">Années d'expérience</label><input class="input" id="exp" type="number" value="7" /></div>
             </div>
@@ -84,19 +95,19 @@
           <section class="card" aria-labelledby="p-cond">
             <div class="card__head"><h2 class="card__title" id="p-cond">Conditions</h2></div>
             <div class="grid-2">
-              <fieldset style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-4)">
-                <legend class="field__label" style="padding-inline:var(--space-2)">Dealbreakers (filtres durs)</legend>
+              <fieldset class="fieldset">
+                <legend>Dealbreakers (filtres durs)</legend>
                 <div class="stack stack-3">
                   <div class="field"><label class="field__label" for="db-c">Type de contrat requis</label><select class="select" id="db-c"><option>CDI uniquement</option><option>Freelance uniquement</option><option>Indifférent</option></select></div>
                   <div class="field"><label class="field__label" for="db-r">Politique remote requise</label><select class="select" id="db-r"><option>Remote requis</option><option>Hybride accepté</option><option>Indifférent</option></select></div>
                   <div class="field"><label class="field__label" for="db-s">Salaire minimum (brut annuel)</label><input class="input" id="db-s" type="number" value="65000" /></div>
-                  <div class="stack stack-2"><span class="field__label">Compétences obligatoires</span><div class="tag-input"><span class="tag">Go <button aria-label="Retirer">×</button></span><input type="text" placeholder="Ajouter…" aria-label="Ajouter compétence obligatoire" /></div></div>
+                  <div class="stack stack-2"><span class="field__label">Compétences obligatoires</span><div class="tag-input"><span class="tag">Go <button aria-label="Retirer Go">×</button></span><input type="text" placeholder="Ajouter…" aria-label="Ajouter compétence obligatoire" /></div></div>
                 </div>
               </fieldset>
-              <fieldset style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-4)">
-                <legend class="field__label" style="padding-inline:var(--space-2)">Préférences (scoring doux)</legend>
+              <fieldset class="fieldset">
+                <legend>Préférences (scoring doux)</legend>
                 <div class="stack stack-3">
-                  <div class="stack stack-2"><span class="field__label">Compétences préférées</span><div class="tag-input"><span class="tag">Kubernetes <button aria-label="Retirer">×</button></span><span class="tag">AWS <button aria-label="Retirer">×</button></span><input type="text" placeholder="Ajouter…" aria-label="Ajouter compétence préférée" /></div></div>
+                  <div class="stack stack-2"><span class="field__label">Compétences préférées</span><div class="tag-input"><span class="tag">Kubernetes <button aria-label="Retirer Kubernetes">×</button></span><span class="tag">AWS <button aria-label="Retirer AWS">×</button></span><input type="text" placeholder="Ajouter…" aria-label="Ajouter compétence préférée" /></div></div>
                   <div class="field"><label class="field__label" for="pr-o">Jours de bureau max / semaine</label><input class="input" id="pr-o" type="number" value="2" /></div>
                   <div class="field"><label class="field__label" for="pr-l">Préférence de localisation</label><input class="input" id="pr-l" value="Paris préféré, France OK" /></div>
                   <div class="field"><label class="field__label" for="pr-w">Jours travaillés</label><select class="select" id="pr-w"><option>Temps plein préféré</option><option>Temps partiel</option><option>Semaine de 4 jours</option></select></div>
@@ -108,27 +119,32 @@
           <!-- Weights with sum-to-100 -->
           <section class="card" aria-labelledby="p-weights">
             <div class="card__head"><h2 class="card__title" id="p-weights">Poids du score de fit</h2></div>
-            <p class="muted text-sm" style="margin-block-end:var(--space-4)">Les dealbreakers filtrent d'abord ; les préférences produisent le score pondéré. La somme des poids doit atteindre 100%.</p>
+            <p class="muted text-sm mbe-4">Les dealbreakers filtrent d'abord ; les préférences produisent le score pondéré. La somme des poids doit atteindre 100%.</p>
             <div class="stack stack-4">
-              <div class="slider-row"><label for="w1">Compétences préférées</label><span class="slider-row__val">40%</span><input class="slider" id="w1" type="range" min="0" max="100" value="40" style="grid-column:1 / -1" /></div>
-              <div class="slider-row"><label for="w2">Salaire vs minimum</label><span class="slider-row__val">25%</span><input class="slider" id="w2" type="range" min="0" max="100" value="25" style="grid-column:1 / -1" /></div>
-              <div class="slider-row"><label for="w3">Préférence de localisation</label><span class="slider-row__val">15%</span><input class="slider" id="w3" type="range" min="0" max="100" value="15" style="grid-column:1 / -1" /></div>
-              <div class="slider-row"><label for="w4">Jours de bureau vs max</label><span class="slider-row__val">10%</span><input class="slider" id="w4" type="range" min="0" max="100" value="10" style="grid-column:1 / -1" /></div>
-              <div class="slider-row"><label for="w5">Jours travaillés</label><span class="slider-row__val">10%</span><input class="slider" id="w5" type="range" min="0" max="100" value="10" style="grid-column:1 / -1" /></div>
+              <div class="slider-row"><label for="w1">Compétences préférées</label><span class="slider-row__val">40%</span><input class="slider" id="w1" type="range" min="0" max="100" value="40" /></div>
+              <div class="slider-row"><label for="w2">Salaire vs minimum</label><span class="slider-row__val">25%</span><input class="slider" id="w2" type="range" min="0" max="100" value="25" /></div>
+              <div class="slider-row"><label for="w3">Préférence de localisation</label><span class="slider-row__val">15%</span><input class="slider" id="w3" type="range" min="0" max="100" value="15" /></div>
+              <div class="slider-row"><label for="w4">Jours de bureau vs max</label><span class="slider-row__val">10%</span><input class="slider" id="w4" type="range" min="0" max="100" value="10" /></div>
+              <div class="slider-row"><label for="w5">Jours travaillés</label><span class="slider-row__val">10%</span><input class="slider" id="w5" type="range" min="0" max="100" value="10" /></div>
             </div>
-            <div class="weights-sum weights-sum--ok" style="margin-block-start:var(--space-5)"><span>Somme des poids</span><span>100% ✓</span></div>
-            <div class="weights-sum weights-sum--off" style="margin-block-start:var(--space-2)"><span>Exemple hors cible</span><span>85% — ajustez pour atteindre 100% (avertissement doux)</span></div>
-            <div class="row" style="justify-content:flex-end;margin-block-start:var(--space-5)"><button class="btn btn--ghost">Annuler</button><button class="btn btn--primary">Enregistrer le profil</button></div>
+            <div class="weights-sum weights-sum--ok mbs-5"><span>Somme des poids</span><span>100% ✓</span></div>
+            <div class="weights-sum weights-sum--off mbs-2"><span>Exemple hors cible</span><span>85% — ajustez pour atteindre 100% (avertissement doux)</span></div>
+            <div class="row justify-end mbs-5"><button class="btn btn--ghost">Annuler</button><button class="btn btn--primary">Enregistrer le profil</button></div>
           </section>
 
-          <!-- States -->
-          <section class="grid-2" aria-label="États">
-            <div class="card"><div class="state"><span class="state__icon">📄</span><span class="state__title">Aucun profil</span><span>Importez un PDF LinkedIn pour créer votre premier profil.</span><label class="btn btn--primary" for="pdf2">Importer un PDF<input id="pdf2" type="file" class="sr-only" /></label></div></div>
-            <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-40"></span><span class="skeleton" style="height:60px"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div><p class="muted text-sm" style="margin-block-start:var(--space-3)">Extraction du PDF en cours…</p></div>
-          </section>
-          <div class="banner banner--danger"><span>⚠️</span><span>Échec de l'import du PDF. Vérifiez le fichier et <a href="#">réessayez</a>.</span></div>
+          <!-- Non-nominal states preview -->
+          <details class="preview">
+            <summary>États — vide · chargement · erreur</summary>
+            <div class="preview__body">
+              <div class="grid-2">
+                <div class="card"><div class="state"><span class="state__icon">📄</span><span class="state__title">Aucun profil</span><span>Importez un PDF LinkedIn pour créer votre premier profil.</span><label class="btn btn--primary" for="pdf2">Importer un PDF<input id="pdf2" type="file" class="sr-only" /></label></div></div>
+                <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-40"></span><span class="skeleton" style="height:60px"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div><p class="muted text-sm mbs-3">Extraction du PDF en cours…</p></div>
+              </div>
+              <div class="banner banner--danger"><span aria-hidden="true">⚠️</span><span>Échec de l'import du PDF. Vérifiez le fichier et <a href="#">réessayez</a>.</span></div>
+            </div>
+          </details>
         </div>
-      </div>
+      </main>
     </div>
   </div>
 </body>

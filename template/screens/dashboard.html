@@ -11,23 +11,29 @@
     <aside class="app__sidebar">
       <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
       <nav class="nav" aria-label="Navigation principale">
-        <span class="nav__section">Écrans</span>
-        <a class="nav__link" aria-current="page" href="dashboard.html">Tableau de bord</a>
-        <a class="nav__link" href="job-browser.html">Offres</a>
-        <a class="nav__link" href="profiles.html">Profils</a>
-        <a class="nav__link" href="boards.html">Sources</a>
-        <a class="nav__link" href="contacts.html">Contacts</a>
-        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Pilotage</span>
+        <a class="nav__link" aria-current="page" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>Offres</a>
+        <a class="nav__link" href="pipeline.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 8-6-16-3 8H2"/></svg>Pipeline</a>
+        <span class="nav__section">Configuration</span>
+        <a class="nav__link" href="profiles.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>Profils</a>
+        <a class="nav__link" href="boards.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Sources</a>
+        <span class="nav__section">Réseau</span>
+        <a class="nav__link" href="contacts.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4.2-6"/></svg>Contacts</a>
         <span class="nav__section">Référence</span>
-        <a class="nav__link" href="../index.html">Design system</a>
+        <a class="nav__link" href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2.5H6.5A2.5 2.5 0 0 0 4 5v14.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg>Design system</a>
       </nav>
+      <div class="app__sidebar-foot">
+        <span class="app__avatar" aria-hidden="true">GT</span>
+        <span>Guillaume<small>Profil : Go Backend Paris</small></span>
+      </div>
     </aside>
 
     <div class="app__main">
       <header class="topbar">
         <div class="row">
           <label class="sr-only" for="profile-switch">Profil actif</label>
-          <select class="select" id="profile-switch" style="width:auto">
+          <select class="select w-auto" id="profile-switch">
             <option>Go Backend Paris — CDI 65k+</option>
             <option>Go Backend Remote Europe — Freelance 500€/j</option>
           </select>
@@ -35,10 +41,13 @@
         <button class="btn btn--primary">Lancer le pipeline</button>
       </header>
 
-      <div class="page">
+      <main class="page">
         <header class="page__head">
-          <h1 class="page__title">Tableau de bord</h1>
-          <p class="page__sub">Vue d'ensemble pour le profil actif.</p>
+          <div>
+            <h1 class="page__title">Tableau de bord</h1>
+            <p class="page__sub">Vue d'ensemble du marché pour le profil actif — mise à jour après chaque exécution du pipeline.</p>
+          </div>
+          <span class="badge badge--neutral num">Dernier scraping : il y a 2 h</span>
         </header>
 
         <div class="stack stack-5">
@@ -48,13 +57,13 @@
             <div class="stat"><div class="stat__label">Nouvelles aujourd'hui</div><div class="stat__value">18</div><div class="stat__delta stat__delta--up">+6 vs hier</div></div>
             <div class="stat"><div class="stat__label">% Remote</div><div class="stat__value">57%</div><div class="stat__delta muted">stable</div></div>
             <div class="stat"><div class="stat__label">Salaire moyen</div><div class="stat__value">62k€</div><div class="stat__delta stat__delta--down">−1k vs mois dernier</div></div>
-            <div class="stat"><div class="stat__label">Contrat fréquent</div><div class="stat__value" style="font-size:var(--font-size-lg)">CDI</div><div class="stat__delta muted">64% des offres</div></div>
+            <div class="stat"><div class="stat__label">Contrat fréquent</div><div class="stat__value stat__value--text">CDI</div><div class="stat__delta muted">64% des offres</div></div>
           </section>
 
           <div class="grid-2">
             <!-- Skills frequency bar chart -->
             <section class="card" aria-labelledby="d-freq">
-              <div class="card__head"><h2 class="card__title" id="d-freq">Compétences les plus demandées</h2></div>
+              <div class="card__head"><h2 class="card__title" id="d-freq">Compétences les plus demandées</h2><span class="badge badge--neutral">30 jours</span></div>
               <div class="barchart">
                 <div class="barchart__row"><span>Go</span><span class="barchart__track"><span class="barchart__fill" style="width:92%"></span></span><span class="barchart__val">412</span></div>
                 <div class="barchart__row"><span>Kubernetes</span><span class="barchart__track"><span class="barchart__fill" style="width:74%"></span></span><span class="barchart__val">331</span></div>
@@ -82,25 +91,30 @@
           <section class="card" aria-labelledby="d-alerts">
             <div class="card__head"><h2 class="card__title" id="d-alerts">Alertes de correspondance</h2><a href="job-browser.html" class="text-sm">Voir toutes</a></div>
             <div class="stack stack-3">
-              <div class="row-between card card--pad-sm" style="box-shadow:none">
-                <div class="row"><span class="fit-score">94</span><div class="stack"><strong class="text-sm">Senior Go Engineer</strong><span class="muted text-xs">Datadog · Paris · CDI · 70k€</span></div></div>
-                <div class="row"><span class="badge conf conf--high badge--success"><span class="badge__dot"></span>92%</span><a class="btn btn--secondary btn--sm" href="#">Voir</a></div>
+              <div class="list-row">
+                <div class="row"><span class="fit-score" style="--v:94">94</span><div class="stack"><strong class="text-sm">Senior Go Engineer</strong><span class="muted text-xs">Datadog · Paris · CDI · 70k€</span></div></div>
+                <div class="row"><span class="badge conf conf--high badge--success"><span class="badge__dot"></span>92%</span><a class="btn btn--secondary btn--sm" href="job-browser.html">Voir l'offre</a></div>
               </div>
-              <div class="row-between card card--pad-sm" style="box-shadow:none">
-                <div class="row"><span class="fit-score">88</span><div class="stack"><strong class="text-sm">Backend Engineer (Go)</strong><span class="muted text-xs">Alan · Remote · CDI · 62k€</span></div></div>
-                <div class="row"><span class="badge conf conf--mid badge--warning"><span class="badge__dot"></span>66%</span><a class="btn btn--secondary btn--sm" href="#">Voir</a></div>
+              <div class="list-row">
+                <div class="row"><span class="fit-score" style="--v:88">88</span><div class="stack"><strong class="text-sm">Backend Engineer (Go)</strong><span class="muted text-xs">Alan · Remote · CDI · 62k€</span></div></div>
+                <div class="row"><span class="badge conf conf--mid badge--warning"><span class="badge__dot"></span>66%</span><a class="btn btn--secondary btn--sm" href="job-browser.html">Voir l'offre</a></div>
               </div>
             </div>
           </section>
 
-          <!-- States row -->
-          <section class="grid-2" aria-label="États">
-            <div class="card"><div class="state"><span class="state__icon">📊</span><span class="state__title">Pas encore de données</span><span>Aucune offre pour ce profil. Lancez le pipeline pour commencer.</span><button class="btn btn--primary">Lancer le pipeline</button></div></div>
-            <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-40"></span><span class="skeleton" style="height:120px"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div></div>
-          </section>
-          <div class="banner banner--danger"><span>⚠️</span><span>Échec du chargement du tableau de bord. <a href="#">Réessayer</a></span></div>
+          <!-- Non-nominal states preview -->
+          <details class="preview">
+            <summary>États — vide · chargement · erreur</summary>
+            <div class="preview__body">
+              <div class="grid-2">
+                <div class="card"><div class="state"><span class="state__icon">📊</span><span class="state__title">Pas encore de données</span><span>Aucune offre pour ce profil. Lancez le pipeline pour commencer.</span><button class="btn btn--primary">Lancer le pipeline</button></div></div>
+                <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-40"></span><span class="skeleton skeleton--block"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div></div>
+              </div>
+              <div class="banner banner--danger"><span aria-hidden="true">⚠️</span><span>Échec du chargement du tableau de bord. <a href="#">Réessayer</a></span></div>
+            </div>
+          </details>
         </div>
-      </div>
+      </main>
     </div>
   </div>
 </body>

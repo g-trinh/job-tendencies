@@ -11,50 +11,65 @@
     <aside class="app__sidebar">
       <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
       <nav class="nav" aria-label="Navigation principale">
-        <span class="nav__section">Écrans</span>
-        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
-        <a class="nav__link" href="job-browser.html">Offres</a>
-        <a class="nav__link" href="profiles.html">Profils</a>
-        <a class="nav__link" href="boards.html">Sources</a>
-        <a class="nav__link" href="contacts.html">Contacts</a>
-        <a class="nav__link" aria-current="page" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Pilotage</span>
+        <a class="nav__link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>Offres</a>
+        <a class="nav__link" aria-current="page" href="pipeline.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 8-6-16-3 8H2"/></svg>Pipeline</a>
+        <span class="nav__section">Configuration</span>
+        <a class="nav__link" href="profiles.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>Profils</a>
+        <a class="nav__link" href="boards.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Sources</a>
+        <span class="nav__section">Réseau</span>
+        <a class="nav__link" href="contacts.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4.2-6"/></svg>Contacts</a>
         <span class="nav__section">Référence</span>
-        <a class="nav__link" href="../index.html">Design system</a>
+        <a class="nav__link" href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2.5H6.5A2.5 2.5 0 0 0 4 5v14.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg>Design system</a>
       </nav>
+      <div class="app__sidebar-foot">
+        <span class="app__avatar" aria-hidden="true">GT</span>
+        <span>Guillaume<small>Profil : Go Backend Paris</small></span>
+      </div>
     </aside>
 
     <div class="app__main">
       <header class="topbar">
-        <h1 class="page__title" style="font-size:var(--font-size-lg)">Pipeline</h1>
+        <div class="row">
+          <label class="sr-only" for="profile-switch">Profil actif</label>
+          <select class="select w-auto" id="profile-switch"><option>Go Backend Paris — CDI 65k+</option><option>Go Backend Remote Europe — Freelance 500€/j</option></select>
+        </div>
         <button class="btn btn--primary">Lancer un scraping maintenant</button>
       </header>
 
-      <div class="page">
-        <header class="page__head"><p class="page__sub">Scraping → extraction LLM → scoring. Statut par source, mis à jour en direct.</p></header>
+      <main class="page">
+        <header class="page__head">
+          <div>
+            <h1 class="page__title">Pipeline</h1>
+            <p class="page__sub">Scraping → extraction LLM → scoring. Statut par source, mis à jour en direct.</p>
+          </div>
+          <span class="badge badge--brand"><span class="badge__dot"></span>Exécution en cours</span>
+        </header>
 
         <div class="stack stack-5">
           <!-- Current run: in progress -->
           <section class="card" aria-labelledby="pl-run">
-            <div class="card__head"><h2 class="card__title" id="pl-run">Exécution en cours</h2><span class="badge badge--brand"><span class="badge__dot"></span>En cours · démarrée il y a 2 min</span></div>
+            <div class="card__head"><h2 class="card__title" id="pl-run">Exécution en cours</h2><span class="badge badge--brand num"><span class="badge__dot"></span>Démarrée il y a 2 min</span></div>
             <div class="stack stack-4">
               <div class="stack stack-2">
-                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">Welcome to the Jungle</span><span class="badge badge--success">Terminé · 42 offres</span></div>
+                <div class="row-between"><span class="text-sm medium">Welcome to the Jungle</span><span class="badge badge--success num">Terminé · 42 offres</span></div>
                 <div class="progress"><div class="progress__bar progress__bar--success" style="width:100%"></div></div>
               </div>
               <div class="stack stack-2">
-                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">Indeed</span><span class="badge badge--brand">Extraction… 68%</span></div>
+                <div class="row-between"><span class="text-sm medium">Indeed</span><span class="badge badge--brand num">Extraction… 68%</span></div>
                 <div class="progress"><div class="progress__bar" style="width:68%"></div></div>
               </div>
               <div class="stack stack-2">
-                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">LinkedIn</span><span class="badge badge--neutral">En attente</span></div>
+                <div class="row-between"><span class="text-sm medium">LinkedIn</span><span class="badge badge--neutral">En attente</span></div>
                 <div class="progress"><div class="progress__bar" style="width:0%"></div></div>
               </div>
               <div class="stack stack-2">
-                <div class="row-between"><span class="text-sm" style="font-weight:var(--font-weight-medium)">Glassdoor</span><span class="badge badge--danger">Échec · limite de débit</span></div>
+                <div class="row-between"><span class="text-sm medium">Glassdoor</span><span class="badge badge--danger">Échec · limite de débit</span></div>
                 <div class="progress"><div class="progress__bar progress__bar--danger" style="width:35%"></div></div>
               </div>
             </div>
-            <div class="row" style="justify-content:flex-end;margin-block-start:var(--space-4)"><button class="btn btn--secondary btn--sm">Annuler l'exécution</button></div>
+            <div class="row justify-end mbs-4"><button class="btn btn--secondary btn--sm">Annuler l'exécution</button></div>
           </section>
 
           <!-- Run history -->
@@ -62,24 +77,29 @@
             <div class="card__head"><h2 class="card__title" id="pl-hist">Historique des exécutions</h2></div>
             <div class="table-wrap">
               <table class="table">
-                <thead><tr><th>Démarrée</th><th>Déclencheur</th><th>Durée</th><th>Offres</th><th>Contacts</th><th>Statut</th></tr></thead>
+                <thead><tr><th>Démarrée</th><th>Déclencheur</th><th class="num">Durée</th><th class="num">Offres</th><th class="num">Contacts</th><th>Statut</th></tr></thead>
                 <tbody>
-                  <tr><td>02/07 08:00</td><td><span class="badge badge--neutral">Planifié</span></td><td>4 min 12 s</td><td>118</td><td>9</td><td><span class="badge badge--success">Réussi</span></td></tr>
-                  <tr><td>01/07 20:00</td><td><span class="badge badge--brand">Manuel</span></td><td>3 min 48 s</td><td>96</td><td>7</td><td><span class="badge badge--warning">Partiel</span></td></tr>
-                  <tr><td>01/07 08:00</td><td><span class="badge badge--neutral">Planifié</span></td><td>—</td><td>0</td><td>0</td><td><span class="badge badge--danger">Échec</span></td></tr>
+                  <tr><td class="num">02/07 08:00</td><td><span class="badge badge--neutral">Planifié</span></td><td class="num">4 min 12 s</td><td class="num">118</td><td class="num">9</td><td><span class="badge badge--success">Réussi</span></td></tr>
+                  <tr><td class="num">01/07 20:00</td><td><span class="badge badge--brand">Manuel</span></td><td class="num">3 min 48 s</td><td class="num">96</td><td class="num">7</td><td><span class="badge badge--warning">Partiel</span></td></tr>
+                  <tr><td class="num">01/07 08:00</td><td><span class="badge badge--neutral">Planifié</span></td><td class="num">—</td><td class="num">0</td><td class="num">0</td><td><span class="badge badge--danger">Échec</span></td></tr>
                 </tbody>
               </table>
             </div>
           </section>
 
-          <!-- States -->
-          <section class="grid-2" aria-label="États">
-            <div class="card"><div class="state"><span class="state__icon">▶️</span><span class="state__title">Aucune exécution</span><span>Lancez un scraping pour récupérer des offres pour le profil actif.</span><button class="btn btn--primary">Lancer un scraping maintenant</button></div></div>
-            <div class="card"><div class="stack stack-3"><span class="muted text-sm">Interrogation du statut…</span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton" style="height:8px;border-radius:var(--radius-pill)"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div></div>
-          </section>
-          <div class="banner banner--danger"><span>⚠️</span><span>Impossible de récupérer le statut du pipeline. Nouvelle tentative automatique… <a href="#">Réessayer maintenant</a></span></div>
+          <!-- Non-nominal states preview -->
+          <details class="preview">
+            <summary>États — vide · chargement · erreur</summary>
+            <div class="preview__body">
+              <div class="grid-2">
+                <div class="card"><div class="state"><span class="state__icon">▶️</span><span class="state__title">Aucune exécution</span><span>Lancez un scraping pour récupérer des offres pour le profil actif.</span><button class="btn btn--primary">Lancer un scraping maintenant</button></div></div>
+                <div class="card"><div class="stack stack-3"><span class="muted text-sm">Interrogation du statut…</span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--bar"></span><span class="skeleton skeleton--text skeleton--line-60"></span></div></div>
+              </div>
+              <div class="banner banner--danger"><span aria-hidden="true">⚠️</span><span>Impossible de récupérer le statut du pipeline. Nouvelle tentative automatique… <a href="#">Réessayer maintenant</a></span></div>
+            </div>
+          </details>
         </div>
-      </div>
+      </main>
     </div>
   </div>
 </body>
