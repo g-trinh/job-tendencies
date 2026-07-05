@@ -201,6 +201,54 @@
   .th-sort[aria-sort="ascending"]::after { content: "▲"; font-size: 0.6em; }
   .th-sort[aria-sort="descending"]::after { content: "▼"; font-size: 0.6em; }
 
+  /* ---------- Pagination ----------
+     Works for BOTH page-numbered and cursor-style APIs:
+     the middle .pagination__pages cluster is optional — summary + prev/next
+     stand alone. Buttons (never links); disabled uses the `disabled` attr. */
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-3) var(--space-4); flex-wrap: wrap;
+  }
+  .pagination__summary {
+    color: var(--color-text-muted); font-size: var(--font-size-sm);
+    margin: 0;
+  }
+  .pagination__summary .num { color: var(--color-text); font-weight: var(--font-weight-medium); }
+  .pagination__controls {
+    display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  }
+  /* Optional middle cluster — omit entirely for cursor-style pagination */
+  .pagination__pages {
+    display: flex; align-items: center; gap: 2px;
+    list-style: none; padding: 0; margin: 0;
+  }
+  .pagination__page {
+    display: inline-grid; place-items: center;
+    min-width: 30px; min-height: 30px; padding-inline: var(--space-2);
+    border: 1px solid transparent; border-radius: var(--radius-md);
+    background: none; color: var(--color-text-muted);
+    font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);
+    font-variant-numeric: tabular-nums;
+    transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+  }
+  .pagination__page:hover { background: var(--color-surface-alt); color: var(--color-text); }
+  .pagination__page[aria-current="page"] {
+    background: var(--color-brand-soft); color: var(--color-brand);
+    border-color: color-mix(in srgb, var(--color-brand) 30%, transparent);
+    font-weight: var(--font-weight-semibold);
+  }
+  .pagination__ellipsis {
+    display: inline-grid; place-items: center; min-width: var(--space-5); min-height: 30px;
+    color: var(--color-text-subtle); font-size: var(--font-size-xs);
+  }
+  /* Vertical rule separating the page cluster from the page-size select */
+  .pagination__sep {
+    inline-size: 1px; align-self: stretch; min-height: 22px;
+    background: var(--color-border); margin-inline: var(--space-1);
+  }
+  .pagination__size { display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+  .pagination__size-label { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
   /* ---------- Tabs ---------- */
   .tabs { display: flex; gap: var(--space-1); border-block-end: 1px solid var(--color-border); }
   .tab {

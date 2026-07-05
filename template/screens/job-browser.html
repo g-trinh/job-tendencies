@@ -125,7 +125,67 @@
                   </tbody>
                 </table>
               </div>
+
+              <!-- Pagination — full variant: summary + page numbers + page-size select -->
+              <nav class="pagination mbs-4" aria-label="Pagination">
+                <p class="pagination__summary">Affichage <span class="num">1–25</span> sur <span class="num">132</span> offres</p>
+                <div class="pagination__controls">
+                  <button class="btn btn--secondary btn--sm" type="button" disabled>
+                    <span aria-hidden="true">‹</span> Précédent
+                  </button>
+                  <ul class="pagination__pages">
+                    <li><button class="pagination__page" type="button" aria-label="Page 1">1</button></li>
+                    <li><span class="pagination__ellipsis" aria-hidden="true">…</span></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 4">4</button></li>
+                    <li><button class="pagination__page" type="button" aria-current="page" aria-label="Page 5">5</button></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 6">6</button></li>
+                    <li><span class="pagination__ellipsis" aria-hidden="true">…</span></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 12">12</button></li>
+                  </ul>
+                  <button class="btn btn--secondary btn--sm" type="button">
+                    Suivant <span aria-hidden="true">›</span>
+                  </button>
+                  <span class="pagination__sep" aria-hidden="true"></span>
+                  <span class="pagination__size">
+                    <label class="sr-only" for="page-size">Offres par page</label>
+                    <select class="select select--sm" id="page-size">
+                      <option>10 / page</option>
+                      <option selected>25 / page</option>
+                      <option>50 / page</option>
+                      <option>100 / page</option>
+                    </select>
+                  </span>
+                </div>
+              </nav>
             </section>
+
+            <!-- Pagination — minimal variant (cursor-style): summary + prev/next only -->
+            <details class="preview">
+              <summary>Pagination — variante minimale (curseur : résumé + précédent/suivant)</summary>
+              <div class="preview__body">
+                <nav class="pagination" aria-label="Pagination (variante minimale)">
+                  <p class="pagination__summary">Affichage <span class="num">26–50</span> sur <span class="num">132</span> offres</p>
+                  <div class="pagination__controls">
+                    <button class="btn btn--secondary btn--sm" type="button">
+                      <span aria-hidden="true">‹</span> Précédent
+                    </button>
+                    <button class="btn btn--secondary btn--sm" type="button">
+                      Suivant <span aria-hidden="true">›</span>
+                    </button>
+                    <span class="pagination__sep" aria-hidden="true"></span>
+                    <span class="pagination__size">
+                      <label class="sr-only" for="page-size-min">Offres par page</label>
+                      <select class="select select--sm" id="page-size-min">
+                        <option>10 / page</option>
+                        <option selected>25 / page</option>
+                        <option>50 / page</option>
+                        <option>100 / page</option>
+                      </select>
+                    </span>
+                  </div>
+                </nav>
+              </div>
+            </details>
 
             <!-- Card mode preview -->
             <section aria-labelledby="cards-h">

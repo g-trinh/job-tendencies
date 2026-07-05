@@ -195,6 +195,43 @@
             </div>
           </section>
 
+          <!-- Pagination -->
+          <section class="card" aria-labelledby="ds-pagination">
+            <div class="card__head"><h2 class="card__title" id="ds-pagination">Pagination</h2><span class="muted text-xs">Le cluster de numéros est optionnel — résumé + précédent/suivant fonctionnent seuls (pagination par curseur).</span></div>
+            <div class="stack stack-4">
+              <!-- Full variant: summary + page numbers + page-size select -->
+              <nav class="pagination" aria-label="Pagination (exemple complet)">
+                <p class="pagination__summary">Affichage <span class="num">1–25</span> sur <span class="num">132</span> offres</p>
+                <div class="pagination__controls">
+                  <button class="btn btn--secondary btn--sm" type="button" disabled><span aria-hidden="true">‹</span> Précédent</button>
+                  <ul class="pagination__pages">
+                    <li><button class="pagination__page" type="button" aria-label="Page 1">1</button></li>
+                    <li><span class="pagination__ellipsis" aria-hidden="true">…</span></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 4">4</button></li>
+                    <li><button class="pagination__page" type="button" aria-current="page" aria-label="Page 5">5</button></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 6">6</button></li>
+                    <li><span class="pagination__ellipsis" aria-hidden="true">…</span></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 12">12</button></li>
+                  </ul>
+                  <button class="btn btn--secondary btn--sm" type="button">Suivant <span aria-hidden="true">›</span></button>
+                  <span class="pagination__sep" aria-hidden="true"></span>
+                  <span class="pagination__size">
+                    <label class="sr-only" for="ds-page-size">Offres par page</label>
+                    <select class="select select--sm" id="ds-page-size"><option>10 / page</option><option selected>25 / page</option><option>50 / page</option><option>100 / page</option></select>
+                  </span>
+                </div>
+              </nav>
+              <!-- Minimal variant: summary + prev/next only -->
+              <nav class="pagination" aria-label="Pagination (variante minimale)">
+                <p class="pagination__summary">Affichage <span class="num">26–50</span> sur <span class="num">132</span> offres</p>
+                <div class="pagination__controls">
+                  <button class="btn btn--secondary btn--sm" type="button"><span aria-hidden="true">‹</span> Précédent</button>
+                  <button class="btn btn--secondary btn--sm" type="button">Suivant <span aria-hidden="true">›</span></button>
+                </div>
+              </nav>
+            </div>
+          </section>
+
           <!-- Kanban column + states -->
           <section class="grid-2" aria-label="Colonne kanban et états">
             <div>
