@@ -301,11 +301,41 @@ Source: `backend/internal/handler/http/jobs.go`. All routes require auth AND
 Confidence/understanding badges = `field_confidence` (per-field) and
 `understanding_score` (overall). Expired marker = `expired_at != null`.
 
+### `GET /api/jobs` response envelope (ADR-007)
+
+**Breaking change**: `GET /api/jobs` no longer returns a bare `jobResponse[]` array. It
+returns a paginated envelope, default-on (no opt-in — see ADR-007):
+
+```jsonc
+{
+  "items": [ /* jobResponse[], unchanged shape */ ],
+  "page": 2,
+  "page_size": 25,
+  "total": 137,        // total rows across the whole filtered result, COUNT(DISTINCT j.id)
+  "total_pages": 6     // ceil(total / page_size); 0 when total is 0
+}
+```
+
+Two new query params, added to the existing filter/sort set:
+
+| Param | Type | Default | Bounds |
+|---|---|---|---|
+| `page` | int, 1-based | `1` | clamped to `>= 1` |
+| `page_size` | int | `25` | clamped to `1..100` |
+
+Out-of-range or unparseable values are **clamped, never rejected** — `page=-5` becomes
+`1`, `page_size=500` becomes `100`, `page_size=abc` falls back to the default `25`. A
+`page` beyond the last page returns `items: []` with the real `total` (not `0`), so the
+frontend can recover (e.g. clamp back to the last valid page).
+
+The kanban view fetches with `page_size=100` (the max) and does not paginate per column
+— it only renders the small tracked (`application_status != null`) subset (ADR-007).
+
 ### Endpoints
 
 | Method | Path | Query params / body | Response |
 |---|---|---|---|
-| GET | `/api/jobs` | `skills[]` (repeatable), `remote_policy`, `contract_type`, `salary_min`, `salary_max`, `location`, `board_id`, `since` (RFC3339), `confidence_min` (int), `sort` (`date`\|`salary`), `sort_dir` (`asc`\|`desc`) | 200 `jobResponse[]` |
+| GET | `/api/jobs` | `skills[]` (repeatable), `remote_policy`, `contract_type`, `salary_min`, `salary_max`, `location`, `board_id`, `since` (RFC3339), `confidence_min` (int), `sort` (`date`\|`salary`), `sort_dir` (`asc`\|`desc`), `page` (int, default 1), `page_size` (int, default 25, max 100) | 200 paginated envelope (see above) |
 | GET | `/api/jobs/{id}` | — | 200 `jobResponse` |
 | GET | `/api/jobs/{id}/original` | — | 302 redirect to `job.url`; 400 if job has no URL | Use as `<a href>` target, not `fetch` |
 | PATCH | `/api/jobs/{id}/application` | `{"status":"string"}` — must be a valid `kernel.ApplicationStatus` (kanban column value: Saved/Applied/Interview/Offer/Rejected — check `kernel.ParseApplicationStatus` for exact accepted string values) | 200 `{"status":"string","updated_at":"RFC3339 string"}` |
@@ -317,3 +347,5 @@ Notes for frontend:
   entry for that job's `application_status`, and roll back on error.
 - `sort` only supports `date`/`salary` per the query parser; there is no server-side sort
   by fit score, confidence, or title — client-side sort those columns if needed.
+- `useJobs` must be updated to read `.items` (list) and `.page/.page_size/.total/.total_pages`
+  (pagination controls) instead of treating the response as an array (ADR-007).

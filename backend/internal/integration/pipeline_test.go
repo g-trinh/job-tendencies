@@ -249,12 +249,12 @@ func (s *memoryJobStore) GetByProfile(_ context.Context, _ kernel.ProfileID, id 
 	return toJobView(job), nil
 }
 
-func (s *memoryJobStore) ListByProfile(_ context.Context, _ kernel.ProfileID, _ appjobs.JobListFilter) ([]appjobs.JobView, error) {
+func (s *memoryJobStore) ListByProfile(_ context.Context, _ kernel.ProfileID, _ appjobs.JobListFilter) (appjobs.JobListResult, error) {
 	out := make([]appjobs.JobView, 0, len(s.byID))
 	for _, job := range s.byID {
 		out = append(out, toJobView(job))
 	}
-	return out, nil
+	return appjobs.JobListResult{Items: out, Total: len(out)}, nil
 }
 
 func toJobView(job jobs.Job) appjobs.JobView {
@@ -430,8 +430,8 @@ func TestPipeline_ScrapeExtractDedupScoreJobVisible(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListJobs error = %v", err)
 	}
-	if len(list) != 1 {
-		t.Fatalf("ListJobs returned %d jobs, want 1 (the job must be browsable)", len(list))
+	if len(list.Items) != 1 {
+		t.Fatalf("ListJobs returned %d jobs, want 1 (the job must be browsable)", len(list.Items))
 	}
 
 	// dedup / idempotency (P5-1, gating this task): redelivering the same

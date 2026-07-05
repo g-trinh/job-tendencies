@@ -3,6 +3,7 @@ package handler_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -25,6 +26,7 @@ type fakeJobService struct {
 	apps           map[kernel.JobID]kernel.ApplicationStatus
 	reextractCalls []kernel.JobID
 	reextractErr   error
+	total          int // override for the reported total; 0 means "use len(jobs)"
 }
 
 func newFakeJobService() *fakeJobService {
@@ -34,15 +36,34 @@ func newFakeJobService() *fakeJobService {
 	}
 }
 
-func (f *fakeJobService) ListJobs(_ context.Context, _ kernel.ProfileID, _ appjobs.JobListFilter) ([]appjobs.JobView, error) {
+func (f *fakeJobService) ListJobs(_ context.Context, _ kernel.ProfileID, filter appjobs.JobListFilter) (appjobs.JobListResult, error) {
 	if f.err != nil {
-		return nil, f.err
+		return appjobs.JobListResult{}, f.err
 	}
 	out := make([]appjobs.JobView, 0, len(f.jobs))
 	for _, j := range f.jobs {
 		out = append(out, j)
 	}
-	return out, nil
+	total := len(out)
+	if f.total != 0 {
+		total = f.total
+	}
+	page, pageSize := filter.Page, filter.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = len(out)
+	}
+	start := (page - 1) * pageSize
+	if start > len(out) {
+		start = len(out)
+	}
+	end := start + pageSize
+	if end > len(out) {
+		end = len(out)
+	}
+	return appjobs.JobListResult{Items: out[start:end], Total: total}, nil
 }
 
 func (f *fakeJobService) GetJob(_ context.Context, _ kernel.ProfileID, id kernel.JobID) (appjobs.JobView, error) {
@@ -166,18 +187,20 @@ func TestListJobs_SourcesHaveBoardName(t *testing.T) {
 		t.Fatalf("status = %d; want 200 (body: %s)", rec.Code, rec.Body.String())
 	}
 
-	var resp []struct {
-		Sources []struct {
-			BoardName string `json:"board_name"`
-		} `json:"sources"`
+	var resp struct {
+		Items []struct {
+			Sources []struct {
+				BoardName string `json:"board_name"`
+			} `json:"sources"`
+		} `json:"items"`
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
-	if len(resp) == 0 {
+	if len(resp.Items) == 0 {
 		t.Fatal("expected at least one job")
 	}
-	if got := resp[0].Sources[0].BoardName; got != "WTTJ" {
+	if got := resp.Items[0].Sources[0].BoardName; got != "WTTJ" {
 		t.Errorf("board_name = %q; want %q", got, "WTTJ")
 	}
 }
@@ -226,14 +249,16 @@ func TestListJobs_ApplicationStatusAndFirstSeen(t *testing.T) {
 				t.Fatalf("status = %d; want 200", rec.Code)
 			}
 
-			var resp []map[string]any
+			var resp struct {
+				Items []map[string]any `json:"items"`
+			}
 			if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 				t.Fatalf("decoding: %v", err)
 			}
-			if len(resp) == 0 {
+			if len(resp.Items) == 0 {
 				t.Fatal("expected one job")
 			}
-			item := resp[0]
+			item := resp.Items[0]
 			_, hasFirstSeen := item["first_seen"]
 			if !hasFirstSeen {
 				t.Error("first_seen missing from response")
@@ -421,5 +446,173 @@ func TestListJobs_FilterQueryParams(t *testing.T) {
 				t.Errorf("status = %d; want %d (body: %s)", rec.Code, tc.wantStatus, rec.Body.String())
 			}
 		})
+	}
+}
+
+// jobListEnvelope mirrors the ADR-007 response shape for decoding in tests.
+type jobListEnvelope struct {
+	Items      []map[string]any `json:"items"`
+	Page       int              `json:"page"`
+	PageSize   int              `json:"page_size"`
+	Total      int              `json:"total"`
+	TotalPages int              `json:"total_pages"`
+}
+
+// seedJobs adds n distinct jobs to the fake service.
+func seedJobs(svc *fakeJobService, n int) {
+	for i := 0; i < n; i++ {
+		id := kernel.JobID(fmt.Sprintf("j-%d", i))
+		svc.jobs[id] = appjobs.JobView{
+			ID:        id,
+			Title:     "Go Engineer",
+			Company:   "Acme",
+			FirstSeen: time.Now(),
+			LastSeen:  time.Now(),
+		}
+	}
+}
+
+// AC: GET /api/jobs returns the ADR-007 paginated envelope, not a bare array.
+
+func TestListJobs_ReturnsPaginatedEnvelope(t *testing.T) {
+	t.Parallel()
+
+	svc := newFakeJobService()
+	seedJobs(svc, 3)
+	r := newJobRouter(svc)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/jobs", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d; want 200 (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	var resp jobListEnvelope
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decoding envelope: %v", err)
+	}
+	if len(resp.Items) != 3 {
+		t.Errorf("items = %d; want 3", len(resp.Items))
+	}
+	if resp.Page != 1 {
+		t.Errorf("page = %d; want default 1", resp.Page)
+	}
+	if resp.PageSize != 25 {
+		t.Errorf("page_size = %d; want default 25", resp.PageSize)
+	}
+	if resp.Total != 3 {
+		t.Errorf("total = %d; want 3", resp.Total)
+	}
+	if resp.TotalPages != 1 {
+		t.Errorf("total_pages = %d; want 1", resp.TotalPages)
+	}
+}
+
+// AC: page and page_size are clamped rather than rejected with a 400 (ADR-007).
+
+func TestListJobs_ClampsPageAndPageSize(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		query        string
+		wantPage     int
+		wantPageSize int
+	}{
+		{name: "page below 1 clamps to 1", query: "?page=-5", wantPage: 1, wantPageSize: 25},
+		{name: "page non-numeric defaults to 1", query: "?page=abc", wantPage: 1, wantPageSize: 25},
+		{name: "page_size above 100 clamps to 100", query: "?page_size=500", wantPage: 1, wantPageSize: 100},
+		{name: "page_size below 1 clamps to 1", query: "?page_size=0", wantPage: 1, wantPageSize: 1},
+		{name: "page_size non-numeric defaults to 25", query: "?page_size=abc", wantPage: 1, wantPageSize: 25},
+		{name: "valid page and page_size pass through", query: "?page=2&page_size=10", wantPage: 2, wantPageSize: 10},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newFakeJobService()
+			seedJobs(svc, 30)
+			r := newJobRouter(svc)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/jobs"+tc.query, nil)
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; want 200 (body: %s)", rec.Code, rec.Body.String())
+			}
+
+			var resp jobListEnvelope
+			if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+				t.Fatalf("decoding envelope: %v", err)
+			}
+			if resp.Page != tc.wantPage {
+				t.Errorf("page = %d; want %d", resp.Page, tc.wantPage)
+			}
+			if resp.PageSize != tc.wantPageSize {
+				t.Errorf("page_size = %d; want %d", resp.PageSize, tc.wantPageSize)
+			}
+		})
+	}
+}
+
+// AC: a page past the end returns empty items with the real total (ADR-007), not an
+// error, so the frontend can recover (e.g. clamp back to the last page).
+
+func TestListJobs_PagePastEnd_ReturnsEmptyItemsWithTrueTotal(t *testing.T) {
+	t.Parallel()
+
+	svc := newFakeJobService()
+	seedJobs(svc, 3)
+	r := newJobRouter(svc)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/jobs?page=5&page_size=25", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d; want 200 (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	var resp jobListEnvelope
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decoding envelope: %v", err)
+	}
+	if len(resp.Items) != 0 {
+		t.Errorf("items = %d; want 0 (page past the end)", len(resp.Items))
+	}
+	if resp.Total != 3 {
+		t.Errorf("total = %d; want 3 (the true total, not 0)", resp.Total)
+	}
+}
+
+// AC: total_pages is ceil(total/page_size), and 0 when the profile has no jobs at all.
+
+func TestListJobs_TotalPagesIsZeroWhenNoJobs(t *testing.T) {
+	t.Parallel()
+
+	svc := newFakeJobService()
+	r := newJobRouter(svc)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/jobs", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d; want 200 (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	var resp jobListEnvelope
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decoding envelope: %v", err)
+	}
+	if resp.Total != 0 {
+		t.Errorf("total = %d; want 0", resp.Total)
+	}
+	if resp.TotalPages != 0 {
+		t.Errorf("total_pages = %d; want 0 when total is 0", resp.TotalPages)
 	}
 }
