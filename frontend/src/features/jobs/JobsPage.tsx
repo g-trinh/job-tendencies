@@ -141,13 +141,14 @@ function JobCard({ job }: { job: JobSummary }) {
 /** Jobs list page, scoped to the active profile (see `useJobs`). */
 function JobsPage() {
   const [filters, setFilters] = useState<JobFilters>({});
-  const [view, setView] = useState<View>('card');
+  const [view, setView] = useState<View>('table');
   // Hidden by default per job-browser/feature.md ("Job removed from board →
-  // marked expired, data retained"). Client-side only — see JobFiltersBar.
+  // marked expired, data retained"). Sent as `include_expired` to `GET
+  // /api/jobs` so the server filters in SQL — see JobFiltersBar and useJobs.
   const [showExpired, setShowExpired] = useState(false);
   // ADR-007 offset pagination — page/pageSize are local view state (single-user
-  // app). Reset to page 1 whenever filters, sort, or view change so a stale
-  // page number is never applied to a different result set.
+  // app). Reset to page 1 whenever filters, sort, view, or expired-visibility
+  // change so a stale page number is never applied to a different result set.
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -166,11 +167,17 @@ function JobsPage() {
     setPage(1);
   }
 
-  const { data, isPending, isError } = useJobs(filters, { page, pageSize });
-  const jobs = data?.items;
-  const visibleJobs = jobs?.filter(
-    (job) => showExpired || job.expiredAt === null,
+  function handleShowExpiredChange(next: boolean) {
+    setShowExpired(next);
+    setPage(1);
+  }
+
+  const { data, isPending, isError } = useJobs(
+    filters,
+    { page, pageSize },
+    showExpired,
   );
+  const jobs = data?.items;
 
   useWidePage(true);
 
@@ -179,11 +186,11 @@ function JobsPage() {
       <header className="page__head">
         <div>
           <h1 className="page__title">Offres</h1>
-          {visibleJobs !== undefined && (
+          {data !== undefined && (
             <p className="page__sub num">
-              {visibleJobs.length === 1
+              {data.total === 1
                 ? '1 offre correspond au profil actif.'
-                : `${visibleJobs.length} offres correspondent au profil actif.`}
+                : `${data.total} offres correspondent au profil actif.`}
             </p>
           )}
         </div>
@@ -194,7 +201,7 @@ function JobsPage() {
           filters={filters}
           onChange={handleFiltersChange}
           showExpired={showExpired}
-          onShowExpiredChange={setShowExpired}
+          onShowExpiredChange={handleShowExpiredChange}
         />
         <div className="stack stack-5">
           {isPending && <p className="muted">Chargement des offres…</p>}
@@ -203,9 +210,9 @@ function JobsPage() {
               Impossible de charger les offres.
             </div>
           )}
-          {visibleJobs !== undefined && (
+          {jobs !== undefined && (
             <>
-              {visibleJobs.length === 0 ? (
+              {jobs.length === 0 ? (
                 <div className="card">
                   <div className="state">
                     <span className="state__icon" aria-hidden="true">
@@ -217,10 +224,10 @@ function JobsPage() {
                   </div>
                 </div>
               ) : view === 'table' ? (
-                <JobsTable jobs={visibleJobs} />
+                <JobsTable jobs={jobs} />
               ) : (
                 <ul className="grid-cards" aria-label="Offres">
-                  {visibleJobs.map((job) => (
+                  {jobs.map((job) => (
                     <JobCard key={job.id} job={job} />
                   ))}
                 </ul>

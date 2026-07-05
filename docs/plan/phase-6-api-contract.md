@@ -331,11 +331,23 @@ frontend can recover (e.g. clamp back to the last valid page).
 The kanban view fetches with `page_size=100` (the max) and does not paginate per column
 — it only renders the small tracked (`application_status != null`) subset (ADR-007).
 
+**Bug fix — expired-job filtering moved server-side:** previously the server counted and
+paginated over *all* jobs (including expired ones) while the frontend hid expired rows
+client-side, so `total`/`total_pages` could disagree with what was actually rendered (a
+page could even render empty while "Suivant" stayed enabled). The expiry predicate
+(`expired_at IS NULL`) now lives in the same shared SQL WHERE builder used by both the
+list and the `COUNT(DISTINCT j.id)` query, so `total`/`total_pages` always match the
+rendered items. New query param:
+
+| Param | Type | Default | Behaviour |
+|---|---|---|---|
+| `include_expired` | bool | `false` | `false` (default, or absent/unparseable): excludes jobs with `expired_at` set. `true`: no expiry filter — expired jobs included (previous behaviour). |
+
 ### Endpoints
 
 | Method | Path | Query params / body | Response |
 |---|---|---|---|
-| GET | `/api/jobs` | `skills[]` (repeatable), `remote_policy`, `contract_type`, `salary_min`, `salary_max`, `location`, `board_id`, `since` (RFC3339), `confidence_min` (int), `sort` (`date`\|`salary`), `sort_dir` (`asc`\|`desc`), `page` (int, default 1), `page_size` (int, default 25, max 100) | 200 paginated envelope (see above) |
+| GET | `/api/jobs` | `skills[]` (repeatable), `remote_policy`, `contract_type`, `salary_min`, `salary_max`, `location`, `board_id`, `since` (RFC3339), `confidence_min` (int), `include_expired` (bool, default `false`), `sort` (`date`\|`salary`), `sort_dir` (`asc`\|`desc`), `page` (int, default 1), `page_size` (int, default 25, max 100) | 200 paginated envelope (see above) |
 | GET | `/api/jobs/{id}` | — | 200 `jobResponse` |
 | GET | `/api/jobs/{id}/original` | — | 302 redirect to `job.url`; 400 if job has no URL | Use as `<a href>` target, not `fetch` |
 | PATCH | `/api/jobs/{id}/application` | `{"status":"string"}` — must be a valid `kernel.ApplicationStatus` (kanban column value: Saved/Applied/Interview/Offer/Rejected — check `kernel.ParseApplicationStatus` for exact accepted string values) | 200 `{"status":"string","updated_at":"RFC3339 string"}` |

@@ -90,8 +90,8 @@ const (
 // ListJobs handles GET /api/jobs, returning a paginated envelope of jobs scoped to
 // the active profile (ADR-007) with optional filter and sort query parameters:
 // skills[], remote_policy, contract_type, salary_min, salary_max, location,
-// board_id, since, confidence_min, sort (date|salary), sort_dir (asc|desc),
-// page, page_size.
+// board_id, since, confidence_min, include_expired (bool, default false — excludes
+// expired jobs), sort (date|salary), sort_dir (asc|desc), page, page_size.
 func ListJobs(reader JobReader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		profileID, _ := ActiveProfileID(r)
@@ -293,6 +293,9 @@ func parseJobListFilter(r *http.Request) appjobs.JobListFilter {
 		if v, err := strconv.Atoi(s); err == nil {
 			f.ConfidenceMin = &v
 		}
+	}
+	if v, err := strconv.ParseBool(q.Get("include_expired")); err == nil {
+		f.IncludeExpired = v
 	}
 	// Normalise sort_dir to lower-case for the repo comparison.
 	f.SortDir = strings.ToLower(f.SortDir)

@@ -61,19 +61,20 @@ type JobView struct {
 // clamping Page to >= 1 and PageSize to 1..100 before this filter reaches the query
 // port — the query port trusts these values are already valid.
 type JobListFilter struct {
-	Skills        []string
-	RemotePolicy  string
-	ContractType  string
-	SalaryMin     *int64
-	SalaryMax     *int64
-	Location      string
-	BoardID       string
-	Since         *time.Time
-	ConfidenceMin *int
-	Sort          string // "date" | "fit" | "salary"; default "date"
-	SortDir       string // "asc" | "desc"; default "desc"
-	Page          int    // 1-based page number; expected >= 1
-	PageSize      int    // rows per page; expected in 1..100
+	Skills         []string
+	RemotePolicy   string
+	ContractType   string
+	SalaryMin      *int64
+	SalaryMax      *int64
+	Location       string
+	BoardID        string
+	Since          *time.Time
+	ConfidenceMin  *int
+	IncludeExpired bool   // when false (default), excludes jobs with expired_at set
+	Sort           string // "date" | "fit" | "salary"; default "date"
+	SortDir        string // "asc" | "desc"; default "desc"
+	Page           int    // 1-based page number; expected >= 1
+	PageSize       int    // rows per page; expected in 1..100
 }
 
 // JobListResult is the paginated outcome of a job list query (ADR-007): the page of

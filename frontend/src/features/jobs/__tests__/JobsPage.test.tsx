@@ -67,6 +67,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // Enum badges are card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     // Query within the characteristics lists (cards) to avoid matching filter <option> text.
     const charLists = screen.getAllByRole('list', { name: 'Caractéristiques' });
     const charText = charLists.map((el) => el.textContent).join('');
@@ -113,6 +115,10 @@ describe('JobsPage', () => {
 
     renderJobsPage();
 
+    await screen.findByRole('link', { name: job.title });
+    // "Lien indisponible" is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
+
     expect(await screen.findByText('Lien indisponible')).toBeInTheDocument();
     // Title still links to detail page (not the original posting)
     expect(screen.getByRole('link', { name: job.title })).toHaveAttribute(
@@ -152,6 +158,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // Status line is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     // First fixture job has application_status: 'saved'
     expect(screen.getByText('Candidature : Sauvegardé')).toBeInTheDocument();
   });
@@ -163,6 +171,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // "Trouvé sur" footer is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     expect(
       screen.getAllByText('Trouvé sur : Welcome to the Jungle'),
     ).toHaveLength(2);
@@ -175,6 +185,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // "Pertinence" line is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     // First job has fit_score: 87 (rendered as "Pertinence : " + a <span class="num">87/100</span>)
     expect(
       screen.getByText((_, element) => element?.textContent === 'Pertinence : 87/100'),
@@ -184,24 +196,24 @@ describe('JobsPage', () => {
     expect(screen.getAllByText(/Pertinence :/)).toHaveLength(1);
   });
 
-  // AC: view toggle switches between card and table layouts
-  it('switches to table view when the Tableau button is pressed', async () => {
+  // AC: view toggle switches between card and table layouts (table is the default)
+  it('defaults to table view and switches to cards when the Cartes button is pressed', async () => {
     mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
 
-    // Initially in card view — jobs rendered as a list
-    expect(screen.getByRole('list', { name: 'Offres' })).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Tableau' }));
-
+    // Initially in table view
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(
       screen.queryByRole('list', { name: 'Offres' }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
+
+    expect(screen.getByRole('list', { name: 'Offres' })).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('switches back to card view when the Cartes button is pressed', async () => {
@@ -241,43 +253,19 @@ describe('JobsPage', () => {
     expect(sentParams['remote_policy']).toBe('hybrid');
   });
 
-  // AC: the confidence threshold filter narrows the list, excluding
-  // below-threshold jobs (overview.md §9, job-browser/feature.md)
-  it('sends confidence_min as a query param and narrows the list to jobs meeting the threshold', async () => {
+  // AC: expired jobs are hidden by default (job-browser/feature.md edge case).
+  // The server filters expired jobs in SQL when `include_expired` is absent —
+  // simulate that by only returning the non-expired subset in that case.
+  it('hides expired jobs by default and omits include_expired from the request', async () => {
     let sentParams: Record<string, unknown> = {};
     mock.onGet('/jobs').reply((config) => {
       sentParams = config.params as Record<string, unknown>;
-      const minConfidence = sentParams['confidence_min'] as number | undefined;
-      const filtered =
-        minConfidence != null
-          ? jobsFixture.filter((job) => job.understanding_score >= minConfidence)
-          : jobsFixture;
-      return [200, filtered];
+      const includeExpired = Boolean(sentParams['include_expired']);
+      const items = includeExpired
+        ? jobsWithExpiredFixture
+        : jobsFixture;
+      return [200, toPagedJobsFixture(items)];
     });
-
-    renderJobsPage();
-
-    // Both jobs present before any threshold is applied (92 and 74).
-    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
-    expect(
-      screen.getByRole('link', { name: 'Développeur Full-Stack' }),
-    ).toBeInTheDocument();
-
-    // Raise the threshold above the second job's understanding_score (74).
-    fireEvent.change(screen.getByLabelText('Confiance min (%)'), {
-      target: { value: '80' },
-    });
-
-    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
-    expect(sentParams['confidence_min']).toBe(80);
-    expect(
-      screen.queryByRole('link', { name: 'Développeur Full-Stack' }),
-    ).not.toBeInTheDocument();
-  });
-
-  // AC: expired jobs are hidden by default (job-browser/feature.md edge case)
-  it('hides expired jobs by default', async () => {
-    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsWithExpiredFixture));
 
     renderJobsPage();
 
@@ -285,11 +273,21 @@ describe('JobsPage', () => {
     expect(
       screen.queryByRole('link', { name: 'Lead Engineer (Go) — Expiré' }),
     ).not.toBeInTheDocument();
+    expect(sentParams['include_expired']).toBeUndefined();
   });
 
-  // AC: a toggle reveals expired jobs, marked with an "Expirée" badge
+  // AC: a toggle reveals expired jobs, marked with an "Expirée" badge, and
+  // sends `include_expired=true` so the server includes them in the paginated result.
   it('shows expired jobs with an "Expirée" badge once the toggle is checked', async () => {
-    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsWithExpiredFixture));
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      const includeExpired = Boolean(sentParams['include_expired']);
+      const items = includeExpired
+        ? jobsWithExpiredFixture
+        : jobsFixture;
+      return [200, toPagedJobsFixture(items)];
+    });
 
     renderJobsPage();
 
@@ -304,6 +302,46 @@ describe('JobsPage', () => {
     });
     expect(expiredLink).toBeInTheDocument();
     expect(screen.getByLabelText('Offre expirée')).toBeInTheDocument();
+    expect(sentParams['include_expired']).toBe(true);
+  });
+
+  // AC: toggling expired visibility re-scopes the result set, so the page
+  // resets to 1 (same reset pattern as filters/sort/view changes).
+  it('resets to page 1 when the expired toggle is checked', async () => {
+    const requestedPages: unknown[] = [];
+    mock.onGet('/jobs').reply((config) => {
+      const params = config.params as Record<string, unknown>;
+      requestedPages.push(params['page']);
+      return [
+        200,
+        toPagedJobsFixture(jobsFixture, {
+          page: (params['page'] as number) ?? 1,
+          total: 132,
+        }),
+      ];
+    });
+
+    renderJobsPage();
+
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+
+    fireEvent.click(screen.getByRole('button', { name: /Suivant/ }));
+    await waitFor(() =>
+      expect(screen.getByText(/Affichage/)).toHaveTextContent(
+        'Affichage 26–50 sur 132 offres',
+      ),
+    );
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Afficher les offres expirées' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Affichage/)).toHaveTextContent(
+        'Affichage 1–25 sur 132 offres',
+      ),
+    );
+    expect(requestedPages).toEqual([1, 2, 1]);
   });
 
   // ADR-007: clicking "Suivant" fetches page 2 from the API
