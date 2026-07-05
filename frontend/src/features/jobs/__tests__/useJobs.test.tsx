@@ -94,4 +94,35 @@ describe('useJobs', () => {
     expect(result.current.data?.page).toBe(3);
     expect(result.current.data?.pageSize).toBe(50);
   });
+
+  // Server default excludes expired jobs — omit the flag rather than sending false.
+  it('omits include_expired by default', async () => {
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      return [200, toPagedJobsFixture(jobsFixture)];
+    });
+
+    const { result } = renderUseJobs();
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(sentParams['include_expired']).toBeUndefined();
+  });
+
+  // Fix: include_expired=true is sent only when the caller opts in, and is
+  // part of the cache key so toggling it re-scopes the query.
+  it('sends include_expired=true when the caller opts in', async () => {
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      return [200, toPagedJobsFixture(jobsFixture)];
+    });
+
+    const { result } = renderUseJobs(undefined, undefined, true);
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    expect(sentParams['include_expired']).toBe(true);
+  });
 });

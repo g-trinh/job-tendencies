@@ -149,6 +149,9 @@ func buildJobListFilterQuery(profileID kernel.ProfileID, filter appjobs.JobListF
 	if filter.ConfidenceMin != nil {
 		conditions = append(conditions, "j.understanding_score >= "+addArg(*filter.ConfidenceMin))
 	}
+	if !filter.IncludeExpired {
+		conditions = append(conditions, "j.expired_at IS NULL")
+	}
 
 	orderCol := "j.first_seen"
 	if filter.Sort == "salary" {

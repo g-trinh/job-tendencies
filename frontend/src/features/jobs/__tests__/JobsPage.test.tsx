@@ -241,9 +241,19 @@ describe('JobsPage', () => {
     expect(sentParams['remote_policy']).toBe('hybrid');
   });
 
-  // AC: expired jobs are hidden by default (job-browser/feature.md edge case)
-  it('hides expired jobs by default', async () => {
-    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsWithExpiredFixture));
+  // AC: expired jobs are hidden by default (job-browser/feature.md edge case).
+  // The server filters expired jobs in SQL when `include_expired` is absent —
+  // simulate that by only returning the non-expired subset in that case.
+  it('hides expired jobs by default and omits include_expired from the request', async () => {
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      const includeExpired = Boolean(sentParams['include_expired']);
+      const items = includeExpired
+        ? jobsWithExpiredFixture
+        : jobsFixture;
+      return [200, toPagedJobsFixture(items)];
+    });
 
     renderJobsPage();
 
@@ -251,11 +261,21 @@ describe('JobsPage', () => {
     expect(
       screen.queryByRole('link', { name: 'Lead Engineer (Go) — Expiré' }),
     ).not.toBeInTheDocument();
+    expect(sentParams['include_expired']).toBeUndefined();
   });
 
-  // AC: a toggle reveals expired jobs, marked with an "Expirée" badge
+  // AC: a toggle reveals expired jobs, marked with an "Expirée" badge, and
+  // sends `include_expired=true` so the server includes them in the paginated result.
   it('shows expired jobs with an "Expirée" badge once the toggle is checked', async () => {
-    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsWithExpiredFixture));
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      const includeExpired = Boolean(sentParams['include_expired']);
+      const items = includeExpired
+        ? jobsWithExpiredFixture
+        : jobsFixture;
+      return [200, toPagedJobsFixture(items)];
+    });
 
     renderJobsPage();
 
@@ -270,6 +290,46 @@ describe('JobsPage', () => {
     });
     expect(expiredLink).toBeInTheDocument();
     expect(screen.getByLabelText('Offre expirée')).toBeInTheDocument();
+    expect(sentParams['include_expired']).toBe(true);
+  });
+
+  // AC: toggling expired visibility re-scopes the result set, so the page
+  // resets to 1 (same reset pattern as filters/sort/view changes).
+  it('resets to page 1 when the expired toggle is checked', async () => {
+    const requestedPages: unknown[] = [];
+    mock.onGet('/jobs').reply((config) => {
+      const params = config.params as Record<string, unknown>;
+      requestedPages.push(params['page']);
+      return [
+        200,
+        toPagedJobsFixture(jobsFixture, {
+          page: (params['page'] as number) ?? 1,
+          total: 132,
+        }),
+      ];
+    });
+
+    renderJobsPage();
+
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+
+    fireEvent.click(screen.getByRole('button', { name: /Suivant/ }));
+    await waitFor(() =>
+      expect(screen.getByText(/Affichage/)).toHaveTextContent(
+        'Affichage 26–50 sur 132 offres',
+      ),
+    );
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Afficher les offres expirées' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Affichage/)).toHaveTextContent(
+        'Affichage 1–25 sur 132 offres',
+      ),
+    );
+    expect(requestedPages).toEqual([1, 2, 1]);
   });
 
   // ADR-007: clicking "Suivant" fetches page 2 from the API

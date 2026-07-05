@@ -34,6 +34,7 @@ export interface JobsPagination {
 async function fetchJobs(
   filters: JobFilters | undefined,
   pagination: JobsPagination,
+  includeExpired: boolean,
 ): Promise<PagedJobs> {
   if (useFixtures) {
     return {
@@ -47,10 +48,13 @@ async function fetchJobs(
 
   // Serialize filter params — omit null/undefined/empty values so the backend
   // does not need to distinguish "not sent" from "sent as empty string".
-  const params: Record<string, string | string[] | number> = {
+  const params: Record<string, string | string[] | number | boolean> = {
     page: pagination.page,
     page_size: pagination.pageSize,
   };
+  // Server defaults to excluding expired jobs; only send the flag when the
+  // caller wants expired jobs included (omit otherwise, matching the default).
+  if (includeExpired) params['include_expired'] = true;
   if (filters) {
     if (filters.skills?.length) params['skills'] = filters.skills;
     if (filters.remote_policy) params['remote_policy'] = filters.remote_policy;
@@ -72,12 +76,16 @@ async function fetchJobs(
 
 /**
  * Lists jobs for the active profile (ADR-007 offset pagination). The
- * active-profile id, filters, and page/pageSize are all part of the cache key,
- * so switching profiles, filters, or pages transparently re-scopes the
- * request; the request is disabled until a profile is resolved (the
- * `X-Active-Profile` header is injected by the axios interceptor).
+ * active-profile id, filters, page/pageSize, and `includeExpired` are all
+ * part of the cache key, so switching profiles, filters, pages, or the
+ * expired-visibility toggle transparently re-scopes the request; the request
+ * is disabled until a profile is resolved (the `X-Active-Profile` header is
+ * injected by the axios interceptor).
  *
- * Defaults to page 1 / 25 per page when `pagination` is omitted. Uses
+ * Defaults to page 1 / 25 per page when `pagination` is omitted, and to
+ * excluding expired jobs when `includeExpired` is omitted — the backend
+ * filters expired jobs in SQL so `items`/`total`/`totalPages` stay consistent
+ * regardless of the flag (see the pagination fix in job-browser). Uses
  * `placeholderData: keepPreviousData` so the list does not flash empty while
  * switching pages — the previous page's items stay on screen until the new
  * page resolves.
@@ -85,14 +93,22 @@ async function fetchJobs(
 export function useJobs(
   filters?: JobFilters,
   pagination?: JobsPagination,
+  includeExpired = false,
 ): UseQueryResult<PagedJobs> {
   const { activeProfileId } = useActiveProfile();
   const page = pagination?.page ?? 1;
   const pageSize = pagination?.pageSize ?? DEFAULT_PAGE_SIZE;
 
   return useQuery({
-    queryKey: ['jobs', activeProfileId, filters, page, pageSize],
-    queryFn: () => fetchJobs(filters, { page, pageSize }),
+    queryKey: [
+      'jobs',
+      activeProfileId,
+      filters,
+      page,
+      pageSize,
+      includeExpired,
+    ],
+    queryFn: () => fetchJobs(filters, { page, pageSize }, includeExpired),
     enabled: useFixtures || activeProfileId !== null,
     placeholderData: keepPreviousData,
   });
