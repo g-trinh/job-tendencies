@@ -141,7 +141,7 @@ function JobCard({ job }: { job: JobSummary }) {
 /** Jobs list page, scoped to the active profile (see `useJobs`). */
 function JobsPage() {
   const [filters, setFilters] = useState<JobFilters>({});
-  const [view, setView] = useState<View>('card');
+  const [view, setView] = useState<View>('table');
   // Hidden by default per job-browser/feature.md ("Job removed from board →
   // marked expired, data retained"). Sent as `include_expired` to `GET
   // /api/jobs` so the server filters in SQL — see JobFiltersBar and useJobs.
