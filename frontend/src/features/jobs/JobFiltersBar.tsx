@@ -10,10 +10,10 @@ interface JobFiltersBarProps {
   filters: JobFilters;
   onChange: (filters: JobFilters) => void;
   /**
-   * Whether expired jobs (job.expired_at set) are included in the list.
-   * This is a client-side display toggle, not a `GET /api/jobs` query param —
-   * the backend does not filter by expiry, so all jobs are fetched and this
-   * flag decides what `JobsPage` renders. Defaults to hidden per
+   * Whether expired jobs (job.expired_at set) are included in the list. Sent
+   * as the `include_expired` query param on `GET /api/jobs` — the backend
+   * filters expired jobs in SQL, so `items`/`total`/`totalPages` stay
+   * consistent regardless of the flag. Defaults to hidden per
    * job-browser/feature.md ("Job removed from board → marked expired").
    */
   showExpired: boolean;

@@ -175,4 +175,21 @@ describe('KanbanPage', () => {
       screen.queryByRole('navigation', { name: 'Pagination' }),
     ).not.toBeInTheDocument();
   });
+
+  // Fix: now that the server defaults to excluding expired jobs, kanban must
+  // opt in via include_expired so a tracked application whose posting expired
+  // still shows in its column (pre-existing behaviour, preserved).
+  it('requests include_expired=true so expired tracked applications still show', async () => {
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      return [200, toPagedJobsFixture(jobsFixture)];
+    });
+
+    renderKanban();
+
+    await screen.findByRole('region', { name: 'Kanban candidatures' });
+
+    expect(sentParams['include_expired']).toBe(true);
+  });
 });

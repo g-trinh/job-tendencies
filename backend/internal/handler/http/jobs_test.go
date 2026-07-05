@@ -27,6 +27,7 @@ type fakeJobService struct {
 	reextractCalls []kernel.JobID
 	reextractErr   error
 	total          int // override for the reported total; 0 means "use len(jobs)"
+	lastFilter     appjobs.JobListFilter
 }
 
 func newFakeJobService() *fakeJobService {
@@ -37,6 +38,7 @@ func newFakeJobService() *fakeJobService {
 }
 
 func (f *fakeJobService) ListJobs(_ context.Context, _ kernel.ProfileID, filter appjobs.JobListFilter) (appjobs.JobListResult, error) {
+	f.lastFilter = filter
 	if f.err != nil {
 		return appjobs.JobListResult{}, f.err
 	}
@@ -398,6 +400,45 @@ func TestPatchJobApplication(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// AC: include_expired defaults to false (excludes expired jobs) and only becomes true
+// when the query param explicitly parses as boolean true; absent, "false", or garbage
+// values all default to false rather than a 400 (mirrors the ADR-007 clamping style).
+func TestListJobs_IncludeExpiredParsing(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		query string
+		want  bool
+	}{
+		{name: "absent defaults to false", query: "", want: false},
+		{name: "explicit true", query: "?include_expired=true", want: true},
+		{name: "explicit false", query: "?include_expired=false", want: false},
+		{name: "garbage defaults to false", query: "?include_expired=notabool", want: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newFakeJobService()
+			seedJob(svc)
+			r := newJobRouter(svc)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/jobs"+tc.query, nil)
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; want 200 (body: %s)", rec.Code, rec.Body.String())
+			}
+			if got := svc.lastFilter.IncludeExpired; got != tc.want {
+				t.Errorf("IncludeExpired = %v; want %v", got, tc.want)
+			}
+		})
+	}
+}
 
 // TestListJobs_FilterQueryParams verifies that filter params are parsed without error.
 func TestListJobs_FilterQueryParams(t *testing.T) {

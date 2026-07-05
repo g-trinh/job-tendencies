@@ -50,7 +50,7 @@ func TestBuildJobListFilterQuery_ConditionsPerFilterField(t *testing.T) {
 		{
 			name:       "no optional filters",
 			filter:     appjobs.JobListFilter{},
-			wantInSQL:  []string{"rl.profile_id = $1"},
+			wantInSQL:  []string{"rl.profile_id = $1", "j.expired_at IS NULL"},
 			wantNotSQL: []string{"js.board_id", "j.remote_policy", "j.understanding_score"},
 		},
 		{
@@ -77,6 +77,61 @@ func TestBuildJobListFilterQuery_ConditionsPerFilterField(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestBuildJobListFilterQuery_ExpiredFiltering verifies the pagination-consistency fix:
+// the expired-job predicate lives in the shared WHERE builder (not a post-filter in Go),
+// so it applies identically to the list and count queries. Default excludes expired jobs
+// (expired_at IS NULL); include_expired=true omits the predicate entirely.
+func TestBuildJobListFilterQuery_ExpiredFiltering(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name           string
+		includeExpired bool
+		wantInSQL      string
+		wantAbsent     bool
+	}{
+		{name: "default excludes expired jobs", includeExpired: false, wantInSQL: "j.expired_at IS NULL"},
+		{name: "include_expired omits the predicate", includeExpired: true, wantInSQL: "j.expired_at IS NULL", wantAbsent: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			filter := appjobs.JobListFilter{IncludeExpired: tc.includeExpired}
+			fq := buildJobListFilterQuery(kernel.ProfileID("p-1"), filter)
+
+			contains := strings.Contains(fq.whereClause, tc.wantInSQL)
+			if tc.wantAbsent && contains {
+				t.Errorf("whereClause = %q; want it NOT to contain %q", fq.whereClause, tc.wantInSQL)
+			}
+			if !tc.wantAbsent && !contains {
+				t.Errorf("whereClause = %q; want it to contain %q", fq.whereClause, tc.wantInSQL)
+			}
+		})
+	}
+}
+
+// TestBuildJobCountQuery_ExpiredFilteringMatchesListQuery verifies the whole point of
+// the shared WHERE builder: the expired predicate (or its absence) is identical between
+// the list and count queries, so total/total_pages never disagree with the rendered
+// items (the bug this fix addresses — ADR-007).
+func TestBuildJobCountQuery_ExpiredFilteringMatchesListQuery(t *testing.T) {
+	t.Parallel()
+
+	fqDefault := buildJobListFilterQuery(kernel.ProfileID("p-1"), appjobs.JobListFilter{})
+	countDefault := buildJobCountQuery(fqDefault)
+	if !strings.Contains(countDefault, "j.expired_at IS NULL") {
+		t.Errorf("countQuery = %q; want the default (exclude expired) predicate", countDefault)
+	}
+
+	fqIncluded := buildJobListFilterQuery(kernel.ProfileID("p-1"), appjobs.JobListFilter{IncludeExpired: true})
+	countIncluded := buildJobCountQuery(fqIncluded)
+	if strings.Contains(countIncluded, "j.expired_at IS NULL") {
+		t.Errorf("countQuery = %q; want no expired predicate when include_expired=true", countIncluded)
 	}
 }
 
