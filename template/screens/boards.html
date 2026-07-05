@@ -11,37 +11,52 @@
     <aside class="app__sidebar">
       <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
       <nav class="nav" aria-label="Navigation principale">
-        <span class="nav__section">Écrans</span>
-        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
-        <a class="nav__link" href="job-browser.html">Offres</a>
-        <a class="nav__link" href="profiles.html">Profils</a>
-        <a class="nav__link" aria-current="page" href="boards.html">Sources</a>
-        <a class="nav__link" href="contacts.html">Contacts</a>
-        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Pilotage</span>
+        <a class="nav__link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>Offres</a>
+        <a class="nav__link" href="pipeline.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 8-6-16-3 8H2"/></svg>Pipeline</a>
+        <span class="nav__section">Configuration</span>
+        <a class="nav__link" href="profiles.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>Profils</a>
+        <a class="nav__link" aria-current="page" href="boards.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Sources</a>
+        <span class="nav__section">Réseau</span>
+        <a class="nav__link" href="contacts.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4.2-6"/></svg>Contacts</a>
         <span class="nav__section">Référence</span>
-        <a class="nav__link" href="../index.html">Design system</a>
+        <a class="nav__link" href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2.5H6.5A2.5 2.5 0 0 0 4 5v14.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg>Design system</a>
       </nav>
+      <div class="app__sidebar-foot">
+        <span class="app__avatar" aria-hidden="true">GT</span>
+        <span>Guillaume<small>Profil : Go Backend Paris</small></span>
+      </div>
     </aside>
 
     <div class="app__main">
       <header class="topbar">
-        <h1 class="page__title" style="font-size:var(--font-size-lg)">Sources d'offres</h1>
+        <div class="row">
+          <label class="sr-only" for="profile-switch">Profil actif</label>
+          <select class="select w-auto" id="profile-switch"><option>Go Backend Paris — CDI 65k+</option><option>Go Backend Remote Europe — Freelance 500€/j</option></select>
+        </div>
         <button class="btn btn--primary">+ Ajouter une source</button>
       </header>
 
-      <div class="page">
-        <header class="page__head"><p class="page__sub">Gérez les sites scrapés, la planification globale et les adaptateurs générés par IA.</p></header>
+      <main class="page">
+        <header class="page__head">
+          <div>
+            <h1 class="page__title">Sources d'offres</h1>
+            <p class="page__sub">Gérez les sites scrapés, la planification globale et les adaptateurs générés par IA.</p>
+          </div>
+          <span class="badge badge--neutral num">4 sources · 2 activées</span>
+        </header>
 
         <div class="stack stack-5">
           <!-- Warning: all disabled -->
-          <div class="banner banner--warning"><span>⚠️</span><span>Toutes les sources sont désactivées — aucun scraping ne sera effectué. Activez-en au moins une.</span></div>
+          <div class="banner banner--warning"><span aria-hidden="true">⚠️</span><span>Toutes les sources sont désactivées — aucun scraping ne sera effectué. Activez-en au moins une.</span></div>
 
           <!-- Global schedule -->
           <section class="card row-between wrap" aria-labelledby="b-sched">
             <div><h2 class="card__title" id="b-sched">Planification globale</h2><p class="muted text-sm">Une seule planification pour toutes les sources.</p></div>
             <div class="row wrap">
               <label class="sr-only" for="freq">Fréquence</label>
-              <select class="select" id="freq" style="width:auto"><option>Toutes les 6 h</option><option>Toutes les 12 h</option><option>Une fois par jour</option><option>Manuel uniquement</option></select>
+              <select class="select w-auto" id="freq"><option>Toutes les 6 h</option><option>Toutes les 12 h</option><option>Une fois par jour</option><option>Manuel uniquement</option></select>
               <label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="text-sm">Planification active</span></label>
             </div>
           </section>
@@ -51,12 +66,12 @@
             <div class="card__head"><h2 class="card__title" id="b-list">Sources</h2></div>
             <div class="table-wrap">
               <table class="table">
-                <thead><tr><th>Nom</th><th>URL de base</th><th>Adaptateur</th><th>Limite débit</th><th>Activée</th><th></th></tr></thead>
+                <thead><tr><th>Nom</th><th>URL de base</th><th>Adaptateur</th><th class="num">Limite débit</th><th>Activée</th><th><span class="sr-only">Actions</span></th></tr></thead>
                 <tbody>
-                  <tr><td>Welcome to the Jungle</td><td class="mono text-xs">welcometothejungle.com</td><td><span class="badge badge--success">Prêt</span></td><td class="text-sm">1 req / 3s</td><td><label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="sr-only">Activer WTTJ</span></label></td><td class="row"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
-                  <tr><td>Indeed</td><td class="mono text-xs">indeed.fr</td><td><span class="badge badge--success">Prêt</span></td><td class="text-sm">1 req / 5s</td><td><label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="sr-only">Activer Indeed</span></label></td><td class="row"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
-                  <tr><td>LinkedIn</td><td class="mono text-xs">linkedin.com/jobs</td><td><span class="badge badge--warning">Brouillon à valider</span></td><td class="text-sm">1 req / 8s</td><td><label class="toggle"><input type="checkbox" /><span class="toggle__track"></span><span class="sr-only">Activer LinkedIn</span></label></td><td class="row"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
-                  <tr><td>Glassdoor</td><td class="mono text-xs">glassdoor.fr</td><td><span class="badge badge--neutral">Aucun</span></td><td class="text-sm">—</td><td><label class="toggle"><input type="checkbox" /><span class="toggle__track"></span><span class="sr-only">Activer Glassdoor</span></label></td><td class="row"><button class="btn btn--secondary btn--sm">Générer l'adaptateur</button></td></tr>
+                  <tr><td><strong>Welcome to the Jungle</strong></td><td class="mono text-xs muted">welcometothejungle.com</td><td><span class="badge badge--success">Prêt</span></td><td class="text-sm num">1 req / 3 s</td><td><label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="sr-only">Activer WTTJ</span></label></td><td class="row justify-end"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
+                  <tr><td><strong>Indeed</strong></td><td class="mono text-xs muted">indeed.fr</td><td><span class="badge badge--success">Prêt</span></td><td class="text-sm num">1 req / 5 s</td><td><label class="toggle"><input type="checkbox" checked /><span class="toggle__track"></span><span class="sr-only">Activer Indeed</span></label></td><td class="row justify-end"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
+                  <tr><td><strong>LinkedIn</strong></td><td class="mono text-xs muted">linkedin.com/jobs</td><td><span class="badge badge--warning">Brouillon à valider</span></td><td class="text-sm num">1 req / 8 s</td><td><label class="toggle"><input type="checkbox" /><span class="toggle__track"></span><span class="sr-only">Activer LinkedIn</span></label></td><td class="row justify-end"><button class="btn btn--ghost btn--sm">Modifier</button><button class="btn btn--ghost btn--sm">Supprimer</button></td></tr>
+                  <tr><td><strong>Glassdoor</strong></td><td class="mono text-xs muted">glassdoor.fr</td><td><span class="badge badge--neutral">Aucun</span></td><td class="text-sm num">—</td><td><label class="toggle"><input type="checkbox" /><span class="toggle__track"></span><span class="sr-only">Activer Glassdoor</span></label></td><td class="row justify-end"><button class="btn btn--secondary btn--sm">Générer l'adaptateur</button></td></tr>
                 </tbody>
               </table>
             </div>
@@ -65,7 +80,7 @@
           <!-- Adapter generation flow: generate → review draft → approve -->
           <section class="card" aria-labelledby="b-adapter">
             <div class="card__head"><h2 class="card__title" id="b-adapter">Adaptateur (généré par IA)</h2><span class="badge badge--info">Étape 2 / 3 — Relecture</span></div>
-            <ol class="row wrap text-sm" style="gap:var(--space-4);margin-block-end:var(--space-4);list-style:none">
+            <ol class="row wrap text-sm mbe-4" style="gap:var(--space-3)">
               <li class="badge badge--success">1. Fournir l'URL + page exemple ✓</li>
               <li class="badge badge--brand">2. Relire le brouillon</li>
               <li class="badge badge--neutral">3. Approuver</li>
@@ -78,7 +93,7 @@
               </div>
               <div class="field">
                 <span class="field__label">Brouillon d'adaptateur (lecture seule) — l'utilisateur n'écrit jamais de code</span>
-                <pre class="input mono text-xs" style="min-height:150px;overflow:auto;white-space:pre;line-height:1.5">selectors:
+                <pre class="code-block">selectors:
   card:    ".job-card"
   title:   ".job-title"
   company: ".employer-name"
@@ -87,20 +102,25 @@
 pagination: "button.next"</pre>
               </div>
             </div>
-            <div class="row" style="justify-content:flex-end;margin-block-start:var(--space-4)">
+            <div class="row justify-end mbs-4">
               <button class="btn btn--ghost">Rejeter</button>
               <button class="btn btn--primary">Approuver &amp; mettre en ligne</button>
             </div>
           </section>
 
-          <!-- States -->
-          <section class="grid-2" aria-label="États">
-            <div class="card"><div class="state"><span class="state__icon">🗂️</span><span class="state__title">Aucune source</span><span>Ajoutez un site pour commencer à scraper.</span><button class="btn btn--primary">+ Ajouter une source</button></div></div>
-            <div class="card"><div class="stack stack-3"><span class="muted text-sm">Génération de l'adaptateur par l'IA…</span><span class="skeleton" style="height:120px"></span></div></div>
-          </section>
-          <div class="banner banner--danger"><span>⚠️</span><span>La génération de l'adaptateur a échoué. Vérifiez l'URL exemple et <a href="#">réessayez</a>.</span></div>
+          <!-- Non-nominal states preview -->
+          <details class="preview">
+            <summary>États — vide · chargement · erreur</summary>
+            <div class="preview__body">
+              <div class="grid-2">
+                <div class="card"><div class="state"><span class="state__icon">🗂️</span><span class="state__title">Aucune source</span><span>Ajoutez un site pour commencer à scraper.</span><button class="btn btn--primary">+ Ajouter une source</button></div></div>
+                <div class="card"><div class="stack stack-3"><span class="muted text-sm">Génération de l'adaptateur par l'IA…</span><span class="skeleton skeleton--block"></span></div></div>
+              </div>
+              <div class="banner banner--danger"><span aria-hidden="true">⚠️</span><span>La génération de l'adaptateur a échoué. Vérifiez l'URL exemple et <a href="#">réessayez</a>.</span></div>
+            </div>
+          </details>
         </div>
-      </div>
+      </main>
     </div>
   </div>
 </body>

@@ -17,7 +17,7 @@ import (
 // JobReader lists and fetches job views scoped to a profile. Implemented by
 // app/jobs.Service (the read side, ADR-005).
 type JobReader interface {
-	ListJobs(ctx context.Context, profileID kernel.ProfileID, filter appjobs.JobListFilter) ([]appjobs.JobView, error)
+	ListJobs(ctx context.Context, profileID kernel.ProfileID, filter appjobs.JobListFilter) (appjobs.JobListResult, error)
 	GetJob(ctx context.Context, profileID kernel.ProfileID, id kernel.JobID) (appjobs.JobView, error)
 }
 
@@ -69,27 +69,60 @@ type jobResponse struct {
 	Sources            []jobSourceResponse `json:"sources"`
 }
 
-// ListJobs handles GET /api/jobs, returning jobs scoped to the active profile with
-// optional filter and sort query parameters:
+// jobListResponse is the paginated envelope returned by GET /api/jobs (ADR-007),
+// replacing the previous bare jobResponse[] array.
+type jobListResponse struct {
+	Items      []jobResponse `json:"items"`
+	Page       int           `json:"page"`
+	PageSize   int           `json:"page_size"`
+	Total      int           `json:"total"`
+	TotalPages int           `json:"total_pages"`
+}
+
+// defaultPageSize and maxPageSize/minPage implement the ADR-007 clamping rules for
+// page/page_size: out-of-range values are clamped, never rejected with a 400.
+const (
+	defaultJobsPage     = 1
+	defaultJobsPageSize = 25
+	maxJobsPageSize     = 100
+)
+
+// ListJobs handles GET /api/jobs, returning a paginated envelope of jobs scoped to
+// the active profile (ADR-007) with optional filter and sort query parameters:
 // skills[], remote_policy, contract_type, salary_min, salary_max, location,
-// board_id, since, confidence_min, sort (date|salary), sort_dir (asc|desc).
+// board_id, since, confidence_min, sort (date|salary), sort_dir (asc|desc),
+// page, page_size.
 func ListJobs(reader JobReader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		profileID, _ := ActiveProfileID(r)
 		filter := parseJobListFilter(r)
 
-		list, err := reader.ListJobs(r.Context(), profileID, filter)
+		result, err := reader.ListJobs(r.Context(), profileID, filter)
 		if err != nil {
 			RespondError(w, r, err)
 			return
 		}
 
-		out := make([]jobResponse, 0, len(list))
-		for _, j := range list {
-			out = append(out, toJobResponse(j))
+		items := make([]jobResponse, 0, len(result.Items))
+		for _, j := range result.Items {
+			items = append(items, toJobResponse(j))
 		}
-		respond(w, http.StatusOK, out)
+		respond(w, http.StatusOK, jobListResponse{
+			Items:      items,
+			Page:       filter.Page,
+			PageSize:   filter.PageSize,
+			Total:      result.Total,
+			TotalPages: totalPages(result.Total, filter.PageSize),
+		})
 	}
+}
+
+// totalPages computes ceil(total/pageSize), returning 0 when total is 0 (ADR-007).
+func totalPages(total, pageSize int) int {
+	if total == 0 {
+		return 0
+	}
+	return (total + pageSize - 1) / pageSize
 }
 
 // GetJob handles GET /api/jobs/{id}, returning one job scoped to the active profile.
@@ -263,5 +296,35 @@ func parseJobListFilter(r *http.Request) appjobs.JobListFilter {
 	}
 	// Normalise sort_dir to lower-case for the repo comparison.
 	f.SortDir = strings.ToLower(f.SortDir)
+
+	f.Page = clampPage(q.Get("page"))
+	f.PageSize = clampPageSize(q.Get("page_size"))
 	return f
+}
+
+// clampPage parses the page query param and clamps it to >= 1 (ADR-007). A missing or
+// invalid value defaults to page 1 rather than a 400.
+func clampPage(raw string) int {
+	v, err := strconv.Atoi(raw)
+	if err != nil || v < defaultJobsPage {
+		return defaultJobsPage
+	}
+	return v
+}
+
+// clampPageSize parses the page_size query param and clamps it to 1..100 (ADR-007): a
+// missing or unparseable value defaults to 25, an out-of-range value is clamped to the
+// nearest bound (e.g. page_size=500 yields 100) rather than a 400.
+func clampPageSize(raw string) int {
+	v, err := strconv.Atoi(raw)
+	if err != nil {
+		return defaultJobsPageSize
+	}
+	if v < 1 {
+		return 1
+	}
+	if v > maxJobsPageSize {
+		return maxJobsPageSize
+	}
+	return v
 }

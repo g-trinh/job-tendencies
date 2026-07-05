@@ -46,8 +46,16 @@ function IdentityEditor({ profile }: IdentityEditorProps) {
         <h2 className="card__title">Identité et compétences</h2>
       </div>
 
+      <div className="banner banner--info mbe-4">
+        <span aria-hidden="true">ℹ️</span>
+        <span>
+          Importez votre export PDF LinkedIn pour extraire automatiquement
+          compétences, expérience et séniorité.
+        </span>
+      </div>
+
       <div className="stack stack-4">
-        <div className="field">
+        <div className="row wrap">
           <label className="btn btn--secondary" htmlFor="identity-pdf">
             Importer un CV LinkedIn (PDF)
           </label>
@@ -105,19 +113,21 @@ function IdentityEditor({ profile }: IdentityEditorProps) {
 
         {profile.rawExperience && (
           <div className="field">
-            <h3>Expérience brute extraite</h3>
+            <span className="field__label">Expérience brute extraite</span>
             <p className="muted text-sm">{profile.rawExperience}</p>
           </div>
         )}
 
-        <button
-          className="btn btn--primary"
-          type="button"
-          disabled={isSaving}
-          onClick={handleSave}
-        >
-          Enregistrer l'identité
-        </button>
+        <div className="row justify-end">
+          <button
+            className="btn btn--primary"
+            type="button"
+            disabled={isSaving}
+            onClick={handleSave}
+          >
+            Enregistrer l'identité
+          </button>
+        </div>
       </div>
     </section>
   );

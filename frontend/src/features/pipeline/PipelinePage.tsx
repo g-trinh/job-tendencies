@@ -2,6 +2,20 @@ import { useState } from 'react';
 import { usePipelineRunList, useTriggerPipelineRunMutation } from './usePipelineRuns';
 import { RunProgress } from './RunProgress';
 
+/** Maps a raw run status to its badge modifier (template: pipeline history table). */
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case 'completed':
+      return 'badge--success';
+    case 'failed':
+      return 'badge--danger';
+    case 'cancelled':
+      return 'badge--warning';
+    default:
+      return 'badge--brand';
+  }
+}
+
 /**
  * Pipeline page at `/pipeline`: on-demand run trigger with live per-board
  * progress (polls `GET /api/pipeline/runs/{id}`, not the list endpoint —
@@ -14,9 +28,9 @@ function PipelinePage() {
   const { data: runs, isPending, isError } = usePipelineRunList();
 
   return (
-    <main>
-      <header className="page__head row-between">
-        <div className="stack">
+    <>
+      <header className="page__head">
+        <div>
           <h1 className="page__title">Pipeline de scraping</h1>
           <p className="page__sub">
             Scraping → extraction LLM → scoring. Statut par source, mis à jour
@@ -60,24 +74,58 @@ function PipelinePage() {
             <p className="muted">Aucune exécution pour le moment.</p>
           )}
           {runs !== undefined && runs.length > 0 && (
-            <ul className="stack stack-2" aria-label="Exécutions">
-              {runs.map((run) => (
-                <li key={run.run_id}>
-                  <button
-                    className="btn btn--ghost btn--sm"
-                    type="button"
-                    onClick={() => setActiveRunId(run.run_id)}
-                  >
-                    {new Date(run.created_at).toLocaleString('fr-FR')} —{' '}
-                    {run.status} ({run.trigger})
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="table-wrap">
+              <table className="table" aria-label="Exécutions">
+                <thead>
+                  <tr>
+                    <th scope="col">Démarrée</th>
+                    <th scope="col">Déclencheur</th>
+                    <th scope="col">Statut</th>
+                    <th scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.map((run) => (
+                    <tr key={run.run_id}>
+                      <td className="num">
+                        {new Date(run.created_at).toLocaleString('fr-FR')}
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            run.trigger === 'manual'
+                              ? 'badge badge--brand'
+                              : 'badge badge--neutral'
+                          }
+                        >
+                          {run.trigger}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${statusBadgeClass(run.status)}`}>
+                          {run.status}
+                        </span>
+                      </td>
+                      <td className="row justify-end">
+                        <button
+                          className="btn btn--ghost btn--sm"
+                          type="button"
+                          onClick={() => setActiveRunId(run.run_id)}
+                        >
+                          Voir le suivi
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       </div>
-    </main>
+    </>
   );
 }
 

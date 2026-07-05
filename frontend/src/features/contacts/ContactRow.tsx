@@ -34,9 +34,13 @@ function ContactRow({ contact }: ContactRowProps) {
 
   return (
     <tr>
-      <td>{contact.name}</td>
+      <td>
+        <strong>{contact.name}</strong>
+      </td>
       <td>{contact.company}</td>
-      <td>{contact.email}</td>
+      <td className="text-xs">
+        {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
+      </td>
       <td className="text-xs">
         {contact.linkedin_url && (
           <a href={contact.linkedin_url} target="_blank" rel="noreferrer">
@@ -68,7 +72,7 @@ function ContactRow({ contact }: ContactRowProps) {
         />
       </td>
       <td>
-        <div className="row">
+        <div className="row justify-end">
           <button
             className="btn btn--secondary btn--sm"
             type="button"

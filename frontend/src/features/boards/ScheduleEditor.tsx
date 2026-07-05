@@ -15,7 +15,12 @@ function ScheduleEditor() {
   return (
     <section className="card" aria-label="Planification">
       <div className="card__head">
-        <h2 className="card__title">Planification</h2>
+        <div>
+          <h2 className="card__title">Planification</h2>
+          <p className="muted text-sm">
+            Une seule planification pour toutes les sources.
+          </p>
+        </div>
       </div>
       {isPending && <p className="muted">Chargement de la planification…</p>}
       {isError && (

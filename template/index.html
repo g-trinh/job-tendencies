@@ -9,34 +9,41 @@
 <body>
   <div class="app">
     <aside class="app__sidebar">
-      <a class="app__brand" href="index.html">
-        <span class="app__brand-mark">JT</span> Job Tendencies
-      </a>
+      <a class="app__brand" href="index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
       <nav class="nav" aria-label="Navigation principale">
+        <span class="nav__section">Pilotage</span>
+        <a class="nav__link" href="screens/dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tableau de bord</a>
+        <a class="nav__link" href="screens/job-browser.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>Offres</a>
+        <a class="nav__link" href="screens/pipeline.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 8-6-16-3 8H2"/></svg>Pipeline</a>
+        <span class="nav__section">Configuration</span>
+        <a class="nav__link" href="screens/profiles.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>Profils</a>
+        <a class="nav__link" href="screens/boards.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Sources</a>
+        <span class="nav__section">Réseau</span>
+        <a class="nav__link" href="screens/contacts.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4.2-6"/></svg>Contacts</a>
         <span class="nav__section">Référence</span>
-        <a class="nav__link" aria-current="page" href="index.html">Design system</a>
-        <span class="nav__section">Écrans</span>
-        <a class="nav__link" href="screens/dashboard.html">Tableau de bord</a>
-        <a class="nav__link" href="screens/job-browser.html">Offres</a>
-        <a class="nav__link" href="screens/profiles.html">Profils</a>
-        <a class="nav__link" href="screens/boards.html">Sources</a>
-        <a class="nav__link" href="screens/contacts.html">Contacts</a>
-        <a class="nav__link" href="screens/pipeline.html">Pipeline</a>
+        <a class="nav__link" aria-current="page" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2.5H6.5A2.5 2.5 0 0 0 4 5v14.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg>Design system</a>
       </nav>
+      <div class="app__sidebar-foot">
+        <span class="app__avatar" aria-hidden="true">GT</span>
+        <span>Guillaume<small>Profil : Go Backend Paris</small></span>
+      </div>
     </aside>
 
     <div class="app__main">
-      <div class="page">
+      <main class="page">
         <header class="page__head">
-          <h1 class="page__title">Design system</h1>
-          <p class="page__sub">Tokens et inventaire des composants de base — source de vérité pour l'équipe frontend.</p>
+          <div>
+            <h1 class="page__title">Design system</h1>
+            <p class="page__sub">Tokens et inventaire des composants de base — source de vérité pour l'équipe frontend.</p>
+          </div>
+          <span class="muted text-xs">Thème clair / sombre via <code>light-dark()</code> — forcer avec <code>data-theme="light|dark"</code> sur <code>&lt;html&gt;</code></span>
         </header>
 
         <div class="stack stack-5">
 
           <!-- Colors -->
           <section class="card" aria-labelledby="ds-colors">
-            <div class="card__head"><h2 class="card__title" id="ds-colors">Couleurs</h2></div>
+            <div class="card__head"><h2 class="card__title" id="ds-colors">Couleurs</h2><span class="muted text-xs">Chaque token est déclaré en <code>light-dark()</code> — le thème suit l'OS, <code>data-theme</code> force un mode.</span></div>
             <div class="demo-grid">
               <div><div class="swatch" style="background:var(--color-brand)"></div><div class="swatch-label">brand</div></div>
               <div><div class="swatch" style="background:var(--color-brand-soft)"></div><div class="swatch-label">brand-soft</div></div>
@@ -48,20 +55,23 @@
               <div><div class="swatch" style="background:var(--color-text-muted)"></div><div class="swatch-label">text-muted</div></div>
               <div><div class="swatch" style="background:var(--color-border)"></div><div class="swatch-label">border</div></div>
               <div><div class="swatch" style="background:var(--color-bg)"></div><div class="swatch-label">bg</div></div>
+              <div><div class="swatch" style="background:var(--color-ink)"></div><div class="swatch-label">ink (sidebar)</div></div>
+              <div><div class="swatch" style="background:var(--color-ink-raised)"></div><div class="swatch-label">ink-raised</div></div>
             </div>
           </section>
 
           <!-- Typography -->
           <section class="card" aria-labelledby="ds-type">
-            <div class="card__head"><h2 class="card__title" id="ds-type">Typographie</h2></div>
+            <div class="card__head"><h2 class="card__title" id="ds-type">Typographie</h2><span class="muted text-xs">Chiffres tabulaires (<code>.num</code>) pour toutes les données.</span></div>
             <div class="stack stack-2">
-              <span style="font-size:var(--font-size-2xl);font-weight:700">2xl — Titre principal</span>
-              <span style="font-size:var(--font-size-xl);font-weight:600">xl — Titre de page</span>
+              <span style="font-size:var(--font-size-2xl);font-weight:700;letter-spacing:var(--tracking-tight)">2xl — Titre principal</span>
+              <span style="font-size:var(--font-size-xl);font-weight:600;letter-spacing:var(--tracking-tight)">xl — Titre de page</span>
               <span style="font-size:var(--font-size-lg);font-weight:600">lg — Titre de section</span>
               <span style="font-size:var(--font-size-md)">md — Corps de texte principal</span>
               <span style="font-size:var(--font-size-base)">base — Corps de texte</span>
               <span style="font-size:var(--font-size-sm)" class="muted">sm — Texte secondaire</span>
               <span style="font-size:var(--font-size-xs)" class="subtle">xs — Étiquettes</span>
+              <span class="num">Tabulaire : 1 284 · 62k€ · 08:00 · 94%</span>
             </div>
           </section>
 
@@ -106,7 +116,7 @@
 
           <!-- Badges & tags -->
           <section class="card" aria-labelledby="ds-badge">
-            <div class="card__head"><h2 class="card__title" id="ds-badge">Badges, tags & confiance</h2></div>
+            <div class="card__head"><h2 class="card__title" id="ds-badge">Badges, tags, confiance & score de fit</h2></div>
             <div class="demo-row">
               <span class="badge badge--neutral">CDI</span>
               <span class="badge badge--brand">Remote</span>
@@ -115,16 +125,22 @@
               <span class="badge badge--danger">Expirée</span>
               <span class="badge badge--info">Full-time</span>
             </div>
-            <div class="demo-row" style="margin-block-start:var(--space-3)">
+            <div class="demo-row mbs-3">
               <span class="badge conf conf--high badge--success"><span class="badge__dot"></span>Confiance 92%</span>
               <span class="badge conf conf--mid badge--warning"><span class="badge__dot"></span>Confiance 64%</span>
               <span class="badge conf conf--low badge--danger"><span class="badge__dot"></span>Confiance 31%</span>
               <span class="badge badge--neutral">Compréhension 88%</span>
             </div>
-            <div class="demo-row" style="margin-block-start:var(--space-3)">
+            <div class="demo-row mbs-3">
               <span class="tag">in-house <button aria-label="Retirer">×</button></span>
               <span class="tag">responsive <button aria-label="Retirer">×</button></span>
               <span class="tag">agency <button aria-label="Retirer">×</button></span>
+            </div>
+            <div class="demo-row mbs-3">
+              <span class="fit-score" style="--v:94">94</span>
+              <span class="fit-score" style="--v:72">72</span>
+              <span class="fit-score" style="--v:38">38</span>
+              <span class="muted text-xs">Anneau conique piloté par <code>--v</code> (0–100)</span>
             </div>
           </section>
 
@@ -136,7 +152,7 @@
               <button role="tab" aria-selected="false" class="tab">Recherche</button>
               <button role="tab" aria-selected="false" class="tab">Conditions</button>
             </div>
-            <div class="demo-row" style="margin-block-start:var(--space-4)">
+            <div class="demo-row mbs-4">
               <div class="segmented" role="group" aria-label="Mode d'affichage">
                 <button aria-pressed="true">Tableau</button>
                 <button aria-pressed="false">Cartes</button>
@@ -155,27 +171,64 @@
             <div class="slider-row">
               <label for="d-sl1">Compétences préférées</label>
               <span class="slider-row__val">40%</span>
-              <input class="slider" id="d-sl1" type="range" min="0" max="100" value="40" style="grid-column:1 / -1" />
+              <input class="slider" id="d-sl1" type="range" min="0" max="100" value="40" />
             </div>
-            <div class="weights-sum weights-sum--ok" style="margin-block-start:var(--space-3)">
+            <div class="weights-sum weights-sum--ok mbs-3">
               <span>Somme des poids</span><span>100% ✓</span>
             </div>
-            <div class="weights-sum weights-sum--off" style="margin-block-start:var(--space-2)">
+            <div class="weights-sum weights-sum--off mbs-2">
               <span>Somme des poids</span><span>85% — ajustez pour atteindre 100%</span>
             </div>
           </section>
 
           <!-- Table -->
           <section aria-labelledby="ds-table">
-            <div class="card__head"><h2 class="card__title" id="ds-table">Tableau</h2></div>
+            <div class="card__head"><h2 class="card__title" id="ds-table">Tableau</h2><span class="muted text-xs">Colonnes numériques alignées à droite via <code>.num</code>.</span></div>
             <div class="table-wrap">
               <table class="table">
-                <thead><tr><th>Poste</th><th>Entreprise</th><th>Contrat</th><th>Fit</th></tr></thead>
+                <thead><tr><th>Poste</th><th>Entreprise</th><th>Contrat</th><th class="num">Fit</th></tr></thead>
                 <tbody>
-                  <tr><td>Go Backend Engineer</td><td>Acme</td><td><span class="badge badge--neutral">CDI</span></td><td>87</td></tr>
-                  <tr><td>Platform Engineer</td><td>Globex</td><td><span class="badge badge--neutral">Freelance</span></td><td>72</td></tr>
+                  <tr><td><strong>Go Backend Engineer</strong></td><td>Acme</td><td><span class="badge badge--neutral">CDI</span></td><td class="num">87</td></tr>
+                  <tr><td><strong>Platform Engineer</strong></td><td>Globex</td><td><span class="badge badge--neutral">Freelance</span></td><td class="num">72</td></tr>
                 </tbody>
               </table>
+            </div>
+          </section>
+
+          <!-- Pagination -->
+          <section class="card" aria-labelledby="ds-pagination">
+            <div class="card__head"><h2 class="card__title" id="ds-pagination">Pagination</h2><span class="muted text-xs">Le cluster de numéros est optionnel — résumé + précédent/suivant fonctionnent seuls (pagination par curseur).</span></div>
+            <div class="stack stack-4">
+              <!-- Full variant: summary + page numbers + page-size select -->
+              <nav class="pagination" aria-label="Pagination (exemple complet)">
+                <p class="pagination__summary">Affichage <span class="num">1–25</span> sur <span class="num">132</span> offres</p>
+                <div class="pagination__controls">
+                  <button class="btn btn--secondary btn--sm" type="button" disabled><span aria-hidden="true">‹</span> Précédent</button>
+                  <ul class="pagination__pages">
+                    <li><button class="pagination__page" type="button" aria-label="Page 1">1</button></li>
+                    <li><span class="pagination__ellipsis" aria-hidden="true">…</span></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 4">4</button></li>
+                    <li><button class="pagination__page" type="button" aria-current="page" aria-label="Page 5">5</button></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 6">6</button></li>
+                    <li><span class="pagination__ellipsis" aria-hidden="true">…</span></li>
+                    <li><button class="pagination__page" type="button" aria-label="Page 12">12</button></li>
+                  </ul>
+                  <button class="btn btn--secondary btn--sm" type="button">Suivant <span aria-hidden="true">›</span></button>
+                  <span class="pagination__sep" aria-hidden="true"></span>
+                  <span class="pagination__size">
+                    <label class="sr-only" for="ds-page-size">Offres par page</label>
+                    <select class="select select--sm" id="ds-page-size"><option>10 / page</option><option selected>25 / page</option><option>50 / page</option><option>100 / page</option></select>
+                  </span>
+                </div>
+              </nav>
+              <!-- Minimal variant: summary + prev/next only -->
+              <nav class="pagination" aria-label="Pagination (variante minimale)">
+                <p class="pagination__summary">Affichage <span class="num">26–50</span> sur <span class="num">132</span> offres</p>
+                <div class="pagination__controls">
+                  <button class="btn btn--secondary btn--sm" type="button"><span aria-hidden="true">‹</span> Précédent</button>
+                  <button class="btn btn--secondary btn--sm" type="button">Suivant <span aria-hidden="true">›</span></button>
+                </div>
+              </nav>
             </div>
           </section>
 
@@ -197,18 +250,20 @@
             </div>
             <div>
               <div class="card__head"><h2 class="card__title">États (vide / chargement / erreur)</h2></div>
-              <div class="card" style="margin-block-end:var(--space-3)">
-                <div class="state"><span class="state__icon">📭</span><span class="state__title">Aucune donnée</span><span>Lancez le pipeline pour récupérer des offres.</span></div>
+              <div class="stack stack-3">
+                <div class="card">
+                  <div class="state"><span class="state__icon">📭</span><span class="state__title">Aucune donnée</span><span>Lancez le pipeline pour récupérer des offres.</span></div>
+                </div>
+                <div class="card">
+                  <div class="stack stack-2"><span class="skeleton skeleton--text skeleton--line-60"></span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-40"></span></div>
+                </div>
+                <div class="banner banner--danger"><span aria-hidden="true">⚠️</span><span>Impossible de charger les données. <a href="#">Réessayer</a></span></div>
               </div>
-              <div class="card" style="margin-block-end:var(--space-3)">
-                <div class="stack stack-2"><span class="skeleton skeleton--text skeleton--line-60"></span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-40"></span></div>
-              </div>
-              <div class="banner banner--danger"><span>⚠️</span><span>Impossible de charger les données. <a href="#">Réessayer</a></span></div>
             </div>
           </section>
 
         </div>
-      </div>
+      </main>
     </div>
   </div>
 </body>

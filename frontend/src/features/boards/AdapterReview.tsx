@@ -35,19 +35,21 @@ function AdapterReview({ boardId, adapter }: AdapterReviewProps) {
 
   return (
     <section aria-label="Adaptateur de scraping">
-      <h4>Adaptateur de scraping</h4>
+      <div className="card__head">
+        <h4 className="card__title">Adaptateur de scraping</h4>
+        {adapter ? (
+          <span
+            className={`badge ${adapter.status === 'approved' ? 'badge--success' : 'badge--warning'}`}
+          >
+            {adapter.status === 'approved' ? 'Prêt' : 'Brouillon à valider'} — v
+            {adapter.version}
+          </span>
+        ) : (
+          <span className="badge badge--neutral">Aucun</span>
+        )}
+      </div>
 
-      {adapter && (
-        <span
-          className={`badge ${adapter.status === 'approved' ? 'badge--success' : 'badge--warning'}`}
-        >
-          {adapter.status === 'approved' ? 'Prêt' : 'Brouillon à valider'} — v
-          {adapter.version}
-        </span>
-      )}
-      {!adapter && <span className="badge badge--neutral">Aucun</span>}
-
-      <div className="field">
+      <div className="field mbe-4">
         <label className="field__label" htmlFor={`adapter-example-${boardId}`}>
           Page d'exemple (HTML ou JSON de la page de recherche)
         </label>
@@ -73,22 +75,30 @@ function AdapterReview({ boardId, adapter }: AdapterReviewProps) {
       )}
 
       {reviewed && (
-        <div className="card card--pad-sm">
-          <h4>Aperçu du brouillon (version {reviewed.version})</h4>
-          <pre className="mono text-xs">{JSON.stringify(reviewed.spec, null, 2)}</pre>
-          <button
-            className="btn btn--primary btn--sm"
-            type="button"
-            disabled={isApproving}
-            onClick={() => approve()}
-          >
-            Approuver l'adaptateur
-          </button>
-          {approved && (
-            <span className="badge badge--success" role="status">
-              Adaptateur approuvé.
+        <div className="card card--pad-sm mbs-4">
+          <div className="field">
+            <span className="field__label">
+              Aperçu du brouillon (version {reviewed.version})
             </span>
-          )}
+            <pre className="code-block">
+              {JSON.stringify(reviewed.spec, null, 2)}
+            </pre>
+          </div>
+          <div className="row justify-end mbs-4">
+            {approved && (
+              <span className="badge badge--success" role="status">
+                Adaptateur approuvé.
+              </span>
+            )}
+            <button
+              className="btn btn--primary btn--sm"
+              type="button"
+              disabled={isApproving}
+              onClick={() => approve()}
+            >
+              Approuver l'adaptateur
+            </button>
+          </div>
           {approveFailed && (
             <div className="banner banner--danger" role="alert">
               Échec de l'approbation. Vérifiez le brouillon et réessayez.

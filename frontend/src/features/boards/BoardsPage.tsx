@@ -88,18 +88,20 @@ function BoardRow({ board }: { board: BoardDto }) {
               }
             />
             <span className="toggle__track" />
-            Activé
+            <span className="text-sm">Activé</span>
           </label>
         </div>
-        <p className="muted text-sm">{board.base_url}</p>
-        <button
-          className="btn btn--danger btn--sm"
-          type="button"
-          disabled={isDeleting}
-          onClick={() => remove(board.id)}
-        >
-          Supprimer
-        </button>
+        <div className="row-between mbe-4">
+          <p className="mono text-xs muted">{board.base_url}</p>
+          <button
+            className="btn btn--ghost btn--sm"
+            type="button"
+            disabled={isDeleting}
+            onClick={() => remove(board.id)}
+          >
+            Supprimer
+          </button>
+        </div>
         <AdapterReview boardId={board.id} adapter={board.adapter} />
       </article>
     </li>
@@ -118,44 +120,69 @@ function BoardsPage() {
     boards.length > 0 &&
     boards.every((b) => !b.enabled);
 
+  const enabledCount = boards?.filter((b) => b.enabled).length ?? 0;
+
   return (
-    <main>
+    <>
       <header className="page__head">
-        <h1 className="page__title">Boards</h1>
+        <div>
+          <h1 className="page__title">Boards</h1>
+          <p className="page__sub">
+            Gérez les sites scrapés, la planification globale et les
+            adaptateurs générés par IA.
+          </p>
+        </div>
+        {boards !== undefined && (
+          <span className="badge badge--neutral num">
+            {boards.length} source{boards.length > 1 ? 's' : ''} ·{' '}
+            {enabledCount} activée{enabledCount > 1 ? 's' : ''}
+          </span>
+        )}
       </header>
 
-      {isPending && <p className="muted">Chargement des boards…</p>}
-      {isError && (
-        <div className="banner banner--danger" role="alert">
-          Impossible de charger les boards.
-        </div>
-      )}
+      <div className="stack stack-5">
+        {isPending && <p className="muted">Chargement des boards…</p>}
+        {isError && (
+          <div className="banner banner--danger" role="alert">
+            Impossible de charger les boards.
+          </div>
+        )}
 
-      {allDisabled && (
-        <div className="banner banner--warning" role="alert">
-          Tous les boards sont désactivés : aucune offre ne sera récupérée.
-        </div>
-      )}
+        {allDisabled && (
+          <div className="banner banner--warning" role="alert">
+            <span aria-hidden="true">⚠️</span>
+            <span>
+              Tous les boards sont désactivés : aucune offre ne sera récupérée.
+            </span>
+          </div>
+        )}
 
-      {boards !== undefined && boards.length === 0 && (
-        <div className="state">
-          <span className="state__title">
-            Aucun board pour l'instant. Ajoutez-en un pour commencer.
-          </span>
-        </div>
-      )}
+        <ScheduleEditor />
 
-      {boards !== undefined && boards.length > 0 && (
-        <ul className="stack stack-4" aria-label="Boards">
-          {boards.map((board) => (
-            <BoardRow key={board.id} board={board} />
-          ))}
-        </ul>
-      )}
+        {boards !== undefined && boards.length === 0 && (
+          <div className="card">
+            <div className="state">
+              <span className="state__icon" aria-hidden="true">
+                🗂️
+              </span>
+              <span className="state__title">
+                Aucun board pour l'instant. Ajoutez-en un pour commencer.
+              </span>
+            </div>
+          </div>
+        )}
 
-      <CreateBoardForm />
-      <ScheduleEditor />
-    </main>
+        {boards !== undefined && boards.length > 0 && (
+          <ul className="stack stack-4" aria-label="Boards">
+            {boards.map((board) => (
+              <BoardRow key={board.id} board={board} />
+            ))}
+          </ul>
+        )}
+
+        <CreateBoardForm />
+      </div>
+    </>
   );
 }
 

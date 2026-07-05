@@ -90,9 +90,30 @@ func (r *Repository) Create(ctx context.Context, job jobs.Job) (kernel.JobID, er
 	return kernel.JobID(jobID), nil
 }
 
-// ListByProfile returns job views scoped to the profile with optional filtering and
-// sorting. Sources (with board names) are loaded in a single follow-up query.
-func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.ProfileID, filter appjobs.JobListFilter) ([]appjobs.JobView, error) {
+// jobListFromClause is the FROM/JOIN clause shared by the list and count queries in
+// ListByProfile. It must stay identical between the two: the count query computes
+// COUNT(DISTINCT j.id) over this same join so a fan-out from job_source (a job with
+// multiple sources) is not over-counted (ADR-007).
+const jobListFromClause = `
+	FROM job j
+	JOIN job_source js ON js.job_id = j.id
+	JOIN raw_listing rl ON rl.id = js.raw_listing_id
+	LEFT JOIN job_application ja ON ja.job_id = j.id AND ja.profile_id = $1`
+
+// jobListFilterQuery holds the WHERE-clause fragments built once from a JobListFilter
+// and reused by both the paginated list query and the COUNT query in ListByProfile, so
+// the two can never drift apart (ADR-007).
+type jobListFilterQuery struct {
+	whereClause string
+	args        []any
+	orderCol    string
+	orderDir    string
+}
+
+// buildJobListFilterQuery translates a JobListFilter into the shared WHERE clause,
+// bind args, and ORDER BY column/direction used by ListByProfile's list and count
+// queries.
+func buildJobListFilterQuery(profileID kernel.ProfileID, filter appjobs.JobListFilter) jobListFilterQuery {
 	conditions := []string{"rl.profile_id = $1"}
 	args := []any{string(profileID)}
 
@@ -138,6 +159,23 @@ func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.Profile
 		orderDir = "ASC"
 	}
 
+	return jobListFilterQuery{
+		whereClause: strings.Join(conditions, " AND "),
+		args:        args,
+		orderCol:    orderCol,
+		orderDir:    orderDir,
+	}
+}
+
+// buildJobListQuery builds the paginated list query text and its bind args: the
+// shared filter args followed by LIMIT (page size) and OFFSET ((page-1)*page size).
+// It adds a deterministic `, j.id DESC` tie-break after the requested ORDER BY column
+// so equal sort keys never let a row straddle two pages (ADR-007).
+func buildJobListQuery(fq jobListFilterQuery, pageSize, page int) (string, []any) {
+	limitArgs := append(append([]any{}, fq.args...), pageSize, (page-1)*pageSize)
+	limitPos := len(fq.args) + 1
+	offsetPos := len(fq.args) + 2
+
 	query := fmt.Sprintf(`
 		SELECT DISTINCT j.id, j.title, j.company, j.location, j.url, j.skills,
 		       j.remote_policy, j.office_days, j.contract_type,
@@ -145,17 +183,30 @@ func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.Profile
 		       j.field_confidence, j.understanding_score, j.description,
 		       j.contact_id, j.first_seen, j.last_seen, j.expired_at,
 		       ja.status
-		FROM job j
-		JOIN job_source js ON js.job_id = j.id
-		JOIN raw_listing rl ON rl.id = js.raw_listing_id
-		LEFT JOIN job_application ja ON ja.job_id = j.id AND ja.profile_id = $1
+		%s
 		WHERE %s
-		ORDER BY %s %s`,
-		strings.Join(conditions, " AND "), orderCol, orderDir)
+		ORDER BY %s %s, j.id DESC
+		LIMIT $%d OFFSET $%d`,
+		jobListFromClause, fq.whereClause, fq.orderCol, fq.orderDir, limitPos, offsetPos)
+	return query, limitArgs
+}
 
-	rows, err := r.pool.Query(ctx, query, args...)
+// ListByProfile returns a page of job views scoped to the profile with optional
+// filtering and sorting, plus the total row count across the whole filtered result
+// (ADR-007). Sources (with board names) are loaded in a single follow-up query.
+func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.ProfileID, filter appjobs.JobListFilter) (appjobs.JobListResult, error) {
+	fq := buildJobListFilterQuery(profileID, filter)
+
+	total, err := r.countJobsByProfile(ctx, fq)
 	if err != nil {
-		return nil, fmt.Errorf("querying jobs: %w", err)
+		return appjobs.JobListResult{}, err
+	}
+
+	query, limitArgs := buildJobListQuery(fq, filter.PageSize, filter.Page)
+
+	rows, err := r.pool.Query(ctx, query, limitArgs...)
+	if err != nil {
+		return appjobs.JobListResult{}, fmt.Errorf("querying jobs: %w", err)
 	}
 	defer rows.Close()
 
@@ -163,12 +214,12 @@ func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.Profile
 	for rows.Next() {
 		view, err := scanJobView(rows)
 		if err != nil {
-			return nil, err
+			return appjobs.JobListResult{}, err
 		}
 		out = append(out, view)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating job rows: %w", err)
+		return appjobs.JobListResult{}, fmt.Errorf("iterating job rows: %w", err)
 	}
 
 	if len(out) > 0 {
@@ -178,13 +229,38 @@ func (r *Repository) ListByProfile(ctx context.Context, profileID kernel.Profile
 		}
 		sourcesMap, err := r.sourcesByJobBulk(ctx, ids)
 		if err != nil {
-			return nil, err
+			return appjobs.JobListResult{}, err
 		}
 		for i := range out {
 			out[i].Sources = sourcesMap[out[i].ID]
 		}
 	}
-	return out, nil
+	return appjobs.JobListResult{Items: out, Total: total}, nil
+}
+
+// countJobsByProfile computes the total row count for a filtered job list, over the
+// identical FROM/JOIN/WHERE the list query uses. It counts COUNT(DISTINCT j.id)
+// because the job_source join fans a job out to one row per source (ADR-007
+// must_not: never COUNT(*) here).
+func (r *Repository) countJobsByProfile(ctx context.Context, fq jobListFilterQuery) (int, error) {
+	query := buildJobCountQuery(fq)
+
+	var total int
+	if err := r.pool.QueryRow(ctx, query, fq.args...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("counting jobs: %w", err)
+	}
+	return total, nil
+}
+
+// buildJobCountQuery builds the COUNT(DISTINCT j.id) query text over the identical
+// FROM/JOIN/WHERE the list query uses (ADR-007 must_not: never COUNT(*), since the
+// job_source join fans a multi-source job out to one row per source).
+func buildJobCountQuery(fq jobListFilterQuery) string {
+	return fmt.Sprintf(`
+		SELECT COUNT(DISTINCT j.id)
+		%s
+		WHERE %s`,
+		jobListFromClause, fq.whereClause)
 }
 
 // GetByProfile returns one job view scoped to the profile, with sources and full detail.

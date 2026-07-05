@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useContacts } from './useContacts';
 import { ContactRow } from './ContactRow';
 import { ContactForm } from './ContactForm';
+import { useWidePage } from '../../components/AppShell';
 
 /**
  * Contacts page at `/contacts`: filterable table with inline tag/notes
@@ -14,37 +15,45 @@ function ContactsPage() {
     tagFilter || undefined,
   );
 
+  useWidePage(true);
+
   return (
-    <main>
-      <header className="page__head row-between">
-        <div className="stack">
+    <>
+      <header className="page__head">
+        <div>
           <h1 className="page__title">Contacts</h1>
           <p className="page__sub">
             Recruteurs auto-remplis depuis l'extraction. Dédupliqués par e-mail
             ou LinkedIn.
           </p>
         </div>
-        <a className="btn btn--secondary" href="/api/contacts/export.csv">
-          Exporter en CSV
-        </a>
+        <div className="page__actions">
+          <label className="sr-only" htmlFor="contact-tag-filter">
+            Filtrer par tag
+          </label>
+          <input
+            className="input w-auto"
+            id="contact-tag-filter"
+            type="text"
+            placeholder="Filtrer par tag…"
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+          />
+          <a className="btn btn--secondary" href="/api/contacts/export.csv">
+            Exporter en CSV
+          </a>
+        </div>
       </header>
 
       <div className="stack stack-5">
         <section aria-label="Liste des contacts">
-          <div className="card__head">
-            <div className="field">
-              <label className="field__label" htmlFor="contact-tag-filter">
-                Filtrer par tag
-              </label>
-              <input
-                className="input"
-                id="contact-tag-filter"
-                type="text"
-                value={tagFilter}
-                onChange={(e) => setTagFilter(e.target.value)}
-              />
+          {contacts !== undefined && contacts.length > 0 && (
+            <div className="card__head">
+              <h2 className="card__title num">
+                {contacts.length} contact{contacts.length > 1 ? 's' : ''}
+              </h2>
             </div>
-          </div>
+          )}
 
           {isPending && <p className="muted">Chargement des contacts…</p>}
           {isError && (
@@ -54,8 +63,15 @@ function ContactsPage() {
           )}
 
           {contacts !== undefined && contacts.length === 0 && (
-            <div className="state">
-              <span className="state__title">Aucun contact pour l'instant.</span>
+            <div className="card">
+              <div className="state">
+                <span className="state__icon" aria-hidden="true">
+                  👥
+                </span>
+                <span className="state__title">
+                  Aucun contact pour l'instant.
+                </span>
+              </div>
             </div>
           )}
 
@@ -70,7 +86,9 @@ function ContactsPage() {
                     <th>LinkedIn</th>
                     <th>Tags</th>
                     <th>Notes</th>
-                    <th>Actions</th>
+                    <th>
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -85,7 +103,7 @@ function ContactsPage() {
 
         <ContactForm />
       </div>
-    </main>
+    </>
   );
 }
 

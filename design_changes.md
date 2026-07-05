@@ -13,6 +13,65 @@ structure, tokens, component classes, and interaction decisions.
   labelled inputs, `:focus-visible` rings via `--focus-ring`, WCAG-AA contrast,
   `prefers-reduced-motion` guards on the spinner/skeleton/shimmer.
 
+---
+
+# ⭐ Polish pass — `feat/template-polish` (READ FIRST)
+
+A "polished SaaS" visual pass landed on top of the Phase 6 template (branch
+`feat/template-polish`). The screen-by-screen **interaction decisions below
+are unchanged and still authoritative** — this section is the *visual delta*
+the frontend must port. The frontend already shares the template's system
+(same 4 CSS files under `frontend/src/styles/`, same class vocabulary), so
+most of this is: copy the CSS, adapt the app-shell JSX. Nothing here renames
+or removes an existing token — all changes are additive or restyle-in-place,
+so copying the CSS cannot break current styling.
+
+### How to port
+1. Copy `template/styles/{tokens,base,components}.css` → `frontend/src/styles/`.
+   Diff `main.css`, take only `@layer`/`@import` order changes.
+2. Adapt the **app shell** (sidebar + topbar + page header) — the only real JSX work (§ Shell).
+3. Sweep for **class drift** — adopt the new classes that replace inline-style hacks (§ Components).
+4. **Skip the scaffolding** — do NOT port the demo-only bits (§ Do not port).
+5. Gates: `rtk tsc`, `rtk lint`, `rtk vitest`.
+
+### Tokens — additive
+- **Theming:** every color token now uses `light-dark()`; `color-scheme: light dark` on `:root` + override `:root[data-theme="light"|"dark"]`. Names unchanged (1:1 contract). App now follows OS theme; `data-theme` on `<html>` forces a mode. Theme toggle is optional, not required for this port.
+- **Ink surface** (new, same in both schemes — the signature sidebar): `--color-ink`, `-ink-raised`, `-ink-border`, `-ink-text`, `-ink-text-strong`, `-ink-text-dim`.
+- **Solid brand fills** (white text readable in dark): `--color-brand-solid`, `-solid-hover`, `-solid-active`.
+- **Type:** `--tracking-tight` (headings), `--tracking-caps` (uppercase labels); `2xl` capped calmer at 2.25rem.
+- **Elevation:** `--shadow-tint-a/-b` (alpha scales up in dark), `--scrim` for modal/drawer backdrops.
+
+### Shell (`base.css`) — main JSX work
+- **Sidebar is now an ink surface** (deep slate, dark in both themes) via `--color-ink*`; content stays on neutral surfaces → chrome-vs-content split.
+- **Nav grouped by job, not flat.** `.nav__section` groups: **Pilotage** (Tableau de bord, Offres, Pipeline) · **Configuration** (Profils, Sources) · **Réseau** (Contacts) · **Référence** (Design system). Each `.nav__link` gets an **inline SVG icon** (16px, `stroke: currentColor`) — copy the exact SVGs from the template screens.
+- **Active link:** `[aria-current="page"]` → ink-raised bg + 3px brand **edge indicator** (`::before`) + brand icon. Keep driving off the active route.
+- **Sidebar footer** (new): `.app__sidebar-foot` pinned bottom (`margin-block-start:auto`) — `.app__avatar` initials + user name + active-profile `<small>`.
+- **Topbar:** `min-height:60px`, tighter padding; profile switcher left, actions right. **`<h1>` moved OUT of the topbar into `.page__head`** (boards/contacts/pipeline had it inline in the topbar — fix).
+- **Page header:** `.page__head` now `flex justify-between align-items:flex-end` — title+sub left `<div>`, right-aligned meta/actions slot (e.g. "Dernier scraping : il y a 2 h" badge). New `.page--wide` (`max-width:none`) for dense table screens.
+- **Semantics:** content wrapper is now `<main class="page">` — add the `<main>` landmark. Global `prefers-reduced-motion` kill switch; `:focus-visible` ring now covers `summary`.
+
+### Utilities (`base.css`)
+`.num` (tabular-nums — use on ALL numeric/metric/timestamp text), `.medium`, `.w-auto` (replaces `style="width:auto"`), `.justify-end`, `.mbs-2..5` / `.mbe-4..5` (margin-block helpers replacing inline margins).
+
+### Components (`components.css`) — new / restyled
+- **`.list-row`** — replaces the `card card--pad-sm` + `style="box-shadow:none"` row hack (match/alert/list items).
+- **`.fit-score`** — now a **CSS conic-gradient ring** driven by `--v`. Markup: `<span class="fit-score" style="--v:94">94</span>`. In React: `style={{ ['--v' as any]: score }}` — no JS math, no chart lib.
+- **`.stat__value--text`** — non-numeric stat values (e.g. "CDI"); replaces `style="font-size:var(--font-size-lg)"`.
+- **`.skeleton--block`** — replaces `style="height:120px"` skeletons.
+- Refined buttons/inputs/segmented/tabs, `.select--sm`, `.fieldset`, `.code-block`. Banners use `color-mix` borders (survive dark mode). Tables: 11px caps headers w/ tracking, right-aligned `.num` columns, row hover.
+- **Elevation system:** border + `shadow-xs` rest → `shadow-sm` hover (job cards, kanban cards, list rows) → `shadow-lg` modal/drawer only.
+- **Class-drift check:** grep frontend for `box-shadow:none` card hacks, `fit-score` without `--v`, inline `width/height/font-size` the new classes now own — swap them.
+
+### Do NOT port (template-only scaffolding)
+- **`<details class="preview">` state demos** — every screen wraps empty/loading/error/skeleton states in a `<details>` "États — vide · chargement · erreur" so the static page shows all states at once. The React app renders real states from query status → **ignore these `.preview` blocks.** (The `.preview` CSS can tag along; just don't emit the markup.)
+- **`index.html`** design-system page — not a screen.
+- Static SVG placeholder charts — frontend keeps its real Recharts components.
+
+### Still needs a design decision (flag, don't invent)
+- **job-browser** stacks table + cards + kanban as one page in the template. A real view should pick one mode per view-state (segmented toggle already specified below). Don't blindly port all three stacked.
+
+---
+
 ## File tree
 
 ```

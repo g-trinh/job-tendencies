@@ -11,62 +11,78 @@
     <aside class="app__sidebar">
       <a class="app__brand" href="../index.html"><span class="app__brand-mark">JT</span> Job Tendencies</a>
       <nav class="nav" aria-label="Navigation principale">
-        <span class="nav__section">Écrans</span>
-        <a class="nav__link" href="dashboard.html">Tableau de bord</a>
-        <a class="nav__link" href="job-browser.html">Offres</a>
-        <a class="nav__link" href="profiles.html">Profils</a>
-        <a class="nav__link" href="boards.html">Sources</a>
-        <a class="nav__link" aria-current="page" href="contacts.html">Contacts</a>
-        <a class="nav__link" href="pipeline.html">Pipeline</a>
+        <span class="nav__section">Pilotage</span>
+        <a class="nav__link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tableau de bord</a>
+        <a class="nav__link" href="job-browser.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"/></svg>Offres</a>
+        <a class="nav__link" href="pipeline.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 8-6-16-3 8H2"/></svg>Pipeline</a>
+        <span class="nav__section">Configuration</span>
+        <a class="nav__link" href="profiles.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5a7 7 0 0 1 14 0"/></svg>Profils</a>
+        <a class="nav__link" href="boards.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Sources</a>
+        <span class="nav__section">Réseau</span>
+        <a class="nav__link" aria-current="page" href="contacts.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4.2-6"/></svg>Contacts</a>
         <span class="nav__section">Référence</span>
-        <a class="nav__link" href="../index.html">Design system</a>
+        <a class="nav__link" href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2.5H6.5A2.5 2.5 0 0 0 4 5v14.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg>Design system</a>
       </nav>
+      <div class="app__sidebar-foot">
+        <span class="app__avatar" aria-hidden="true">GT</span>
+        <span>Guillaume<small>Profil : Go Backend Paris</small></span>
+      </div>
     </aside>
 
     <div class="app__main">
       <header class="topbar">
-        <h1 class="page__title" style="font-size:var(--font-size-lg)">Contacts</h1>
+        <div class="row">
+          <label class="sr-only" for="profile-switch">Profil actif</label>
+          <select class="select w-auto" id="profile-switch"><option>Go Backend Paris — CDI 65k+</option><option>Go Backend Remote Europe — Freelance 500€/j</option></select>
+        </div>
         <div class="row">
           <button class="btn btn--secondary">Exporter en CSV</button>
           <button class="btn btn--primary">+ Ajouter un contact</button>
         </div>
       </header>
 
-      <div class="page">
-        <header class="page__head"><p class="page__sub">Recruteurs auto-remplis depuis l'extraction. Dédupliqués par e-mail ou LinkedIn.</p></header>
+      <main class="page">
+        <header class="page__head">
+          <div>
+            <h1 class="page__title">Contacts</h1>
+            <p class="page__sub">Recruteurs auto-remplis depuis l'extraction. Dédupliqués par e-mail ou LinkedIn.</p>
+          </div>
+          <div class="page__actions">
+            <label class="sr-only" for="c-tag">Filtrer par tag</label>
+            <select class="select w-auto" id="c-tag"><option>Tous les tags</option><option>in-house</option><option>agency</option><option>responsive</option><option>ghosted</option><option>not-contacted</option></select>
+          </div>
+        </header>
 
         <div class="stack stack-5">
           <section aria-labelledby="c-list">
-            <div class="card__head"><h2 class="card__title" id="c-list">128 contacts</h2>
-              <div class="row"><label class="sr-only" for="c-tag">Filtrer par tag</label><select class="select" id="c-tag" style="width:auto"><option>Tous les tags</option><option>in-house</option><option>agency</option><option>responsive</option><option>ghosted</option><option>not-contacted</option></select></div>
-            </div>
+            <div class="card__head"><h2 class="card__title" id="c-list">128 contacts</h2></div>
             <div class="table-wrap">
               <table class="table">
-                <thead><tr><th>Nom</th><th>Entreprise</th><th>Contact</th><th>Offres postées</th><th>Tags</th><th>Notes</th><th></th></tr></thead>
+                <thead><tr><th>Nom</th><th>Entreprise</th><th>Contact</th><th class="num">Offres postées</th><th>Tags</th><th>Notes</th><th><span class="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   <tr>
-                    <td>Camille Dubois</td><td>Datadog</td>
+                    <td><strong>Camille Dubois</strong></td><td>Datadog</td>
                     <td class="text-xs"><a href="mailto:c.dubois@datadog.com">c.dubois@datadog.com</a><br /><a href="#" rel="noreferrer">LinkedIn ↗</a></td>
-                    <td>3</td>
+                    <td class="num">3</td>
                     <td><span class="tag">in-house</span> <span class="tag">responsive</span></td>
                     <td class="muted text-xs">Réactive, entretien prévu</td>
-                    <td><button class="btn btn--ghost btn--sm">Modifier</button></td>
+                    <td class="row justify-end"><button class="btn btn--ghost btn--sm">Modifier</button></td>
                   </tr>
                   <tr>
-                    <td>Marc Lefèvre</td><td>TechRecruit (agence)</td>
-                    <td class="text-xs"><a href="mailto:marc@techrecruit.fr">marc@techrecruit.fr</a><br /><span class="muted">+33 6 12 34 56 78</span></td>
-                    <td>7</td>
+                    <td><strong>Marc Lefèvre</strong></td><td>TechRecruit (agence)</td>
+                    <td class="text-xs"><a href="mailto:marc@techrecruit.fr">marc@techrecruit.fr</a><br /><span class="muted num">+33 6 12 34 56 78</span></td>
+                    <td class="num">7</td>
                     <td><span class="tag">agency</span> <span class="tag">ghosted</span></td>
                     <td class="muted text-xs">Sans réponse depuis 2 semaines</td>
-                    <td><button class="btn btn--ghost btn--sm">Modifier</button></td>
+                    <td class="row justify-end"><button class="btn btn--ghost btn--sm">Modifier</button></td>
                   </tr>
                   <tr>
-                    <td>Inconnu <span class="badge badge--warning">Incomplet</span></td><td>Alan</td>
+                    <td><strong>Inconnu</strong> <span class="badge badge--warning">Incomplet</span></td><td>Alan</td>
                     <td class="text-xs muted">Easy Apply — e-mail masqué</td>
-                    <td>1</td>
+                    <td class="num">1</td>
                     <td><span class="tag">not-contacted</span></td>
                     <td class="muted text-xs">—</td>
-                    <td><button class="btn btn--ghost btn--sm">Modifier</button></td>
+                    <td class="row justify-end"><button class="btn btn--ghost btn--sm">Modifier</button></td>
                   </tr>
                 </tbody>
               </table>
@@ -77,7 +93,7 @@
           <section aria-labelledby="c-edit">
             <div class="card__head"><h2 class="card__title" id="c-edit">Panneau d'édition (aperçu)</h2></div>
             <div class="card" style="max-width:480px">
-              <div class="drawer__head" style="padding:0 0 var(--space-4)"><strong>Modifier le contact</strong><button class="icon-btn" aria-label="Fermer">×</button></div>
+              <div class="row-between mbe-4"><strong>Modifier le contact</strong><button class="icon-btn" aria-label="Fermer">×</button></div>
               <div class="stack stack-3">
                 <div class="field"><label class="field__label" for="e-name">Nom</label><input class="input" id="e-name" value="Camille Dubois" /></div>
                 <div class="grid-2">
@@ -89,18 +105,23 @@
                 <div class="stack stack-2"><span class="field__label">Tags</span><div class="tag-input"><span class="tag">in-house <button aria-label="Retirer">×</button></span><span class="tag">responsive <button aria-label="Retirer">×</button></span><input type="text" placeholder="Ajouter un tag…" aria-label="Ajouter un tag" /></div></div>
                 <div class="field"><label class="field__label" for="e-notes">Notes</label><textarea class="textarea" id="e-notes">Réactive, entretien prévu</textarea></div>
               </div>
-              <div class="drawer__foot" style="padding:var(--space-4) 0 0"><button class="btn btn--ghost">Annuler</button><button class="btn btn--primary">Enregistrer</button></div>
+              <div class="row justify-end mbs-4"><button class="btn btn--ghost">Annuler</button><button class="btn btn--primary">Enregistrer</button></div>
             </div>
           </section>
 
-          <!-- States -->
-          <section class="grid-2" aria-label="États">
-            <div class="card"><div class="state"><span class="state__icon">👥</span><span class="state__title">Aucun contact</span><span>Les recruteurs apparaîtront ici après le premier scraping.</span><button class="btn btn--primary">+ Ajouter un contact</button></div></div>
-            <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-60"></span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-40"></span></div></div>
-          </section>
-          <div class="banner banner--danger"><span>⚠️</span><span>Échec du chargement des contacts. <a href="#">Réessayer</a></span></div>
+          <!-- Non-nominal states preview -->
+          <details class="preview">
+            <summary>États — vide · chargement · erreur</summary>
+            <div class="preview__body">
+              <div class="grid-2">
+                <div class="card"><div class="state"><span class="state__icon">👥</span><span class="state__title">Aucun contact</span><span>Les recruteurs apparaîtront ici après le premier scraping.</span><button class="btn btn--primary">+ Ajouter un contact</button></div></div>
+                <div class="card"><div class="stack stack-3"><span class="skeleton skeleton--text skeleton--line-60"></span><span class="skeleton skeleton--text skeleton--line-80"></span><span class="skeleton skeleton--text skeleton--line-40"></span></div></div>
+              </div>
+              <div class="banner banner--danger"><span aria-hidden="true">⚠️</span><span>Échec du chargement des contacts. <a href="#">Réessayer</a></span></div>
+            </div>
+          </details>
         </div>
-      </div>
+      </main>
     </div>
   </div>
 </body>

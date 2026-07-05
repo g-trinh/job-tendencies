@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useDashboardMatches } from './useDashboard';
 
@@ -25,14 +26,14 @@ function MatchAlerts() {
       {matches !== undefined && matches.length > 0 && (
         <ul className="stack stack-3" aria-label="Offres correspondantes">
           {matches.map((m) => (
-            <li
-              key={m.id}
-              className="row-between card card--pad-sm"
-              style={{ boxShadow: 'none' }}
-            >
+            <li key={m.id} className="list-row">
               <div className="row">
                 {m.weighted_score != null && (
-                  <span className="fit-score" aria-hidden="true">
+                  <span
+                    className="fit-score"
+                    style={{ '--v': Math.round(m.weighted_score) } as CSSProperties}
+                    aria-hidden="true"
+                  >
                     {Math.round(m.weighted_score)}
                   </span>
                 )}
@@ -49,7 +50,8 @@ function MatchAlerts() {
               </div>
               {m.weighted_score != null && (
                 <span className="muted text-xs">
-                  Score pondéré : {Math.round(m.weighted_score)}/100
+                  Score pondéré :{' '}
+                  <span className="num">{Math.round(m.weighted_score)}/100</span>
                 </span>
               )}
             </li>

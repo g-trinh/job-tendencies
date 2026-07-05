@@ -172,3 +172,36 @@ export function toJobDetail(dto: JobDetailDto): JobDetail {
     lastSeen: dto.last_seen,
   };
 }
+
+/**
+ * Raw `GET /api/jobs` envelope (ADR-007). Replaces the bare `JobSummaryDto[]`
+ * response: items plus offset-pagination metadata computed server-side.
+ * `total_pages` is `0` when `total` is `0`.
+ */
+export interface PagedJobsDto {
+  items: JobSummaryDto[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
+/** Paged jobs list mapped to the camelCase domain shape used by the UI. */
+export interface PagedJobs {
+  items: JobSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+/** Maps a wire paged-jobs envelope to the camelCase domain shape used by the UI. */
+export function toPagedJobs(dto: PagedJobsDto): PagedJobs {
+  return {
+    items: dto.items.map(toJobSummary),
+    page: dto.page,
+    pageSize: dto.page_size,
+    total: dto.total,
+    totalPages: dto.total_pages,
+  };
+}

@@ -56,7 +56,8 @@ function JobFiltersBar({
   }
 
   return (
-    <section className="card filter-panel" aria-label="Filtres et tri">
+    <aside className="card" aria-label="Filtres et tri">
+      <h2 className="card__title mbe-4">Filtres</h2>
       <div className="field filter-group">
         {/* Skills — comma-separated text input */}
         <label className="field__label" htmlFor="filter-skills">
@@ -117,42 +118,47 @@ function JobFiltersBar({
         </select>
       </div>
 
-      <div className="field filter-group">
-        <label className="field__label" htmlFor="filter-salary-min">
-          Salaire min (€)
-        </label>
-        <input
-          className="input"
-          id="filter-salary-min"
-          type="number"
-          min={0}
-          value={filters.salary_min ?? ''}
-          onChange={(e) =>
-            set(
-              'salary_min',
-              e.target.value ? parseInt(e.target.value, 10) : undefined,
-            )
-          }
-        />
-      </div>
-
-      <div className="field filter-group">
-        <label className="field__label" htmlFor="filter-salary-max">
-          Salaire max (€)
-        </label>
-        <input
-          className="input"
-          id="filter-salary-max"
-          type="number"
-          min={0}
-          value={filters.salary_max ?? ''}
-          onChange={(e) =>
-            set(
-              'salary_max',
-              e.target.value ? parseInt(e.target.value, 10) : undefined,
-            )
-          }
-        />
+      <div className="filter-group">
+        <div className="filter-group__title">Salaire (€)</div>
+        <div className="row">
+          <label className="sr-only" htmlFor="filter-salary-min">
+            Salaire min (€)
+          </label>
+          <input
+            className="input"
+            id="filter-salary-min"
+            type="number"
+            min={0}
+            placeholder="min"
+            value={filters.salary_min ?? ''}
+            onChange={(e) =>
+              set(
+                'salary_min',
+                e.target.value ? parseInt(e.target.value, 10) : undefined,
+              )
+            }
+          />
+          <span className="muted" aria-hidden="true">
+            –
+          </span>
+          <label className="sr-only" htmlFor="filter-salary-max">
+            Salaire max (€)
+          </label>
+          <input
+            className="input"
+            id="filter-salary-max"
+            type="number"
+            min={0}
+            placeholder="max"
+            value={filters.salary_max ?? ''}
+            onChange={(e) =>
+              set(
+                'salary_max',
+                e.target.value ? parseInt(e.target.value, 10) : undefined,
+              )
+            }
+          />
+        </div>
       </div>
 
       <div className="field filter-group">
@@ -252,7 +258,7 @@ function JobFiltersBar({
         </select>
       </div>
 
-      <div className="filter-group" style={{ border: 0 }}>
+      <div className="filter-group filter-group--last">
         <label className="check" htmlFor="filter-show-expired">
           <input
             id="filter-show-expired"
@@ -263,7 +269,7 @@ function JobFiltersBar({
           Afficher les offres expirées
         </label>
       </div>
-    </section>
+    </aside>
   );
 }
 

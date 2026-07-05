@@ -45,9 +45,10 @@ describe('PipelinePage', () => {
 
     renderPipelinePage();
 
-    expect(
-      await screen.findByText(/completed \(manual\)/),
-    ).toBeInTheDocument();
+    // History is rendered as a table row: trigger and status as badges.
+    expect(await screen.findByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('completed')).toBeInTheDocument();
+    expect(screen.getByText('manual')).toBeInTheDocument();
   });
 
   it('triggers a run and polls the detail endpoint for per-board progress', async () => {

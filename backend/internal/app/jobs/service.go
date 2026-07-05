@@ -55,6 +55,11 @@ type JobView struct {
 
 // JobListFilter holds optional filter and sort parameters for the list query.
 // Zero values mean "no filter". Sort defaults to "date" DESC when unset.
+//
+// Page/PageSize implement offset pagination (ADR-007): Page is 1-based and PageSize
+// is the number of rows per page. Callers (the HTTP handler) are responsible for
+// clamping Page to >= 1 and PageSize to 1..100 before this filter reaches the query
+// port — the query port trusts these values are already valid.
 type JobListFilter struct {
 	Skills        []string
 	RemotePolicy  string
@@ -67,6 +72,16 @@ type JobListFilter struct {
 	ConfidenceMin *int
 	Sort          string // "date" | "fit" | "salary"; default "date"
 	SortDir       string // "asc" | "desc"; default "desc"
+	Page          int    // 1-based page number; expected >= 1
+	PageSize      int    // rows per page; expected in 1..100
+}
+
+// JobListResult is the paginated outcome of a job list query (ADR-007): the page of
+// items plus the total row count across the entire filtered result set (not just the
+// page), so the caller can compute total_pages.
+type JobListResult struct {
+	Items []JobView
+	Total int
 }
 
 // ApplicationResult is returned after upserting a job application kanban status.
@@ -78,8 +93,9 @@ type ApplicationResult struct {
 // JobQuery reads job views scoped to a profile, querying storage directly. It is the
 // read side and deliberately does not reuse the domain Job repository (ADR-005).
 type JobQuery interface {
-	// ListByProfile returns job views scoped to the profile, filtered and sorted.
-	ListByProfile(ctx context.Context, profileID kernel.ProfileID, filter JobListFilter) ([]JobView, error)
+	// ListByProfile returns a page of job views scoped to the profile, filtered and
+	// sorted, plus the total row count across the whole filtered result (ADR-007).
+	ListByProfile(ctx context.Context, profileID kernel.ProfileID, filter JobListFilter) (JobListResult, error)
 	// GetByProfile returns one job view scoped to the profile, or a kernel.NotFoundError.
 	GetByProfile(ctx context.Context, profileID kernel.ProfileID, id kernel.JobID) (JobView, error)
 }
@@ -126,11 +142,12 @@ func (s *Service) WithReextraction(rawListings JobRawListingSource, publisher me
 	return s
 }
 
-// ListJobs returns job views scoped to the active profile with optional filtering.
-func (s *Service) ListJobs(ctx context.Context, profileID kernel.ProfileID, filter JobListFilter) ([]JobView, error) {
+// ListJobs returns a page of job views scoped to the active profile with optional
+// filtering, plus the total row count (ADR-007).
+func (s *Service) ListJobs(ctx context.Context, profileID kernel.ProfileID, filter JobListFilter) (JobListResult, error) {
 	out, err := s.query.ListByProfile(ctx, profileID, filter)
 	if err != nil {
-		return nil, fmt.Errorf("listing jobs for profile %q: %w", profileID, err)
+		return JobListResult{}, fmt.Errorf("listing jobs for profile %q: %w", profileID, err)
 	}
 	return out, nil
 }

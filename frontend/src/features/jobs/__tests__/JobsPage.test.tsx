@@ -1,12 +1,16 @@
 import { type ReactNode } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import MockAdapter from 'axios-mock-adapter';
 import { apiClient, setActiveProfileId } from '../../../lib/apiClient';
 import { ActiveProfileProvider } from '../../../context/ActiveProfileContext';
 import { JobsPage } from '../JobsPage';
-import { jobsFixture, jobsWithExpiredFixture } from '../fixtures';
+import {
+  jobsFixture,
+  jobsWithExpiredFixture,
+  toPagedJobsFixture,
+} from '../fixtures';
 
 const ACTIVE_PROFILE_ID = 'profile-123';
 
@@ -43,7 +47,7 @@ describe('JobsPage', () => {
 
   // AC: the page lists jobs returned by the dev API
   it('lists the jobs returned by the API', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
@@ -58,7 +62,7 @@ describe('JobsPage', () => {
 
   // AC: structured enums shown in French
   it('renders structured enum fields in French', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
@@ -77,7 +81,7 @@ describe('JobsPage', () => {
   // The second job's contract type is undetermined ("") — it must be omitted,
   // never rendered as the raw i18n key.
   it('omits an enum field that the extraction could not determine', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
@@ -92,7 +96,7 @@ describe('JobsPage', () => {
       sentProfile = (config.headers as Record<string, string>)[
         'X-Active-Profile'
       ];
-      return [200, jobsFixture];
+      return [200, toPagedJobsFixture(jobsFixture)];
     });
 
     renderJobsPage();
@@ -105,7 +109,7 @@ describe('JobsPage', () => {
   // (no dead `<a href="">`), but still link to the detail page via the title.
   it('renders the title as a detail link and shows "Lien indisponible" when the posting URL is empty', async () => {
     const [job] = jobsFixture;
-    mock.onGet('/jobs').reply(200, [{ ...job, url: '' }]);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture([{ ...job, url: '' }]));
 
     renderJobsPage();
 
@@ -122,7 +126,7 @@ describe('JobsPage', () => {
   });
 
   it('shows an empty-state message when no jobs match the profile', async () => {
-    mock.onGet('/jobs').reply(200, []);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture([]));
 
     renderJobsPage();
 
@@ -143,7 +147,7 @@ describe('JobsPage', () => {
 
   // AC: application status shown in French on the card
   it('renders application status in French when present', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
@@ -154,7 +158,7 @@ describe('JobsPage', () => {
 
   // AC: source board shown on the card
   it('renders the source board name on each card', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
@@ -166,13 +170,15 @@ describe('JobsPage', () => {
 
   // AC: fit score shown when present
   it('renders the fit score when the scoring pipeline has run', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
-    // First job has fit_score: 87
-    expect(screen.getByText('Pertinence : 87/100')).toBeInTheDocument();
+    // First job has fit_score: 87 (rendered as "Pertinence : " + a <span class="num">87/100</span>)
+    expect(
+      screen.getByText((_, element) => element?.textContent === 'Pertinence : 87/100'),
+    ).toBeInTheDocument();
     // Second job has fit_score: null — score line must not appear
     // (only 1 "Pertinence" line total for the first job)
     expect(screen.getAllByText(/Pertinence :/)).toHaveLength(1);
@@ -180,7 +186,7 @@ describe('JobsPage', () => {
 
   // AC: view toggle switches between card and table layouts
   it('switches to table view when the Tableau button is pressed', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
@@ -199,7 +205,7 @@ describe('JobsPage', () => {
   });
 
   it('switches back to card view when the Cartes button is pressed', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
@@ -219,7 +225,7 @@ describe('JobsPage', () => {
     let sentParams: Record<string, unknown> = {};
     mock.onGet('/jobs').reply((config) => {
       sentParams = config.params as Record<string, unknown>;
-      return [200, jobsFixture];
+      return [200, toPagedJobsFixture(jobsFixture)];
     });
 
     renderJobsPage();
@@ -271,7 +277,7 @@ describe('JobsPage', () => {
 
   // AC: expired jobs are hidden by default (job-browser/feature.md edge case)
   it('hides expired jobs by default', async () => {
-    mock.onGet('/jobs').reply(200, jobsWithExpiredFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsWithExpiredFixture));
 
     renderJobsPage();
 
@@ -283,7 +289,7 @@ describe('JobsPage', () => {
 
   // AC: a toggle reveals expired jobs, marked with an "Expirée" badge
   it('shows expired jobs with an "Expirée" badge once the toggle is checked', async () => {
-    mock.onGet('/jobs').reply(200, jobsWithExpiredFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsWithExpiredFixture));
 
     renderJobsPage();
 
@@ -298,5 +304,75 @@ describe('JobsPage', () => {
     });
     expect(expiredLink).toBeInTheDocument();
     expect(screen.getByLabelText('Offre expirée')).toBeInTheDocument();
+  });
+
+  // ADR-007: clicking "Suivant" fetches page 2 from the API
+  it('fetches page 2 when "Suivant" is pressed', async () => {
+    const requestedPages: unknown[] = [];
+    mock.onGet('/jobs').reply((config) => {
+      const params = config.params as Record<string, unknown>;
+      requestedPages.push(params['page']);
+      return [
+        200,
+        toPagedJobsFixture(jobsFixture, {
+          page: (params['page'] as number) ?? 1,
+          total: 132,
+        }),
+      ];
+    });
+
+    renderJobsPage();
+
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    expect(screen.getByText(/Affichage/)).toHaveTextContent(
+      'Affichage 1–25 sur 132 offres',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Suivant/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Affichage/)).toHaveTextContent(
+        'Affichage 26–50 sur 132 offres',
+      ),
+    );
+    expect(requestedPages).toEqual([1, 2]);
+  });
+
+  // ADR-007: changing a filter resets pagination to page 1
+  it('resets to page 1 when a filter changes', async () => {
+    const requestedPages: unknown[] = [];
+    mock.onGet('/jobs').reply((config) => {
+      const params = config.params as Record<string, unknown>;
+      requestedPages.push(params['page']);
+      return [
+        200,
+        toPagedJobsFixture(jobsFixture, {
+          page: (params['page'] as number) ?? 1,
+          total: 132,
+        }),
+      ];
+    });
+
+    renderJobsPage();
+
+    await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+
+    fireEvent.click(screen.getByRole('button', { name: /Suivant/ }));
+    await waitFor(() =>
+      expect(screen.getByText(/Affichage/)).toHaveTextContent(
+        'Affichage 26–50 sur 132 offres',
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText('Télétravail'), {
+      target: { value: 'hybrid' },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(/Affichage/)).toHaveTextContent(
+        'Affichage 1–25 sur 132 offres',
+      ),
+    );
+    expect(requestedPages).toEqual([1, 2, 1]);
   });
 });
