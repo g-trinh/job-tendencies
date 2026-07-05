@@ -67,6 +67,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // Enum badges are card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     // Query within the characteristics lists (cards) to avoid matching filter <option> text.
     const charLists = screen.getAllByRole('list', { name: 'Caractéristiques' });
     const charText = charLists.map((el) => el.textContent).join('');
@@ -113,6 +115,10 @@ describe('JobsPage', () => {
 
     renderJobsPage();
 
+    await screen.findByRole('link', { name: job.title });
+    // "Lien indisponible" is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
+
     expect(await screen.findByText('Lien indisponible')).toBeInTheDocument();
     // Title still links to detail page (not the original posting)
     expect(screen.getByRole('link', { name: job.title })).toHaveAttribute(
@@ -152,6 +158,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // Status line is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     // First fixture job has application_status: 'saved'
     expect(screen.getByText('Candidature : Sauvegardé')).toBeInTheDocument();
   });
@@ -163,6 +171,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // "Trouvé sur" footer is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     expect(
       screen.getAllByText('Trouvé sur : Welcome to the Jungle'),
     ).toHaveLength(2);
@@ -175,6 +185,8 @@ describe('JobsPage', () => {
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
+    // "Pertinence" line is card-view markup — switch from the default table view.
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
     // First job has fit_score: 87 (rendered as "Pertinence : " + a <span class="num">87/100</span>)
     expect(
       screen.getByText((_, element) => element?.textContent === 'Pertinence : 87/100'),
@@ -184,24 +196,24 @@ describe('JobsPage', () => {
     expect(screen.getAllByText(/Pertinence :/)).toHaveLength(1);
   });
 
-  // AC: view toggle switches between card and table layouts
-  it('switches to table view when the Tableau button is pressed', async () => {
+  // AC: view toggle switches between card and table layouts (table is the default)
+  it('defaults to table view and switches to cards when the Cartes button is pressed', async () => {
     mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderJobsPage();
 
     await screen.findByRole('link', { name: 'Senior Backend Engineer (Go)' });
 
-    // Initially in card view — jobs rendered as a list
-    expect(screen.getByRole('list', { name: 'Offres' })).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Tableau' }));
-
+    // Initially in table view
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(
       screen.queryByRole('list', { name: 'Offres' }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cartes' }));
+
+    expect(screen.getByRole('list', { name: 'Offres' })).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('switches back to card view when the Cartes button is pressed', async () => {
