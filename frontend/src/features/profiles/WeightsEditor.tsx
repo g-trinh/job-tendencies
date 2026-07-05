@@ -33,6 +33,10 @@ function WeightsEditor({ profileId, weights }: WeightsEditorProps) {
       <div className="card__head">
         <h2 className="card__title">Pondération du score de pertinence</h2>
       </div>
+      <p className="muted text-sm mbe-4">
+        Les critères éliminatoires filtrent d'abord ; les préférences
+        produisent le score pondéré. La somme des poids doit atteindre 100%.
+      </p>
       <div className="stack stack-4">
         {FIELDS.map((f) => (
           <div className="slider-row" key={f.key}>
@@ -55,7 +59,9 @@ function WeightsEditor({ profileId, weights }: WeightsEditorProps) {
       <p aria-live="polite" className="sr-only">
         Total : {sum}%
       </p>
-      <div className={`weights-sum ${isBalanced ? 'weights-sum--ok' : 'weights-sum--off'}`}>
+      <div
+        className={`weights-sum mbs-5 ${isBalanced ? 'weights-sum--ok' : 'weights-sum--off'}`}
+      >
         <span>Total : {sum}%</span>
         {!isBalanced && (
           <span role="alert">
@@ -64,19 +70,21 @@ function WeightsEditor({ profileId, weights }: WeightsEditorProps) {
           </span>
         )}
       </div>
-      <button
-        className="btn btn--primary"
-        type="button"
-        disabled={isPending}
-        onClick={() => mutate(draft)}
-      >
-        Enregistrer
-      </button>
-      {isSuccess && (
-        <span className="badge badge--success" role="status">
-          Pondérations enregistrées.
-        </span>
-      )}
+      <div className="row justify-end mbs-4">
+        {isSuccess && (
+          <span className="badge badge--success" role="status">
+            Pondérations enregistrées.
+          </span>
+        )}
+        <button
+          className="btn btn--primary"
+          type="button"
+          disabled={isPending}
+          onClick={() => mutate(draft)}
+        >
+          Enregistrer
+        </button>
+      </div>
     </section>
   );
 }

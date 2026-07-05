@@ -32,16 +32,27 @@ function JobsTable({ jobs }: JobsTableProps) {
           <th scope="col">Entreprise</th>
           <th scope="col">Contrat</th>
           <th scope="col">Télétravail</th>
-          <th scope="col">Salaire</th>
-          <th scope="col">Pertinence</th>
+          <th scope="col" className="num">Salaire</th>
+          <th scope="col" className="num">Pertinence</th>
+          <th scope="col">Trouvée sur</th>
           <th scope="col">Candidature</th>
+          <th scope="col">
+            <span className="sr-only">Actions</span>
+          </th>
         </tr>
       </thead>
       <tbody>
         {jobs.map((job) => (
-          <tr key={job.id}>
+          <tr
+            key={job.id}
+            className={job.expiredAt ? 'jobcard--expired' : undefined}
+          >
             <td>
-              <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
+              <strong>
+                <Link to={`/jobs/${job.id}`}>
+                  {job.title || "Voir l'offre"}
+                </Link>
+              </strong>
               {job.expiredAt && (
                 <span
                   className="badge badge--danger"
@@ -57,17 +68,58 @@ function JobsTable({ jobs }: JobsTableProps) {
               {[job.company, job.location].filter(Boolean).join(' — ') || '—'}
             </td>
             <td>
-              {job.contractType ? t(`job.contract.${job.contractType}`) : '—'}
+              {job.contractType ? (
+                <span className="badge badge--neutral">
+                  {t(`job.contract.${job.contractType}`)}
+                </span>
+              ) : (
+                '—'
+              )}
             </td>
             <td>
-              {job.remotePolicy ? t(`job.remote.${job.remotePolicy}`) : '—'}
+              {job.remotePolicy ? (
+                <span
+                  className={
+                    job.remotePolicy === 'full_remote'
+                      ? 'badge badge--brand'
+                      : 'badge badge--neutral'
+                  }
+                >
+                  {t(`job.remote.${job.remotePolicy}`)}
+                </span>
+              ) : (
+                '—'
+              )}
             </td>
-            <td>{formatSalaryCompact(job.salaryMin, job.salaryMax)}</td>
-            <td>{job.fitScore != null ? `${job.fitScore}/100` : '—'}</td>
+            <td className="num">
+              {formatSalaryCompact(job.salaryMin, job.salaryMax)}
+            </td>
+            <td className="num">
+              {job.fitScore != null ? `${job.fitScore}/100` : '—'}
+            </td>
+            <td className="text-xs muted">
+              {job.sources.length > 0
+                ? job.sources.map((s) => s.board_name).join(', ')
+                : '—'}
+            </td>
             <td>
               {job.applicationStatus
                 ? t(`application.status.${job.applicationStatus}`)
                 : '—'}
+            </td>
+            <td>
+              {job.url ? (
+                <a
+                  className="btn btn--ghost btn--sm"
+                  href={job.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Lien ↗
+                </a>
+              ) : (
+                <span className="muted text-xs">—</span>
+              )}
             </td>
           </tr>
         ))}

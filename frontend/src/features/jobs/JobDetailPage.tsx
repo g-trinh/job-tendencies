@@ -41,7 +41,7 @@ function JobDetailPage() {
   const { data: job, isPending, isError } = useJobDetail(id ?? '');
 
   return (
-    <main>
+    <>
       <nav aria-label="Fil d'Ariane">
         <Link to="/">← Retour aux offres</Link>
       </nav>
@@ -109,6 +109,7 @@ function JobDetailPage() {
             <p>
               Score de compréhension global :{' '}
               <span
+                className="num"
                 aria-label={`Score de compréhension : ${job.understandingScore}%`}
               >
                 {job.understandingScore}/100
@@ -157,7 +158,9 @@ function JobDetailPage() {
 
           {/* Scores */}
           {job.fitScore != null && (
-            <p>Score de pertinence : {job.fitScore}/100</p>
+            <p>
+              Score de pertinence : <span className="num">{job.fitScore}/100</span>
+            </p>
           )}
 
           {/* Application status */}
@@ -176,7 +179,7 @@ function JobDetailPage() {
           </section>
         </article>
       )}
-    </main>
+    </>
   );
 }
 

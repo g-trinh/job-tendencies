@@ -90,6 +90,7 @@ function ContactForm() {
             className="input"
             id="contact-phone"
             type="tel"
+            placeholder="Si trouvé"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
@@ -142,7 +143,7 @@ function ContactForm() {
           onChange={(e) => setTags(e.target.value)}
         />
       </div>
-      <div className="row" style={{ justifyContent: 'flex-end' }}>
+      <div className="row justify-end">
         <button className="btn btn--primary" type="submit" disabled={isPending}>
           Enregistrer
         </button>

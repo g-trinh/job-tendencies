@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../lib/apiClient';
 import { useActiveProfile } from '../../context/ActiveProfileContext';
-import type { ApplicationStatus, JobSummary } from './types';
+import type { ApplicationStatus, PagedJobs } from './types';
 
 interface ApplicationResponseDto {
   status: ApplicationStatus;
@@ -36,18 +36,18 @@ export function useApplicationMutation(jobId: string) {
     onMutate: async (status: ApplicationStatus) => {
       await queryClient.cancelQueries({ queryKey: ['jobs', activeProfileId] });
 
-      const previousLists = queryClient.getQueriesData<JobSummary[]>({
+      const previousLists = queryClient.getQueriesData<PagedJobs>({
         queryKey: ['jobs', activeProfileId],
       });
 
-      previousLists.forEach(([key, jobs]) => {
-        if (!jobs) return;
-        queryClient.setQueryData<JobSummary[]>(
-          key,
-          jobs.map((job) =>
+      previousLists.forEach(([key, paged]) => {
+        if (!paged) return;
+        queryClient.setQueryData<PagedJobs>(key, {
+          ...paged,
+          items: paged.items.map((job) =>
             job.id === jobId ? { ...job, applicationStatus: status } : job,
           ),
-        );
+        });
       });
 
       return { previousLists };

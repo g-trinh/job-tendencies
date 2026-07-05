@@ -6,7 +6,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { apiClient, setActiveProfileId } from '../../../lib/apiClient';
 import { ActiveProfileProvider } from '../../../context/ActiveProfileContext';
 import { KanbanPage } from '../KanbanPage';
-import { jobsFixture } from '../fixtures';
+import { jobsFixture, toPagedJobsFixture } from '../fixtures';
 import type { JobSummaryDto } from '../types';
 
 const ACTIVE_PROFILE_ID = 'profile-123';
@@ -52,7 +52,7 @@ describe('KanbanPage', () => {
 
   // AC: kanban shows 5 columns for the full status lifecycle
   it('renders all five kanban columns after jobs load', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderKanban();
 
@@ -76,7 +76,7 @@ describe('KanbanPage', () => {
 
   // AC: jobs with non-null application status appear in the matching column
   it('places the saved job in the Sauvegardé column', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderKanban();
 
@@ -91,7 +91,7 @@ describe('KanbanPage', () => {
 
   // AC: jobs with null application_status do not appear in the kanban
   it('excludes jobs with no application status', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderKanban();
 
@@ -105,7 +105,7 @@ describe('KanbanPage', () => {
 
   // AC: empty column shows a placeholder
   it('shows a placeholder in columns with no jobs', async () => {
-    mock.onGet('/jobs').reply(200, jobsFixture);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture(jobsFixture));
 
     renderKanban();
 
@@ -122,14 +122,14 @@ describe('KanbanPage', () => {
 
   // AC: status transitions persist per profile+job via PATCH
   it('calls the application PATCH endpoint when advancing a job', async () => {
-    mock.onGet('/jobs').reply(200, [appliedJob, ...jobsFixture]);
+    mock.onGet('/jobs').reply(200, toPagedJobsFixture([appliedJob, ...jobsFixture]));
     let patchBody: unknown;
     mock.onPatch(`/jobs/${appliedJob.id}/application`).reply((config) => {
       patchBody = JSON.parse(config.data as string);
       return [200, { status: 'interview', updated_at: '2026-06-27T12:00:00Z' }];
     });
     // After mutation, re-fetch still returns the same list (testing the PATCH call, not the re-render)
-    mock.onGet('/jobs').replyOnce(200, [appliedJob, ...jobsFixture]);
+    mock.onGet('/jobs').replyOnce(200, toPagedJobsFixture([appliedJob, ...jobsFixture]));
 
     renderKanban();
 
@@ -154,5 +154,25 @@ describe('KanbanPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Impossible de charger les candidatures.',
     );
+  });
+
+  // ADR-007: kanban stays fetch-all — it requests the max page size in one
+  // shot and never renders a pagination bar, unlike the table/cards views.
+  it('requests page 1 with the max page size and renders no pagination bar', async () => {
+    let sentParams: Record<string, unknown> = {};
+    mock.onGet('/jobs').reply((config) => {
+      sentParams = config.params as Record<string, unknown>;
+      return [200, toPagedJobsFixture(jobsFixture)];
+    });
+
+    renderKanban();
+
+    await screen.findByRole('region', { name: 'Kanban candidatures' });
+
+    expect(sentParams['page']).toBe(1);
+    expect(sentParams['page_size']).toBe(100);
+    expect(
+      screen.queryByRole('navigation', { name: 'Pagination' }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import type { JobSummaryDto, JobDetailDto } from './types';
+import type { JobSummaryDto, JobDetailDto, PagedJobsDto } from './types';
 
 /**
  * Local fixture mirroring the `GET /api/jobs` contract. Used to stub the jobs
@@ -104,3 +104,28 @@ export const expiredJobDetailFixture: JobDetailDto = {
   title: 'Lead Engineer (Go) — Expiré',
   expired_at: '2026-06-25T00:00:00Z',
 };
+
+/**
+ * Wraps a list of job DTOs in the `GET /api/jobs` paginated envelope
+ * (ADR-007). Defaults to a single full page (`page` 1, `page_size` 25, one
+ * `total_pages`) — override to simulate multi-page responses in pagination
+ * tests.
+ */
+export function toPagedJobsFixture(
+  items: JobSummaryDto[],
+  overrides: Partial<Omit<PagedJobsDto, 'items'>> = {},
+): PagedJobsDto {
+  const page = overrides.page ?? 1;
+  const pageSize = overrides.page_size ?? 25;
+  const total = overrides.total ?? items.length;
+  const totalPages =
+    overrides.total_pages ?? (total === 0 ? 0 : Math.ceil(total / pageSize));
+
+  return {
+    items,
+    page,
+    page_size: pageSize,
+    total,
+    total_pages: totalPages,
+  };
+}

@@ -25,7 +25,9 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
     <section className="card" aria-label="Conditions de recherche">
       <div className="card__head"><h2 className="card__title">Conditions de recherche</h2></div>
 
-      <fieldset className="stack stack-4"><legend className="filter-group__title">Critères éliminatoires</legend>
+      <div className="grid-2">
+      <fieldset className="fieldset"><legend>Critères éliminatoires</legend>
+      <div className="stack stack-3">
       <div className="field">
         <label className="field__label" htmlFor="cond-contract">Type de contrat requis</label>
         <select
@@ -102,7 +104,9 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
         />
       </div>
 
-      </fieldset><fieldset className="stack stack-4"><legend className="filter-group__title">Préférences</legend>
+      </div>
+      </fieldset><fieldset className="fieldset"><legend>Préférences</legend>
+      <div className="stack stack-3">
       <div className="field">
         <label className="field__label" htmlFor="cond-preferred-skills">
           Compétences préférées (séparées par des virgules)
@@ -167,15 +171,19 @@ function ConditionsEditor({ profileId, conditions }: ConditionsEditorProps) {
         </select>
       </div>
 
+      </div>
       </fieldset>
-      <button className="btn btn--primary" type="button" disabled={isPending} onClick={() => mutate(draft)}>
-        Enregistrer les conditions
-      </button>
-      {isSuccess && (
-        <span className="badge badge--success" role="status">
-          Conditions enregistrées.
-        </span>
-      )}
+      </div>
+      <div className="row justify-end mbs-4">
+        {isSuccess && (
+          <span className="badge badge--success" role="status">
+            Conditions enregistrées.
+          </span>
+        )}
+        <button className="btn btn--primary" type="button" disabled={isPending} onClick={() => mutate(draft)}>
+          Enregistrer les conditions
+        </button>
+      </div>
     </section>
   );
 }

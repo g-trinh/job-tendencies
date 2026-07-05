@@ -101,44 +101,53 @@ function ProfilesPage() {
   const active = profiles?.find((p) => p.isActive);
 
   return (
-    <main>
+    <>
       <header className="page__head">
-        <h1 className="page__title">Profils</h1>
-        {active && (
-          <p className="page__sub">
-            Profil actif : <strong>{active.name}</strong>
-          </p>
-        )}
+        <div>
+          <h1 className="page__title">Profils</h1>
+          {active && (
+            <p className="page__sub">
+              Profil actif : <strong>{active.name}</strong>
+            </p>
+          )}
+        </div>
       </header>
 
-      {isPending && <p className="muted">Chargement des profils…</p>}
-      {isError && (
-        <div className="banner banner--danger" role="alert">
-          Impossible de charger les profils.
-        </div>
-      )}
+      <div className="stack stack-5">
+        {isPending && <p className="muted">Chargement des profils…</p>}
+        {isError && (
+          <div className="banner banner--danger" role="alert">
+            Impossible de charger les profils.
+          </div>
+        )}
 
-      {profiles !== undefined && profiles.length === 0 && (
-        <div className="state">
-          <span className="state__title">
-            Aucun profil pour l'instant. Créez-en un pour commencer.
-          </span>
-        </div>
-      )}
+        {profiles !== undefined && profiles.length === 0 && (
+          <div className="card">
+            <div className="state">
+              <span className="state__icon" aria-hidden="true">
+                📄
+              </span>
+              <span className="state__title">
+                Aucun profil pour l'instant. Créez-en un pour commencer.
+              </span>
+            </div>
+          </div>
+        )}
 
-      {active !== undefined && (
-        <div className="stack stack-5">
-          <IdentityEditor profile={active} />
-          <ConditionsEditor
-            profileId={active.id}
-            conditions={active.conditions}
-          />
-          <WeightsEditor profileId={active.id} weights={active.weights} />
-        </div>
-      )}
+        {active !== undefined && (
+          <>
+            <IdentityEditor profile={active} />
+            <ConditionsEditor
+              profileId={active.id}
+              conditions={active.conditions}
+            />
+            <WeightsEditor profileId={active.id} weights={active.weights} />
+          </>
+        )}
 
-      <CreateProfileForm />
-    </main>
+        <CreateProfileForm />
+      </div>
+    </>
   );
 }
 

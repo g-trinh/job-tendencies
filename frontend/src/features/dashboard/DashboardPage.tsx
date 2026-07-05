@@ -6,10 +6,12 @@ import { MatchAlerts } from './MatchAlerts';
 /** Dashboard page at `/dashboard`, scoped to the active profile. */
 function DashboardPage() {
   return (
-    <main>
+    <>
       <header className="page__head">
-        <h1 className="page__title">Tableau de bord</h1>
-        <p className="page__sub">Vue d'ensemble pour le profil actif.</p>
+        <div>
+          <h1 className="page__title">Tableau de bord</h1>
+          <p className="page__sub">Vue d'ensemble pour le profil actif.</p>
+        </div>
       </header>
       <div className="stack stack-5">
         <StatsCards />
@@ -19,7 +21,7 @@ function DashboardPage() {
         </div>
         <MatchAlerts />
       </div>
-    </main>
+    </>
   );
 }
 

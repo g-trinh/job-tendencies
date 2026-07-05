@@ -18,23 +18,23 @@ function StatsCards() {
     <section className="grid-stats" aria-label="Statistiques">
       <div className="stat">
         <div className="stat__label">Total des offres</div>
-        <div className="stat__value">{stats.total}</div>
+        <div className="stat__value num">{stats.total}</div>
       </div>
       <div className="stat">
         <div className="stat__label">Nouvelles aujourd'hui</div>
-        <div className="stat__value">{stats.new_today}</div>
+        <div className="stat__value num">{stats.new_today}</div>
       </div>
       <div className="stat">
         <div className="stat__label">Nouvelles cette semaine</div>
-        <div className="stat__value">{stats.new_this_week}</div>
+        <div className="stat__value num">{stats.new_this_week}</div>
       </div>
       <div className="stat">
         <div className="stat__label">% en télétravail</div>
-        <div className="stat__value">{Math.round(stats.pct_remote)}%</div>
+        <div className="stat__value num">{Math.round(stats.pct_remote)}%</div>
       </div>
       <div className="stat">
         <div className="stat__label">Salaire moyen</div>
-        <div className="stat__value">
+        <div className="stat__value num">
           {stats.avg_salary != null
             ? `${Math.round(stats.avg_salary).toLocaleString('fr-FR')} €`
             : 'Non communiqué'}
@@ -42,7 +42,7 @@ function StatsCards() {
       </div>
       <div className="stat">
         <div className="stat__label">Contrat le plus fréquent</div>
-        <div className="stat__value" style={{ fontSize: 'var(--font-size-lg)' }}>
+        <div className="stat__value stat__value--text">
           {stats.top_contract_type
             ? t(`job.contract.${stats.top_contract_type}`)
             : 'Indéterminé'}

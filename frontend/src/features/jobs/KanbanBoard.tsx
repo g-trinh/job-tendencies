@@ -53,7 +53,11 @@ function KanbanCard({ job }: KanbanCardProps) {
           {[job.company, job.location].filter(Boolean).join(' — ')}
         </p>
       )}
-      {job.fitScore != null && <p>Pertinence : {job.fitScore}/100</p>}
+      {job.fitScore != null && (
+        <p className="text-xs muted">
+          Pertinence : <span className="num">{job.fitScore}/100</span>
+        </p>
+      )}
       <div className="row">
         {prev && (
           <button

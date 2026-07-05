@@ -1,11 +1,16 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { apiClient } from '../../lib/apiClient';
 import { useActiveProfile } from '../../context/ActiveProfileContext';
 import { jobsFixture } from './fixtures';
 import {
   toJobSummary,
-  type JobSummary,
-  type JobSummaryDto,
+  toPagedJobs,
+  type PagedJobs,
+  type PagedJobsDto,
   type JobFilters,
 } from './types';
 
@@ -17,14 +22,35 @@ import {
  */
 const useFixtures = import.meta.env.VITE_USE_FIXTURES === 'true';
 
-async function fetchJobs(filters?: JobFilters): Promise<JobSummary[]> {
+/** Default page size for the jobs list — mirrors the backend default (ADR-007). */
+export const DEFAULT_PAGE_SIZE = 25;
+
+/** Pagination request params — 1-based `page`, `pageSize` clamped to 1..100 server-side. */
+export interface JobsPagination {
+  page: number;
+  pageSize: number;
+}
+
+async function fetchJobs(
+  filters: JobFilters | undefined,
+  pagination: JobsPagination,
+): Promise<PagedJobs> {
   if (useFixtures) {
-    return jobsFixture.map(toJobSummary);
+    return {
+      items: jobsFixture.map(toJobSummary),
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      total: jobsFixture.length,
+      totalPages: jobsFixture.length > 0 ? 1 : 0,
+    };
   }
 
   // Serialize filter params — omit null/undefined/empty values so the backend
   // does not need to distinguish "not sent" from "sent as empty string".
-  const params: Record<string, string | string[] | number> = {};
+  const params: Record<string, string | string[] | number> = {
+    page: pagination.page,
+    page_size: pagination.pageSize,
+  };
   if (filters) {
     if (filters.skills?.length) params['skills'] = filters.skills;
     if (filters.remote_policy) params['remote_policy'] = filters.remote_policy;
@@ -40,22 +66,34 @@ async function fetchJobs(filters?: JobFilters): Promise<JobSummary[]> {
     if (filters.sort_dir) params['sort_dir'] = filters.sort_dir;
   }
 
-  const { data } = await apiClient.get<JobSummaryDto[]>('/jobs', { params });
-  return data.map(toJobSummary);
+  const { data } = await apiClient.get<PagedJobsDto>('/jobs', { params });
+  return toPagedJobs(data);
 }
 
 /**
- * Lists jobs for the active profile. The active-profile id is part of the cache
- * key, so switching profiles transparently re-scopes the list; the request is
- * disabled until a profile is resolved (the `X-Active-Profile` header is injected
- * by the axios interceptor). Pass `filters` to narrow or sort the result set.
+ * Lists jobs for the active profile (ADR-007 offset pagination). The
+ * active-profile id, filters, and page/pageSize are all part of the cache key,
+ * so switching profiles, filters, or pages transparently re-scopes the
+ * request; the request is disabled until a profile is resolved (the
+ * `X-Active-Profile` header is injected by the axios interceptor).
+ *
+ * Defaults to page 1 / 25 per page when `pagination` is omitted. Uses
+ * `placeholderData: keepPreviousData` so the list does not flash empty while
+ * switching pages — the previous page's items stay on screen until the new
+ * page resolves.
  */
-export function useJobs(filters?: JobFilters): UseQueryResult<JobSummary[]> {
+export function useJobs(
+  filters?: JobFilters,
+  pagination?: JobsPagination,
+): UseQueryResult<PagedJobs> {
   const { activeProfileId } = useActiveProfile();
+  const page = pagination?.page ?? 1;
+  const pageSize = pagination?.pageSize ?? DEFAULT_PAGE_SIZE;
 
   return useQuery({
-    queryKey: ['jobs', activeProfileId, filters],
-    queryFn: () => fetchJobs(filters),
+    queryKey: ['jobs', activeProfileId, filters, page, pageSize],
+    queryFn: () => fetchJobs(filters, { page, pageSize }),
     enabled: useFixtures || activeProfileId !== null,
+    placeholderData: keepPreviousData,
   });
 }

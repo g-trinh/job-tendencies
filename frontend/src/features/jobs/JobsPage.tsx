@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { t } from '../../i18n/fr';
-import { useJobs } from './useJobs';
+import { useJobs, DEFAULT_PAGE_SIZE } from './useJobs';
 import { JobFiltersBar } from './JobFiltersBar';
 import { JobsTable } from './JobsTable';
+import { Pagination } from './Pagination';
 import { ViewToggle, type View } from './ViewToggle';
 import type { JobFilters, JobSummary } from './types';
+import { useWidePage } from '../../components/AppShell';
 
 /** Formats a salary range in whole euros, or a French placeholder when hidden. */
 function formatSalary(min: number | null, max: number | null): string {
@@ -33,34 +35,38 @@ function JobCard({ job }: { job: JobSummary }) {
     <li>
       <article className={`card jobcard${job.expiredAt ? ' jobcard--expired' : ''}`}>
         <div className="row-between">
-          <h2 className="jobcard__title">
-            <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>
-          </h2>
+          <div>
+            <h2 className="jobcard__title">
+              <Link to={`/jobs/${job.id}`}>{job.title || "Voir l'offre"}</Link>{' '}
+              {job.expiredAt && (
+                <span
+                  className="badge badge--danger"
+                  data-badge="expired"
+                  aria-label="Offre expirée"
+                >
+                  Expirée
+                </span>
+              )}
+            </h2>
+            {companyLine !== '' && (
+              <div className="jobcard__company">{companyLine}</div>
+            )}
+          </div>
           {job.fitScore != null && (
-            <span className="fit-score" aria-hidden="true">
+            <span
+              className="fit-score"
+              style={{ '--v': job.fitScore } as CSSProperties}
+              aria-hidden="true"
+            >
               {job.fitScore}
             </span>
           )}
         </div>
-        {job.fitScore != null && <p>Pertinence : {job.fitScore}/100</p>}
-        {job.expiredAt && (
-          <p>
-            <span
-              className="badge badge--danger"
-              data-badge="expired"
-              aria-label="Offre expirée"
-            >
-              Expirée
-            </span>
+        {job.fitScore != null && (
+          <p className="text-xs muted">
+            Pertinence : <span className="num">{job.fitScore}/100</span>
           </p>
         )}
-        {job.url && (
-          <a className="text-sm" href={job.url} target="_blank" rel="noreferrer">
-            Offre originale
-          </a>
-        )}
-        {!job.url && <p className="muted text-sm">Lien indisponible</p>}
-        {companyLine !== '' && <p className="jobcard__company">{companyLine}</p>}
         <ul className="jobcard__meta" aria-label="Caractéristiques">
           {job.contractType && (
             <li className="badge badge--neutral">
@@ -82,8 +88,21 @@ function JobCard({ job }: { job: JobSummary }) {
               {t(`job.working_days.${job.workingDays}`)}
             </li>
           )}
+          <li className="badge badge--neutral num">
+            {formatSalary(job.salaryMin, job.salaryMax)}
+          </li>
         </ul>
-        <p>{formatSalary(job.salaryMin, job.salaryMax)}</p>
+        <div className="jobcard__meta">
+          <span className="badge badge--neutral">
+            Compréhension :{' '}
+            <span className="num">{job.understandingScore}/100</span>
+          </span>
+          {job.applicationStatus && (
+            <span className="badge badge--info">
+              Candidature : {t(`application.status.${job.applicationStatus}`)}
+            </span>
+          )}
+        </div>
         {job.skills.length > 0 && (
           <ul className="jobcard__meta" aria-label="Compétences">
             {job.skills.map((skill) => (
@@ -93,19 +112,27 @@ function JobCard({ job }: { job: JobSummary }) {
             ))}
           </ul>
         )}
-        <p className="text-xs muted">
-          Compréhension : {job.understandingScore}/100
-        </p>
-        {job.applicationStatus && (
-          <p>
-            Candidature : {t(`application.status.${job.applicationStatus}`)}
-          </p>
-        )}
-        {job.sources.length > 0 && (
-          <p className="text-xs muted">
-            Trouvé sur : {job.sources.map((s) => s.board_name).join(', ')}
-          </p>
-        )}
+        <div className="row-between">
+          {job.sources.length > 0 ? (
+            <span className="text-xs muted">
+              Trouvé sur : {job.sources.map((s) => s.board_name).join(', ')}
+            </span>
+          ) : (
+            <span />
+          )}
+          {job.url ? (
+            <a
+              className="text-sm"
+              href={job.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Offre originale
+            </a>
+          ) : (
+            <span className="muted text-sm">Lien indisponible</span>
+          )}
+        </div>
       </article>
     </li>
   );
@@ -118,48 +145,101 @@ function JobsPage() {
   // Hidden by default per job-browser/feature.md ("Job removed from board →
   // marked expired, data retained"). Client-side only — see JobFiltersBar.
   const [showExpired, setShowExpired] = useState(false);
+  // ADR-007 offset pagination — page/pageSize are local view state (single-user
+  // app). Reset to page 1 whenever filters, sort, or view change so a stale
+  // page number is never applied to a different result set.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const { data: jobs, isPending, isError } = useJobs(filters);
+  function handleFiltersChange(next: JobFilters) {
+    setFilters(next);
+    setPage(1);
+  }
+
+  function handleViewChange(next: View) {
+    setView(next);
+    setPage(1);
+  }
+
+  function handlePageSizeChange(next: number) {
+    setPageSize(next);
+    setPage(1);
+  }
+
+  const { data, isPending, isError } = useJobs(filters, { page, pageSize });
+  const jobs = data?.items;
   const visibleJobs = jobs?.filter(
     (job) => showExpired || job.expiredAt === null,
   );
 
+  useWidePage(true);
+
   return (
-    <main>
-      <header className="page__head row-between">
-        <h1 className="page__title">Offres</h1>
-        <ViewToggle view={view} onChange={setView} />
-      </header>
-      <JobFiltersBar
-        filters={filters}
-        onChange={setFilters}
-        showExpired={showExpired}
-        onShowExpiredChange={setShowExpired}
-      />
-      {isPending && <p className="muted">Chargement des offres…</p>}
-      {isError && (
-        <div className="banner banner--danger" role="alert">
-          Impossible de charger les offres.
-        </div>
-      )}
-      {visibleJobs !== undefined && (
-        <>
-          {visibleJobs.length === 0 ? (
-            <div className="state">
-              <span className="state__title">Aucune offre pour ce profil.</span>
-            </div>
-          ) : view === 'table' ? (
-            <JobsTable jobs={visibleJobs} />
-          ) : (
-            <ul className="grid-cards" aria-label="Offres">
-              {visibleJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-            </ul>
+    <>
+      <header className="page__head">
+        <div>
+          <h1 className="page__title">Offres</h1>
+          {visibleJobs !== undefined && (
+            <p className="page__sub num">
+              {visibleJobs.length === 1
+                ? '1 offre correspond au profil actif.'
+                : `${visibleJobs.length} offres correspondent au profil actif.`}
+            </p>
           )}
-        </>
-      )}
-    </main>
+        </div>
+        <ViewToggle view={view} onChange={handleViewChange} />
+      </header>
+      <div className="layout-with-panel">
+        <JobFiltersBar
+          filters={filters}
+          onChange={handleFiltersChange}
+          showExpired={showExpired}
+          onShowExpiredChange={setShowExpired}
+        />
+        <div className="stack stack-5">
+          {isPending && <p className="muted">Chargement des offres…</p>}
+          {isError && (
+            <div className="banner banner--danger" role="alert">
+              Impossible de charger les offres.
+            </div>
+          )}
+          {visibleJobs !== undefined && (
+            <>
+              {visibleJobs.length === 0 ? (
+                <div className="card">
+                  <div className="state">
+                    <span className="state__icon" aria-hidden="true">
+                      🔍
+                    </span>
+                    <span className="state__title">
+                      Aucune offre pour ce profil.
+                    </span>
+                  </div>
+                </div>
+              ) : view === 'table' ? (
+                <JobsTable jobs={visibleJobs} />
+              ) : (
+                <ul className="grid-cards" aria-label="Offres">
+                  {visibleJobs.map((job) => (
+                    <JobCard key={job.id} job={job} />
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          {data !== undefined && data.total > 0 && (
+            <Pagination
+              page={data.page}
+              pageSize={data.pageSize}
+              total={data.total}
+              totalPages={data.totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 

@@ -15,9 +15,8 @@ function ProfileSwitcher() {
         Profil actif
       </label>
       <select
-        className="select"
+        className="select w-auto"
         id="profile-switcher"
-        style={{ width: 'auto' }}
         value={activeProfileId ?? ''}
         disabled={isSwitching}
         onChange={(e) => void switchActiveProfile(e.target.value)}

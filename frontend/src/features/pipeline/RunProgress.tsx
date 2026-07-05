@@ -33,7 +33,7 @@ function RunProgress({ runId }: RunProgressProps) {
       <ul className="stack stack-4" aria-label="Progression par board">
         {run.boards.map((b) => (
           <li key={b.board_id} className="stack stack-2">
-            <span className="text-sm">
+            <span className="text-sm medium">
               {b.board_id} — {b.status} — {b.pages_fetched} page(s),{' '}
               {b.listings_captured} offre(s)
               {b.error && <span role="alert"> — Erreur : {b.error}</span>}
